@@ -159,11 +159,15 @@ const orderBtnBase =
 
     {/* Image */}
     <div className="overflow-hidden rounded-3xl border border-brand-border">
-      <img
-        src="/images/hero.jpg"
-        alt="Nazar food"
-        className="h-72 w-full object-cover md:h-96"
-      />
+<img
+  src="/images/hero.jpg"
+  alt="Nazar food"
+  className="h-72 w-full object-cover md:h-96"
+  loading="eager"
+  fetchPriority="high"
+  decoding="async"
+/>
+
     </div>
   </div>
 </div>

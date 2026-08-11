@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   return (
     <footer className="border-t bg-white">
@@ -9,8 +11,14 @@ export default function Footer() {
               West Haven, CT • Turkish cuisine • Fresh bakery
             </div>
           </div>
-          <div className="text-xs">
-            © {new Date().getFullYear()} Nazar. All rights reserved.
+          <div className="flex flex-col gap-1 text-xs md:items-end">
+            <Link
+              to="/vip"
+              className="font-extrabold text-[#1E7A3A] underline underline-offset-2"
+            >
+              Join the VIP Club →
+            </Link>
+            <span>© {new Date().getFullYear()} Nazar. All rights reserved.</span>
           </div>
         </div>
       </div>

@@ -44,6 +44,12 @@ export default function NavBar() {
 <NavLink to="/menu" className={({ isActive }) => linkClass(isActive)}>
   Menu
 </NavLink>
+<NavLink to="/specials" className={({ isActive }) => linkClass(isActive)}>
+  Specials
+</NavLink>
+<NavLink to="/catering" className={({ isActive }) => linkClass(isActive)}>
+  Catering
+</NavLink>
 <NavLink to="/gallery" className={({ isActive }) => linkClass(isActive)}>
   Gallery
 </NavLink>
@@ -55,6 +61,12 @@ export default function NavBar() {
 </NavLink>
 <NavLink to="/contact" className={({ isActive }) => linkClass(isActive)}>
   Contact
+</NavLink>
+<NavLink
+  to="/vip"
+  className="rounded-full bg-[#1E7A3A] px-3 py-2 text-sm font-extrabold text-white shadow-sm hover:opacity-95"
+>
+  VIP Club
 </NavLink>
   </nav>
 
