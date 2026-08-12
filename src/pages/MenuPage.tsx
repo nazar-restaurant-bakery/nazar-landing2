@@ -1,7 +1,7 @@
 import React from "react";
 import { MENU_CATEGORIES } from "../data/menuData";
 import type { MenuCategory, MenuItem, MenuTag } from "../data/menuData";
-import { CLOVER_PICKUP_URL, DOORDASH_URL } from "../data/menu";
+import { CLOVER_PICKUP_URL } from "../data/menu";
 
 const PH = "/images/placeholder.jpg";
 
@@ -112,8 +112,9 @@ function DetailsModal({
 }) {
   if (!open || !item) return null;
 
-  const pickupHref = item.pickupUrl ?? CLOVER_PICKUP_URL;
-  const deliveryHref = item.deliveryUrl ?? DOORDASH_URL;
+  // Clover covers pickup AND delivery, so one link carries the whole order
+  // flow. item.pickupUrl stays as a per-item override if one is ever needed.
+  const orderHref = item.pickupUrl ?? CLOVER_PICKUP_URL;
 
   // Optional fields (if you add later)
   const comesWith = (item as any).comesWith as string | undefined;
@@ -194,26 +195,17 @@ function DetailsModal({
             ) : null}
 
             <p className="mt-3 text-xs text-zinc-500">
-              Ordering (pickup time, quantity, special instructions, payment) continues on Clover/DoorDash.
+              Ordering (pickup time, quantity, special instructions, payment) continues on Clover.
             </p>
 
-            {/* Optional action buttons (uses your urls if present) */}
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4">
               <a
-                href={pickupHref}
+                href={orderHref}
                 target="_blank"
-                rel="noreferrer"
-                className="flex-1 rounded-full bg-orange-500 py-2 text-center text-sm font-extrabold text-white hover:bg-orange-600"
+                rel="noopener noreferrer"
+                className="block w-full rounded-full bg-[#1E7A3A] py-2 text-center text-sm font-extrabold text-white hover:opacity-95"
               >
-                Pickup
-              </a>
-              <a
-                href={deliveryHref}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 rounded-full bg-zinc-900 py-2 text-center text-sm font-extrabold text-white hover:bg-black"
-              >
-                Delivery
+                Order Online — Pickup or Delivery
               </a>
             </div>
           </div>

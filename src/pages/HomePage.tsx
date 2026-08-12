@@ -8,7 +8,6 @@ import {
   PHONE_NUMBER_DISPLAY,
   PHONE_NUMBER_TEL,
   CLOVER_PICKUP_URL,
-  DOORDASH_URL,
 } from "../data/menu";
 // Same Clover-first row the rest of the site uses. It already renders the
 // "Also on:" marketplace links, so MarketplaceLinks is not needed separately.
@@ -245,22 +244,16 @@ export default function HomePage() {
                 {PHONE_NUMBER_DISPLAY}
               </a>
 
-              <div className="mt-6 flex gap-2">
+              {/* Ordering CTA — Clover only. The maps links above/below are
+                  directions, not an ordering channel, so they stay as they are. */}
+              <div className="mt-6">
                 <a
                   href={CLOVER_PICKUP_URL}
                   target="_blank"
-                  rel="noreferrer"
-                  className="rounded-full bg-brand-primary px-4 py-2 text-sm font-extrabold text-white"
+                  rel="noopener noreferrer"
+                  className="inline-flex rounded-full bg-[#1E7A3A] px-4 py-2 text-sm font-extrabold text-white hover:opacity-95"
                 >
-                  Pickup
-                </a>
-                <a
-                  href={DOORDASH_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-full bg-brand-dark px-4 py-2 text-sm font-extrabold text-white"
-                >
-                  Delivery
+                  Order Online — Pickup or Delivery
                 </a>
               </div>
 

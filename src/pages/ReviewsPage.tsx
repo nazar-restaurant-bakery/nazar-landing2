@@ -18,22 +18,25 @@ const GOOGLE_RATING = 4.7;
 const GOOGLE_REVIEW_COUNT = 46;
 
 /**
- * Both links point at a working Google Maps search for the business so nothing
- * on this page is dead. They are placeholders, not the real destinations.
- *
- * TODO(Talip): replace with the real links.
- *   GOOGLE_REVIEW_URL  — Google Business Profile → Ask for reviews → Share
- *                        review form. Looks like https://g.page/r/<PLACE_ID>/review
- *   GOOGLE_PROFILE_URL — Google Maps → the business listing → Share → Copy link
+ * The Google Maps listing — this is where the reviews live. Official Maps URLs
+ * API format, pinned with `query_place_id` so it resolves to this exact record
+ * rather than whatever a name search happens to rank first.
  */
-const GOOGLE_MAPS_FALLBACK_URL =
-  "https://www.google.com/maps/search/?api=1&query=Nazar+Restaurant+%26+Bakery+39+Elm+Street+West+Haven+CT";
+const GOOGLE_PROFILE_URL =
+  "https://www.google.com/maps/search/?api=1&query=Nazar%20Restaurant%20%26%20Bakery&query_place_id=ChIJKTmeJADZ54kRvLZoaDaB9J4";
+
+/**
+ * Google Place ID for Nazar Restaurant & Bakery, 39 Elm St, West Haven CT.
+ * Derived from feature-id 0x89e7d900249e3929:0x9ef481366868b6bc (CID
+ * 11453921822989924028). Set, so WRITE_REVIEW_URL below is the one-click
+ * review dialog; blanking it falls back to the profile link.
+ */
+const GOOGLE_PLACE_ID: string = "ChIJKTmeJADZ54kRvLZoaDaB9J4";
 
 /** "Leave a Review" link. */
-const GOOGLE_REVIEW_URL = GOOGLE_MAPS_FALLBACK_URL;
-
-/** "Read on Google" link — the public business profile. */
-const GOOGLE_PROFILE_URL = GOOGLE_MAPS_FALLBACK_URL;
+const WRITE_REVIEW_URL = GOOGLE_PLACE_ID
+  ? `https://search.google.com/local/writereview?placeid=${GOOGLE_PLACE_ID}`
+  : GOOGLE_PROFILE_URL;
 
 // NOTE: no testimonial quotes live on this page. We do not write our own
 // reviews. TODO(Talip): if you want snippets here, copy them verbatim from the
@@ -93,16 +96,16 @@ export default function ReviewsPage() {
           <a
             href={GOOGLE_PROFILE_URL}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className={ghostBtn}
           >
             {t("reviews.readOnGoogle", lang)}
           </a>
 
           <a
-            href={GOOGLE_REVIEW_URL}
+            href={WRITE_REVIEW_URL}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className={primaryBtn}
           >
             {t("reviews.leaveReview", lang)}
@@ -130,7 +133,7 @@ export default function ReviewsPage() {
         <a
           href={GOOGLE_PROFILE_URL}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className={`${primaryBtn} mt-6`}
         >
           {t("reviews.readOurReviews", lang)}
@@ -147,9 +150,9 @@ export default function ReviewsPage() {
         </p>
 
         <a
-          href={GOOGLE_REVIEW_URL}
+          href={WRITE_REVIEW_URL}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className={`${primaryBtn} mt-4`}
         >
           {t("reviews.leaveReview", lang)}
