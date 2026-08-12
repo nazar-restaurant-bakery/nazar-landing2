@@ -430,27 +430,7 @@ export default function MenuPage() {
         )}
       </div>
 
-      {/* Mobile sticky CTA bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white/95 backdrop-blur md:hidden">
-        <div className="mx-auto flex max-w-6xl gap-2 px-4 py-3">
-          <a
-            href={CLOVER_PICKUP_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 rounded-full bg-orange-500 py-3 text-center text-sm font-extrabold text-white shadow hover:bg-orange-600"
-          >
-            Pickup
-          </a>
-          <a
-            href={DOORDASH_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 rounded-full bg-zinc-900 py-3 text-center text-sm font-extrabold text-white hover:bg-black"
-          >
-            Delivery
-          </a>
-        </div>
-      </div>
+      {/* No sticky bar here — Layout renders the one global GlobalOrderStickyBar. */}
 
       <DetailsModal
         open={!!modalItem}
