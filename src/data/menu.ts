@@ -5,19 +5,32 @@ export const BUSINESS_NAME = "Nazar Restaurant & Bakery";
 export const TAGLINE = "Fresh Turkish flavors—fast, filling, and made with care.";
 
 // Ordering links (customer-facing)
-export const DOORDASH_URL =
-  "https://www.doordash.com/store/nazar-restaurant-&-bakery-west-haven-34962973/92198546/?cursor=eyJzdG9yZV9wcmltYXJ5X3ZlcnRpY2FsX2lkcyI6WzEsMTEwMDQ1LDQsMTAwMzMzXSwiY2Fyb3VzZWxfaWQiOiJyZWNlbnRseV92aWV3ZWQiLCJjYXJvdXNlbF90aXRsZSI6IlJlY2VudGx5IHZpZXdlZCJ9&pickup=false";
-
+//
+// Clover is the primary channel: it handles BOTH pickup and delivery, and it is
+// the only one that doesn't take a marketplace commission. The marketplaces
+// below stay available, but they are demoted to secondary text links.
 export const CLOVER_PICKUP_URL =
   "https://nazar-bakery-west-haven.cloveronline.com/";
 
+export const DOORDASH_URL =
+  "https://www.doordash.com/store/nazar-restaurant-&-bakery-west-haven-34962973/92198546/?cursor=eyJzdG9yZV9wcmltYXJ5X3ZlcnRpY2FsX2lkcyI6WzEsMTEwMDQ1LDQsMTAwMzMzXSwiY2Fyb3VzZWxfaWQiOiJyZWNlbnRseV92aWV3ZWQiLCJjYXJvdXNlbF90aXRsZSI6IlJlY2VudGx5IHZpZXdlZCJ9&pickup=false";
 
 // Uber Eats public customer link (kısa ve temiz)
-export const UBER_EATS_URL =
+export const UBEREATS_URL =
   "https://www.ubereats.com/store/nazar-restaurant-%26-bakery-west-haven/miDkOS7wSnGYWrbqFRJAEg";
+
+/** @deprecated Older name for {@link UBEREATS_URL}; kept so existing imports keep working. */
+export const UBER_EATS_URL = UBEREATS_URL;
 
 export const GRUBHUB_URL =
   "https://www.grubhub.com/restaurant/nazar-bakery--fast-food-39-elm-st-west-haven/12070448";
+
+/** Secondary marketplaces, rendered as the "Also on:" row. */
+export const MARKETPLACE_LINKS: Array<{ label: string; url: string }> = [
+  { label: "DoorDash", url: DOORDASH_URL },
+  { label: "Uber Eats", url: UBEREATS_URL },
+  { label: "Grubhub", url: GRUBHUB_URL },
+];
 
 export const WEEKLY_SPECIALS_LOGO = "/images/brands/weekly-specials.png";
 export const BREAKFAST_IMG = "/images/brands/breakfast.png";

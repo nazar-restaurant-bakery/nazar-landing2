@@ -1,5 +1,7 @@
 // src/components/GlobalOrderButtons.tsx
-import { CLOVER_PICKUP_URL, DOORDASH_URL } from "../data/menu";
+import { CLOVER_PICKUP_URL, MARKETPLACE_LINKS } from "../data/menu";
+import { useLang } from "./Language";
+import { t } from "./i18n";
 
 function cn(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(" ");
@@ -10,36 +12,30 @@ type Props = {
   className?: string;
 };
 
+/**
+ * Clover is the primary ordering channel — it covers pickup *and* delivery, so
+ * it gets the one prominent button. The marketplaces sit underneath as small
+ * text links.
+ */
 export default function OrderButtonsRow({ variant = "top", className }: Props) {
+  const { lang } = useLang();
   const isTop = variant === "top";
 
-  // ✅ Make the whole row a bit narrower (creates side space)
-  const rowWidth = isTop ? "max-w-4xl" : "max-w-4xl";
-
-  // ✅ Layout: top = centered pills, bottom = sticky two buttons
   const wrap = cn(
-    rowWidth,
-    "mx-auto w-full",
-    isTop
-     ? "grid grid-cols-2 gap-3 place-items-center"
-     : "grid grid-cols-2 gap-3 place-items-center",
+    "mx-auto w-full max-w-4xl flex flex-col items-center",
+    isTop ? "gap-3" : "gap-2",
     className
   );
 
-  // ✅ Button sizing:
-  // - TOP: "smaller on the sides" = not full-width on desktop, capped width
-  // - BOTTOM: still usable, but row is narrower so it has side margins
-  const btnBase = cn(
-    "inline-flex items-center justify-center rounded-full font-extrabold shadow-sm min-w-[140px]",
-    "hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-zinc-300",
+  const primaryBtn = cn(
+    "inline-flex items-center justify-center rounded-full font-extrabold shadow-sm",
+    "bg-[#1E7A3A] text-white drop-shadow-sm",
+    "hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E7A3A]",
+    "w-full text-center",
     isTop
-      ? "h-11 px-6 text-sm w-full max-w-[220px]" // <— key: capped width
-      : "h-11 px-6 text-sm w-full max-w-[220px] justify-self-center"
-
- // bottom fills the (narrower) bar
+      ? "h-12 px-8 text-base max-w-[420px]"
+      : "h-11 px-6 text-sm max-w-[380px]"
   );
-
-  const btnText = "text-white drop-shadow-sm";
 
   return (
     <div className={wrap}>
@@ -47,20 +43,43 @@ export default function OrderButtonsRow({ variant = "top", className }: Props) {
         href={CLOVER_PICKUP_URL}
         target="_blank"
         rel="noreferrer"
-        className={cn(btnBase, "bg-[#1E7A3A]", btnText)}
+        className={primaryBtn}
       >
-        Pickup (Clover)
+        {t("buttons.orderOnline", lang)}
       </a>
 
-      <a
-        href={DOORDASH_URL}
-        target="_blank"
-        rel="noreferrer"
-        className={cn(btnBase, "bg-[#B91C1C]", btnText)}
-      >
-        Delivery (DoorDash)
-      </a>
+      <MarketplaceLinks />
     </div>
+  );
+}
+
+/** Small secondary "Also on:" row of marketplace text links. */
+export function MarketplaceLinks({ className }: { className?: string }) {
+  const { lang } = useLang();
+
+  return (
+    <p
+      className={cn(
+        "flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-zinc-500",
+        className
+      )}
+    >
+      <span className="font-semibold">{t("buttons.alsoOn", lang)}</span>
+
+      {MARKETPLACE_LINKS.map((m, i) => (
+        <span key={m.label} className="inline-flex items-center gap-2">
+          {i > 0 && <span aria-hidden="true">·</span>}
+          <a
+            href={m.url}
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold underline underline-offset-2 hover:text-zinc-800"
+          >
+            {m.label}
+          </a>
+        </span>
+      ))}
+    </p>
   );
 }
 

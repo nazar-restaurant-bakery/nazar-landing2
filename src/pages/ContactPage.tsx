@@ -117,12 +117,6 @@ export default function ContactPage() {
                   >
                     Order on DoorDash
                   </a>
-                  <a
-                    href={`tel:${PHONE_NUMBER_TEL}`}
-                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 hover:bg-neutral-50"
-                  >
-                    Phone pickup
-                  </a>
                 </div>
               </div>
             </div>
@@ -164,6 +158,7 @@ export default function ContactPage() {
             </div>
 
             {/* Map */}
+ 
             <div className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
               <div className="flex items-center justify-between gap-3 border-b border-neutral-200 p-6">
                 <div>
@@ -179,11 +174,10 @@ export default function ContactPage() {
                   target="_blank"
                   rel="noreferrer"
                   className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 hover:bg-neutral-50"
-                >
+               >
                   Open in Google Maps
                 </a>
               </div>
-
               <iframe
                 title="Google Map"
                 src={mapEmbedSrc}

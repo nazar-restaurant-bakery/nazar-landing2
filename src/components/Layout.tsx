@@ -12,25 +12,29 @@ export default function Layout() {
 <div className="mx-auto w-full max-w-6xl px-4 pt-6">
   <GlobalOrderButtons />
 
-  {/* Global note under Clover/DoorDash */}
+  {/* Global note under the Clover button */}
   <div className="mx-auto mt-3 max-w-4xl text-center text-xs sm:text-sm font-bold text-zinc-600">
 
-    <p>Browse here, then order pickup via Clover or delivery via DoorDash.</p>
+    <p>Browse here, then order online — pickup or delivery, straight from us.</p>
     <p className="mt-1">
-      Pickup prices shown. DoorDash prices typically match—delivery fees apply. Uber Eats/Grubhub prices may vary.
+      Our prices shown. Marketplace prices and fees may vary.
     </p>
   </div>
 </div>
 
 
-      <main className="w-full flex-1">
+      <main className="w-full flex-1 pb-24">
         <Outlet />
       </main>
 
-      <Footer />
+<Footer />
 
-      {/* BOTTOM sticky buttons on all pages */}
-      <GlobalOrderStickyBar />
+{/* spacer so footer/content isn't hidden behind fixed bottom bar */}
+<div className="h-24" aria-hidden="true" />
+
+{/* BOTTOM sticky buttons on all pages */}
+<GlobalOrderStickyBar />
+
     </div>
   );
 }
