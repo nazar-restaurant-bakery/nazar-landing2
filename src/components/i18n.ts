@@ -183,6 +183,11 @@ export const translations = {
     ratedOn: { tr: "Google’da puanımız", en: "Rated on Google", ar: "تقييمنا على Google" },
     reviewCount: { tr: "yorum", en: "reviews", ar: "تقييم" },
     readOnGoogle: { tr: "Google’da Oku", en: "Read on Google", ar: "اقرأ على Google" },
+    readOurReviews: {
+      tr: "Yorumlarımızı Google’da okuyun",
+      en: "Read our reviews on Google",
+      ar: "اقرأ تقييماتنا على Google",
+    },
     leaveReview: { tr: "Yorum Yaz", en: "Leave a Review", ar: "اكتب تقييمًا" },
     contactUs: { tr: "Bize ulaşın", en: "Contact us", ar: "اتصل بنا" },
     highlightsTitle: {

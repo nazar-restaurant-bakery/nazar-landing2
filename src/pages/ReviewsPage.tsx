@@ -11,11 +11,11 @@ import { t } from "../components/i18n";
 /* PLACEHOLDERS — edit these, nothing else on this page needs touching        */
 /* ========================================================================== */
 
-/** Current Google star rating, e.g. 4.4 */
-const GOOGLE_RATING = 4.4;
+/** Current Google star rating. */
+const GOOGLE_RATING = 4.7;
 
 /** How many Google reviews that rating is based on. */
-const GOOGLE_REVIEW_COUNT = 20;
+const GOOGLE_REVIEW_COUNT = 46;
 
 /**
  * Both links point at a working Google Maps search for the business so nothing
@@ -35,58 +35,35 @@ const GOOGLE_REVIEW_URL = GOOGLE_MAPS_FALLBACK_URL;
 /** "Read on Google" link — the public business profile. */
 const GOOGLE_PROFILE_URL = GOOGLE_MAPS_FALLBACK_URL;
 
-/** Curated quotes. Keep 4–6; `stars` is 1–5. */
-const REVIEWS: Array<{ name: string; stars: number; text: string }> = [
-  {
-    name: "Local Customer",
-    stars: 5,
-    text: "Great Turkish food, fresh and filling. The kebabs are delicious.",
-  },
-  {
-    name: "DoorDash Customer",
-    stars: 5,
-    text: "Fast delivery and everything arrived hot. Lahmacun was amazing!",
-  },
-  {
-    name: "First-time Visitor",
-    stars: 5,
-    text: "Friendly service and fair prices. We’ll be back.",
-  },
-  {
-    name: "Weekend Regular",
-    stars: 5,
-    text: "The bakery case is the reason I keep coming back. Simit is always fresh.",
-  },
-  {
-    name: "Office Lunch Order",
-    stars: 4,
-    text: "Ordered trays for the whole team. Everything was ready on time and the portions were generous.",
-  },
-  {
-    name: "Neighbor",
-    stars: 5,
-    text: "Real Turkish breakfast in West Haven. Feels like home.",
-  },
-];
+// NOTE: no testimonial quotes live on this page. We do not write our own
+// reviews. TODO(Talip): if you want snippets here, copy them verbatim from the
+// real Google listing (reviewer name + text as written) and add them below.
 
 /* ========================================================================== */
 
+/**
+ * Fractional star bar: a grey row of five stars with an amber row clipped over
+ * it. Uses only the ★ glyph — a dedicated half-star character renders as a tofu
+ * box in plenty of fonts, and 4.7 needs a partial star to be honest.
+ */
 function Stars({ value, className }: { value: number; className?: string }) {
-  const rounded = Math.round(value * 2) / 2;
-  const full = Math.floor(rounded);
-  const hasHalf = rounded - full >= 0.5;
-  const empty = 5 - full - (hasHalf ? 1 : 0);
+  const pct = Math.max(0, Math.min(100, (value / 5) * 100));
 
   return (
     <span
-      className={className}
+      className={`relative inline-block whitespace-nowrap ${className ?? ""}`}
       role="img"
       aria-label={`${value} out of 5 stars`}
     >
-      <span aria-hidden="true" className="text-amber-500">
-        {"★".repeat(full)}
-        {hasHalf ? "⯨" : ""}
-        <span className="text-zinc-300">{"★".repeat(Math.max(0, empty))}</span>
+      <span aria-hidden="true" className="text-zinc-300">
+        ★★★★★
+      </span>
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 overflow-hidden text-amber-500"
+        style={{ width: `${pct}%` }}
+      >
+        ★★★★★
       </span>
     </span>
   );
@@ -111,17 +88,6 @@ export default function ReviewsPage() {
         <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
           {t("reviews.title", lang)}
         </h1>
-
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <Stars value={GOOGLE_RATING} className="text-xl leading-none" />
-          <span className="text-xl font-extrabold text-zinc-900">
-            {GOOGLE_RATING.toFixed(1)}
-          </span>
-          <span className="text-sm font-semibold text-zinc-600">
-            {t("reviews.ratedOn", lang)} • {GOOGLE_REVIEW_COUNT}{" "}
-            {t("reviews.reviewCount", lang)}
-          </span>
-        </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
           <a
@@ -148,29 +114,27 @@ export default function ReviewsPage() {
         </div>
       </header>
 
-      {/* Review cards */}
-      <h2 className="mt-10 text-lg font-extrabold text-zinc-900">
-        {t("reviews.highlightsTitle", lang)}
-      </h2>
+      {/* Rating summary — real Google numbers, no quotes we wrote ourselves. */}
+      <div className="mt-8 rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+        <Stars value={GOOGLE_RATING} className="text-3xl leading-none" />
 
-      <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {REVIEWS.map((r) => (
-          <figure
-            key={r.name}
-            className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
-          >
-            <Stars value={r.stars} className="text-sm leading-none" />
+        <p className="mt-3 text-4xl font-extrabold text-zinc-900">
+          {GOOGLE_RATING.toFixed(1)}
+        </p>
 
-            <blockquote className="mt-3 text-sm font-semibold text-zinc-700">
-              “{r.text}”
-            </blockquote>
+        <p className="mt-1 text-sm font-semibold text-zinc-600">
+          {t("reviews.ratedOn", lang)} • {GOOGLE_REVIEW_COUNT}{" "}
+          {t("reviews.reviewCount", lang)}
+        </p>
 
-            <figcaption className="mt-auto pt-4">
-              <div className="text-sm font-extrabold text-zinc-900">{r.name}</div>
-              <div className="text-xs font-semibold text-zinc-500">West Haven, CT</div>
-            </figcaption>
-          </figure>
-        ))}
+        <a
+          href={GOOGLE_PROFILE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className={`${primaryBtn} mt-6`}
+        >
+          {t("reviews.readOurReviews", lang)}
+        </a>
       </div>
 
       {/* CTA */}
