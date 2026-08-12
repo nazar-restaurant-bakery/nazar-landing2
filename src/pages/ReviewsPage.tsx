@@ -18,19 +18,22 @@ const GOOGLE_RATING = 4.4;
 const GOOGLE_REVIEW_COUNT = 20;
 
 /**
- * "Leave a Review" link — the write-a-review deep link.
- * Get the real one from Google Business Profile → Ask for reviews → Share
- * review form. It looks like: https://g.page/r/<PLACE_ID>/review
+ * Both links point at a working Google Maps search for the business so nothing
+ * on this page is dead. They are placeholders, not the real destinations.
+ *
+ * TODO(Talip): replace with the real links.
+ *   GOOGLE_REVIEW_URL  — Google Business Profile → Ask for reviews → Share
+ *                        review form. Looks like https://g.page/r/<PLACE_ID>/review
+ *   GOOGLE_PROFILE_URL — Google Maps → the business listing → Share → Copy link
  */
-const GOOGLE_REVIEW_URL =
-  "https://search.google.com/local/writereview?placeid=REPLACE_WITH_PLACE_ID";
+const GOOGLE_MAPS_FALLBACK_URL =
+  "https://www.google.com/maps/search/?api=1&query=Nazar+Restaurant+%26+Bakery+39+Elm+Street+West+Haven+CT";
 
-/**
- * "Read on Google" link — the public business profile.
- * Replace with the short link from Google Maps → Share → Copy link.
- */
-const GOOGLE_PROFILE_URL =
-  "https://www.google.com/search?q=Nazar+Restaurant+%26+Bakery+West+Haven+reviews";
+/** "Leave a Review" link. */
+const GOOGLE_REVIEW_URL = GOOGLE_MAPS_FALLBACK_URL;
+
+/** "Read on Google" link — the public business profile. */
+const GOOGLE_PROFILE_URL = GOOGLE_MAPS_FALLBACK_URL;
 
 /** Curated quotes. Keep 4–6; `stars` is 1–5. */
 const REVIEWS: Array<{ name: string; stars: number; text: string }> = [

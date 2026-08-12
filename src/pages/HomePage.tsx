@@ -9,9 +9,10 @@ import {
   PHONE_NUMBER_TEL,
   CLOVER_PICKUP_URL,
   DOORDASH_URL,
-  UBER_EATS_URL,
-  GRUBHUB_URL,
 } from "../data/menu";
+// Same Clover-first row the rest of the site uses. It already renders the
+// "Also on:" marketplace links, so MarketplaceLinks is not needed separately.
+import OrderButtonsRow from "../components/GlobalOrderButtons";
 
 function cn(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(" ");
@@ -29,10 +30,6 @@ const QUICK_CATS = [
 
 export default function HomePage() {
   // Buttons
-const orderBtnBase =
-  "inline-flex items-center justify-center gap-2 rounded-full px-6 h-11 font-extrabold shadow-sm hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-offset-2";
-
-  const orderBtnText = "text-white drop-shadow-sm";
   const ghostBtn =
     "inline-flex items-center justify-center rounded-full px-6 h-11 min-w-[190px] border border-zinc-300 bg-white text-zinc-900 font-extrabold hover:bg-zinc-50";
 
@@ -112,41 +109,11 @@ const orderBtnBase =
 </div>
 
 
-    {/* Uber + Grubhub */}
-    <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 place-items-center sm:place-items-stretch">
-      <a
-        href={UBER_EATS_URL}
-        target="_blank"
-        rel="noreferrer"
-        className={cn(
-          orderBtnBase,
-          "w-full max-w-[260px] sm:max-w-none",
-          "bg-[#059669]",
-          orderBtnText
-        )}
-      >
-        Delivery (Uber Eats)
-      </a>
+    {/* Ordering — Clover first, marketplaces demoted to the "Also on:" row */}
+    <div className="mt-6 flex flex-col items-center gap-4">
+      <OrderButtonsRow />
 
-      <a
-        href={GRUBHUB_URL}
-        target="_blank"
-        rel="noreferrer"
-        className={cn(
-          orderBtnBase,
-          "w-full max-w-[260px] sm:max-w-none",
-          "bg-[#D97706]",
-          orderBtnText
-        )}
-      >
-        Delivery (Grubhub)
-      </a>
-
-      <p className="col-span-full -mt-1 text-center text-sm font-semibold text-zinc-700">
-        Prices/availability may vary by platform.
-      </p>
-
-      <a href="/menu" className={cn(ghostBtn, "w-full sm:col-span-2")}>
+      <a href="/menu" className={cn(ghostBtn, "w-full max-w-[420px]")}>
         View Menu
       </a>
     </div>
@@ -323,27 +290,7 @@ const orderBtnBase =
         </div>
       </section>
 
-      {/* Mobile sticky CTA bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white">
-        <div className="mx-auto flex max-w-6xl gap-2 px-4 py-3">
-          <a
-            href={CLOVER_PICKUP_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 rounded-full bg-orange-500 py-3 text-center font-extrabold text-white"
-          >
-            Pickup
-          </a>
-          <a
-            href={DOORDASH_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 rounded-full bg-zinc-900 py-3 text-center font-extrabold text-white"
-          >
-            Delivery
-          </a>
-        </div>
-      </div>
+      {/* No sticky bar here — Layout renders the one global GlobalOrderStickyBar. */}
     </div>
   );
 }
