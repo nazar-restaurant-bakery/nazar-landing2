@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import {
   BUSINESS_NAME,
-  DOORDASH_URL,
+  CLOVER_PICKUP_URL,
   PHONE_NUMBER_DISPLAY,
   PHONE_NUMBER_TEL,
 } from "../data/menu";
@@ -110,12 +110,12 @@ export default function ContactPage() {
 
                 <div className="pt-2 flex flex-wrap gap-3">
                   <a
-                    href={DOORDASH_URL}
+                    href={CLOVER_PICKUP_URL}
                     target="_blank"
                     rel="noreferrer"
                     className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
                   >
-                    Order on DoorDash
+                    Order online
                   </a>
                 </div>
               </div>

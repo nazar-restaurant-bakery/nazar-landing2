@@ -2,7 +2,7 @@
 import { Link } from "react-router-dom";
 import {
   BUSINESS_NAME,
-  DOORDASH_URL,
+  CLOVER_PICKUP_URL,
   PHONE_NUMBER_DISPLAY,
   PHONE_NUMBER_TEL,
 } from "../data/menu";
@@ -149,7 +149,7 @@ export default function AboutPage() {
 
                   <div className="mt-5 flex flex-wrap gap-3">
                     <a
-                      href={DOORDASH_URL}
+                      href={CLOVER_PICKUP_URL}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center justify-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark"
@@ -185,12 +185,12 @@ export default function AboutPage() {
               </div>
               <div className="flex flex-wrap gap-3">
                 <a
-                  href={DOORDASH_URL}
+                  href={CLOVER_PICKUP_URL}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white hover:bg-brand-dark"
                 >
-                  Order on DoorDash
+                  Order online
                 </a>
                 <a
                   href={`tel:${PHONE_NUMBER_TEL}`}
