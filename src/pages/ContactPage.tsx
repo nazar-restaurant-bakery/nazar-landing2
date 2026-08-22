@@ -11,7 +11,7 @@ import { useSeo } from "../hooks/useSeo";
 type HoursRow = { day: string; hours: string };
 
 export default function ContactPage() {
-  useSeo("Contact & Hours", "39 Elm Street, Unit 1, West Haven, CT. Hours, directions and phone for Nazar Restaurant & Bakery.", "/contact");
+  useSeo("Contact & Hours, West Haven CT", "39 Elm Street, Unit 1, West Haven, CT. Hours, directions and phone for Nazar Restaurant & Bakery.", "/contact");
 
   // ✅ Edit these if needed
   const addressLine1 = "39 Elm Street, Unit 1";

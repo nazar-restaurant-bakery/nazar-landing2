@@ -217,7 +217,7 @@ function DetailsModal({
 }
 
 export default function MenuPage() {
-  useSeo("Menu", "Kebabs, döner, pide, lahmacun, mezze and daily bakery. See the full Nazar menu and order direct in West Haven, CT.", "/menu");
+  useSeo("Turkish Menu, Kebabs & Pide", "Kebabs, döner, pide, lahmacun, mezze and daily bakery. See the full Nazar menu and order direct in West Haven, CT.", "/menu");
 
   const [activeCatId, setActiveCatId] = React.useState<string>(MENU_CATEGORIES[0]?.id ?? "");
   const [search, setSearch] = React.useState("");

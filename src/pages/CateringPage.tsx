@@ -24,7 +24,7 @@ const HIGHLIGHTS = [
 ] as const;
 
 export default function CateringPage() {
-  useSeo("Catering", "Turkish platters, fresh bread and baklava for 10 to 60 people. One order, one pickup. Serving West Haven and New Haven.", "/catering");
+  useSeo("Turkish Catering in West Haven", "Turkish platters, fresh bread and baklava for 10 to 60 people. One order, one pickup. Serving West Haven and New Haven.", "/catering");
 
   const { lang } = useLang();
 

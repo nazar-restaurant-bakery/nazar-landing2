@@ -29,7 +29,7 @@ const QUICK_CATS = [
 ];
 
 export default function HomePage() {
-  useSeo("Nazar Restaurant & Bakery", "Turkish kitchen and bakery in West Haven, CT. Kebabs, döner, pide and bread baked fresh every morning. Order pickup or delivery direct.", "/");
+  useSeo("Turkish Kitchen & Bakery in West Haven, CT", "Turkish kitchen and bakery in West Haven, CT. Kebabs, döner, pide and bread baked fresh every morning. Order pickup or delivery direct.", "/");
 
   // Buttons
   const ghostBtn =
