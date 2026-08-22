@@ -2,6 +2,7 @@ import React from "react";
 import { MENU_CATEGORIES } from "../data/menuData";
 import type { MenuCategory, MenuItem, MenuTag } from "../data/menuData";
 import { CLOVER_PICKUP_URL } from "../data/menu";
+import { useSeo } from "../hooks/useSeo";
 
 const PH = "/images/placeholder.jpg";
 
@@ -216,6 +217,8 @@ function DetailsModal({
 }
 
 export default function MenuPage() {
+  useSeo("Menu", "Kebabs, döner, pide, lahmacun, mezze and daily bakery. See the full Nazar menu and order direct in West Haven, CT.", "/menu");
+
   const [activeCatId, setActiveCatId] = React.useState<string>(MENU_CATEGORIES[0]?.id ?? "");
   const [search, setSearch] = React.useState("");
   const [activeFilters, setActiveFilters] = React.useState<Set<MenuTag>>(new Set());

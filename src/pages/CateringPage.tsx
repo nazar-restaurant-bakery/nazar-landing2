@@ -3,6 +3,7 @@ import CateringRequestForm from "../components/CateringRequestForm";
 import { useLang } from "../components/Language";
 import { t } from "../components/i18n";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
+import { useSeo } from "../hooks/useSeo";
 
 const HIGHLIGHTS = [
   {
@@ -23,6 +24,8 @@ const HIGHLIGHTS = [
 ] as const;
 
 export default function CateringPage() {
+  useSeo("Catering", "Turkish platters, fresh bread and baklava for 10 to 60 people. One order, one pickup. Serving West Haven and New Haven.", "/catering");
+
   const { lang } = useLang();
 
   return (

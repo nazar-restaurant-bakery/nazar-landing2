@@ -2,6 +2,7 @@
 import VipSignupForm from "../components/VipSignupForm";
 import { useLang } from "../components/Language";
 import { t } from "../components/i18n";
+import { useSeo } from "../hooks/useSeo";
 
 const PERKS = [
   {
@@ -22,6 +23,8 @@ const PERKS = [
 ] as const;
 
 export default function VipPage() {
+  useSeo("VIP List", "Join the VIP list and get our weekly special first. One message a week, always an offer, never spam.", "/vip");
+
   const { lang } = useLang();
 
   return (

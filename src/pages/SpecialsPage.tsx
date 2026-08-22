@@ -6,6 +6,7 @@ import { CLOVER_PICKUP_URL } from "../data/menu";
 import { MarketplaceLinks } from "../components/GlobalOrderButtons";
 import { useLang } from "../components/Language";
 import { t, type Lang } from "../components/i18n";
+import { useSeo } from "../hooks/useSeo";
 
 /** Same green pill as the main order button. */
 const CLOVER_BTN =
@@ -38,6 +39,8 @@ type State =
   | { status: "error" };
 
 export default function SpecialsPage() {
+  useSeo("This Week's Special", "A new offer every week — bundles and extras, never watered-down portions. Order direct on our site.", "/specials");
+
   const { lang } = useLang();
   const [state, setState] = React.useState<State>({ status: "loading" });
 

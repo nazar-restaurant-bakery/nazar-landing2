@@ -1,5 +1,6 @@
 // src/pages/GalleryPage.tsx
 import { Link } from "react-router-dom";
+import { useSeo } from "../hooks/useSeo";
 
 type GalleryItem = {
   title: string;
@@ -87,6 +88,8 @@ const GALLERY: GalleryItem[] = [
 ];
 
 export default function GalleryPage() {
+  useSeo("Gallery", "Inside the kitchen and the bakery case at Nazar Restaurant & Bakery, West Haven, CT.", "/gallery");
+
   return (
     <main>
       {/* Header */}

@@ -6,6 +6,7 @@
 import { Link } from "react-router-dom";
 import { useLang } from "../components/Language";
 import { t } from "../components/i18n";
+import { useSeo } from "../hooks/useSeo";
 
 /* ========================================================================== */
 /* PLACEHOLDERS — edit these, nothing else on this page needs touching        */
@@ -73,6 +74,8 @@ function Stars({ value, className }: { value: number; className?: string }) {
 }
 
 export default function ReviewsPage() {
+  useSeo("Reviews", "What our neighbors say about Nazar Restaurant & Bakery in West Haven, CT.", "/reviews");
+
   const { lang } = useLang();
 
   const primaryBtn =

@@ -6,6 +6,7 @@ import {
   PHONE_NUMBER_DISPLAY,
   PHONE_NUMBER_TEL,
 } from "../data/menu";
+import { useSeo } from "../hooks/useSeo";
 
 // Images (make sure these filenames match your folder exactly)
 const donerImg = "/images/about/doner.jpg";
@@ -80,6 +81,8 @@ const blocks: StoryBlock[] = [
 ];
 
 export default function AboutPage() {
+  useSeo("About Us", "A family Turkish kitchen and bakery on Elm Street, West Haven. Everything cooked in-house, bread baked daily.", "/about");
+
   return (
     <main className="bg-brand-bg">
       {/* Header / Intro */}

@@ -12,6 +12,7 @@ import {
 // Same Clover-first row the rest of the site uses. It already renders the
 // "Also on:" marketplace links, so MarketplaceLinks is not needed separately.
 import OrderButtonsRow from "../components/GlobalOrderButtons";
+import { useSeo } from "../hooks/useSeo";
 
 function cn(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(" ");
@@ -28,6 +29,8 @@ const QUICK_CATS = [
 ];
 
 export default function HomePage() {
+  useSeo("Nazar Restaurant & Bakery", "Turkish kitchen and bakery in West Haven, CT. Kebabs, döner, pide and bread baked fresh every morning. Order pickup or delivery direct.", "/");
+
   // Buttons
   const ghostBtn =
     "inline-flex items-center justify-center rounded-full px-6 h-11 min-w-[190px] border border-zinc-300 bg-white text-zinc-900 font-extrabold hover:bg-zinc-50";
