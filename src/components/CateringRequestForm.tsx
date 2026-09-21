@@ -89,7 +89,7 @@ export default function CateringRequestForm({ className }: { className?: string 
       p_email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
       p_phone: normalizedPhone,
       p_source: "catering",
-      p_consent_email: true,
+      p_consent_email: false,
       p_consent_sms: false,
       p_utm: getUtmOrNull(),
       p_meta: Object.keys(meta).length > 0 ? meta : null,

@@ -115,7 +115,9 @@ export const NAZAR_BUSINESS_ID = (import.meta.env.VITE_NAZAR_BUSINESS_ID ?? "") 
  * client is null instead of throwing at import time.
  */
 export const isSupabaseConfigured = Boolean(
-  supabaseUrl && supabaseAnonKey && NAZAR_BUSINESS_ID
+  supabaseUrl === "https://khgczybubufouraqyrcj.supabase.co" &&
+  supabaseAnonKey?.startsWith("sb_publishable_") &&
+  NAZAR_BUSINESS_ID === "a358eba4-b197-4309-805b-46f43a718454"
 );
 
 export const supabase: NazarSupabaseClient | null = isSupabaseConfigured

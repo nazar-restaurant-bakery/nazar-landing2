@@ -25,8 +25,8 @@ export default function VipSignupForm({
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
-  const [consentEmail, setConsentEmail] = React.useState(true);
-  const [consentSms, setConsentSms] = React.useState(false);
+  const [consentEmail, setConsentEmail] = React.useState(false);
+  const consentSms = false;
 
   const [status, setStatus] = React.useState<Status>("idle");
   const [errorKey, setErrorKey] = React.useState<string | null>(null);
@@ -73,7 +73,7 @@ export default function VipSignupForm({
       return;
     }
 
-    if (!consentEmail && !consentSms) {
+    if (!consentEmail || !trimmedEmail) {
       setStatus("error");
       setErrorKey("vip.errorConsent");
       return;
@@ -236,15 +236,6 @@ export default function VipSignupForm({
           <span>{t("vip.consentEmail", lang)}</span>
         </label>
 
-        <label className="flex items-start gap-2.5 text-sm font-semibold text-zinc-700">
-          <input
-            type="checkbox"
-            checked={consentSms}
-            onChange={(e) => setConsentSms(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300"
-          />
-          <span>{t("vip.consentSms", lang)}</span>
-        </label>
       </div>
 
       {errorKey && (
