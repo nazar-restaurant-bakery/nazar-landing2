@@ -12,11 +12,11 @@ In the `nazar-restaurant-website` Pages project, set these production variables:
 | `TURNSTILE_SECRET_KEY` | Secret | Matching Turnstile secret key |
 | `SUPABASE_SECRET_KEY` | Secret | Nazar-production `sb_secret_...` key, never a key from another project |
 
-Keep the existing Nazar-production `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_NAZAR_BUSINESS_ID` build variables. The publishable key is still needed to display public specials. For a preview deployment, configure preview variables and a preview-only Turnstile widget. Cloudflare's documented dummy site key and secret are suitable for local or automated tests, never production.
+Keep the existing Nazar-production `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_NAZAR_BUSINESS_ID` build variables. The publishable key is still needed to display public specials. **Do not place the Nazar-production secret key in the Pages preview environment.** A preview can check route availability and form layout while failing closed; a successful write test needs a separate isolated Supabase project. Cloudflare's documented dummy Turnstile keys are suitable for local or isolated automated tests, never production.
 
 ## Cutover order
 
-1. Deploy this branch as a Pages preview. Check that both forms show Turnstile and that `/api/signup` is served by the Function, not the static SPA fallback. With the database intake switch still off, no real lead should be stored.
+1. Deploy this branch as a Pages preview without a production Supabase secret. Check that both forms show Turnstile and that `/api/signup` is served by the Function, not the static SPA fallback. No real lead should be stored.
 2. Add a Cloudflare rate-limit rule for `POST /api/signup` on the production hostname. Turnstile verifies people, but it does not replace request throttling. Choose the threshold after observing normal traffic; avoid blocking a busy shared network without evidence.
 3. Set the production variables and deploy the same code. Confirm the production widget and Function route load. Do not use a real customer's details as a test.
 4. Run `database/20260923_form_intake_cutover.sql` in **Nazar-production** only. It revokes direct public submission, grants the server role access, and opens intake atomically. Check the project ref in the SQL and in the dashboard before running it.
