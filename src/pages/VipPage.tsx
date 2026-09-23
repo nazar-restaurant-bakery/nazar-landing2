@@ -64,7 +64,7 @@ export default function VipPage() {
 
         {/* Form */}
         <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-          <VipSignupForm source="website_vip_page" />
+          <VipSignupForm />
         </div>
       </div>
     </section>
