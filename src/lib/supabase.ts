@@ -7,62 +7,18 @@
 // also put `core.business_settings` and `core.commissions` on the wire — so we
 // never talk to `core` from the browser at all.
 //
-// Everything goes through SECURITY DEFINER functions in `public` that `anon`
-// may EXECUTE:
-//
-//   submit_signup(...)     inserts into core.signups on our behalf and rejects
-//                          an unknown business_id
-//   get_active_offers(...) reads the live offers for one business
-//
-// Each has a fixed argument list, so the browser's whole reach into the
-// database is those two calls.
+// The browser may only call get_active_offers. VIP and catering submissions go
+// to the protected Cloudflare Pages Function at /api/signup, which verifies
+// Turnstile before using a server-only Supabase secret key.
 //
 // The key below is the *publishable* (anon) key, so it is safe to ship in the
-// bundle: EXECUTE on those two functions is all it buys you.
+// bundle: it cannot write a signup after the database cutover.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /* -------------------------------------------------------------------------- */
 /* Database types                                                             */
 /* -------------------------------------------------------------------------- */
-
-/**
- * One row of `core.signups`, as written by `public.submit_signup`. Not
- * reachable from the browser — kept here to document what the RPC produces.
- */
-export type Signup = {
-  id: string;
-  business_id: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  /** Free-form origin label, e.g. "website-form". */
-  source: string | null;
-  /** Captured UTM params, or null when the visitor arrived without any. */
-  utm: Record<string, string> | null;
-  consent_email: boolean | null;
-  consent_sms: boolean | null;
-  /** Flipped by the back-office once the lead has been actioned. */
-  processed: boolean | null;
-  created_at: string;
-};
-
-/** Arguments accepted by `public.submit_signup`. */
-export type SubmitSignupArgs = {
-  p_business_id: string;
-  p_name: string | null;
-  p_email: string | null;
-  p_phone: string | null;
-  p_source: string | null;
-  p_consent_email: boolean;
-  p_consent_sms: boolean;
-  p_utm: Record<string, string> | null;
-  /**
-   * Free-form extras that don't have their own column — catering event date,
-   * guest count, and so on. Optional: the function defaults it to NULL.
-   */
-  p_meta?: Record<string, unknown> | null;
-};
 
 /** One row returned by `public.get_active_offers`. */
 export type Offer = {
@@ -82,11 +38,6 @@ export type Database = {
     Tables: Record<never, never>;
     Views: Record<never, never>;
     Functions: {
-      submit_signup: {
-        Args: SubmitSignupArgs;
-        /** The function returns void. */
-        Returns: undefined;
-      };
       get_active_offers: {
         Args: { p_business_id: string };
         Returns: Offer[];
@@ -106,7 +57,7 @@ export type NazarSupabaseClient = SupabaseClient<Database>;
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-/** `core.businesses.id` for Nazar — passed to the RPC on every signup. */
+/** `core.businesses.id` for Nazar — used for public offer lookup. */
 export const NAZAR_BUSINESS_ID = (import.meta.env.VITE_NAZAR_BUSINESS_ID ?? "") as string;
 
 /**

@@ -60,9 +60,9 @@ export const translations = {
     submit: { tr: "VIP Kulübe Katıl", en: "Join the VIP Club", ar: "انضم إلى نادي VIP" },
     submitting: { tr: "Gönderiliyor…", en: "Joining…", ar: "جارٍ الإرسال…" },
     success: {
-      tr: "Aramıza hoş geldiniz! İlk fırsatınızı yakında göndereceğiz.",
-      en: "You’re in! Watch for your first offer soon.",
-      ar: "تم تسجيلك! ترقّب أول عرض قريبًا.",
+      tr: "VIP başvurunuzu aldık. Fırsatlar hazır olduğunda haber vereceğiz.",
+      en: "We received your VIP request. We’ll be in touch when offers are ready.",
+      ar: "تلقّينا طلب انضمامك إلى VIP. سنتواصل معك عندما تصبح العروض جاهزة.",
     },
     errorContact: {
       tr: "Lütfen e-posta veya telefon numarası girin.",
@@ -80,9 +80,14 @@ export const translations = {
       ar: "يرجى إدخال رقم هاتف صالح مكوّن من 10 أرقام.",
     },
     errorConsent: {
-      tr: "Devam etmek için en az bir iletişim iznini işaretleyin.",
-      en: "Please tick at least one box so we know how to reach you.",
-      ar: "يرجى تحديد خيار واحد على الأقل لنعرف كيفية التواصل معك.",
+      tr: "Devam etmek için e-posta iznini işaretleyin.",
+      en: "Please tick the email consent box to continue.",
+      ar: "يرجى تحديد موافقة البريد الإلكتروني للمتابعة.",
+    },
+    errorVerification: {
+      tr: "Lütfen insan doğrulamasını tamamlayın.",
+      en: "Please complete the human verification.",
+      ar: "يرجى إكمال التحقق البشري.",
     },
     errorGeneric: {
       tr: "Kaydınızı alamadık. Lütfen tekrar deneyin veya bizi arayın.",
@@ -161,6 +166,11 @@ export const translations = {
       tr: "Lütfen 10 haneli geçerli bir telefon numarası girin.",
       en: "Please enter a valid 10-digit phone number.",
       ar: "يرجى إدخال رقم هاتف صالح مكوّن من 10 أرقام.",
+    },
+    errorVerification: {
+      tr: "Lütfen insan doğrulamasını tamamlayın.",
+      en: "Please complete the human verification.",
+      ar: "يرجى إكمال التحقق البشري.",
     },
     errorGeneric: {
       tr: "Talebinizi alamadık. Lütfen tekrar deneyin veya bizi arayın.",

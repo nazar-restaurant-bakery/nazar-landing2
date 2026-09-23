@@ -1,7 +1,9 @@
 // src/components/VipSignupForm.tsx
 import React from "react";
-import { supabase, isSupabaseConfigured, NAZAR_BUSINESS_ID } from "../lib/supabase";
 import { captureUtm, getUtmOrNull } from "../lib/utm";
+import { submitSignup } from "../lib/signup";
+import TurnstileWidget from "./TurnstileWidget";
+import { turnstileSiteKey } from "../lib/formConfig";
 // Shared with CateringRequestForm so both forms validate identically.
 import { cn, EMAIL_RE, normalizePhone } from "../lib/form";
 import { useLang } from "./Language";
@@ -11,13 +13,10 @@ import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
 type Status = "idle" | "submitting" | "success" | "error";
 
 type Props = {
-  /** Written to `core.signups.source` so we can tell entry points apart. */
-  source?: string;
   className?: string;
 };
 
 export default function VipSignupForm({
-  source = "website_vip_form",
   className,
 }: Props) {
   const { lang } = useLang();
@@ -26,13 +25,14 @@ export default function VipSignupForm({
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [consentEmail, setConsentEmail] = React.useState(false);
-  const consentSms = false;
 
   const [status, setStatus] = React.useState<Status>("idle");
   const [errorKey, setErrorKey] = React.useState<string | null>(null);
 
   // Bots fill every field they can see; humans never touch a hidden one.
   const [honeypot, setHoneypot] = React.useState("");
+  const [turnstileToken, setTurnstileToken] = React.useState("");
+  const [resetSignal, setResetSignal] = React.useState(0);
 
   React.useEffect(() => {
     captureUtm();
@@ -48,7 +48,7 @@ export default function VipSignupForm({
     const trimmedEmail = email.trim();
     const trimmedPhone = phone.trim();
 
-    if (!isSupabaseConfigured || !supabase) {
+    if (!turnstileSiteKey) {
       setStatus("error");
       setErrorKey("vip.errorOffline");
       return;
@@ -79,6 +79,12 @@ export default function VipSignupForm({
       return;
     }
 
+    if (!turnstileToken) {
+      setStatus("error");
+      setErrorKey("vip.errorVerification");
+      return;
+    }
+
     // Silently accept the bot so it doesn't retry, but write nothing.
     if (honeypot.trim()) {
       setStatus("success");
@@ -89,22 +95,19 @@ export default function VipSignupForm({
     setStatus("submitting");
     setErrorKey(null);
 
-    // Goes through the SECURITY DEFINER RPC in `public` — the browser never
-    // touches `core.signups` directly. Returns void, so no error means success.
-    const { error } = await supabase.rpc("submit_signup", {
-      p_business_id: NAZAR_BUSINESS_ID,
-      p_name: trimmedName || null,
-      p_email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
-      p_phone: normalizedPhone,
-      p_source: source,
-      // Only claim consent for a channel we actually have an address for.
-      p_consent_email: consentEmail && Boolean(trimmedEmail),
-      p_consent_sms: consentSms && Boolean(normalizedPhone),
-      p_utm: getUtmOrNull(),
+    const ok = await submitSignup({
+      kind: "vip",
+      name: trimmedName,
+      email: trimmedEmail.toLowerCase(),
+      phone: normalizedPhone || "",
+      consentEmail,
+      turnstileToken,
+      extra: honeypot,
+      utm: getUtmOrNull(),
     });
-
-    if (error) {
-      console.error("[vip-signup] submit_signup failed", error);
+    setTurnstileToken("");
+    setResetSignal((value) => value + 1);
+    if (!ok) {
       setStatus("error");
       setErrorKey("vip.errorGeneric");
       return;
@@ -114,6 +117,7 @@ export default function VipSignupForm({
     setName("");
     setEmail("");
     setPhone("");
+    setConsentEmail(false);
   }
 
   if (status === "success") {
@@ -237,6 +241,8 @@ export default function VipSignupForm({
         </label>
 
       </div>
+
+      <TurnstileWidget onToken={setTurnstileToken} resetSignal={resetSignal} />
 
       {errorKey && (
         <p role="alert" className="text-sm font-bold text-red-700">

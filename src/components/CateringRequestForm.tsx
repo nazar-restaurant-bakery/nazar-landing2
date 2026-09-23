@@ -5,9 +5,11 @@
 // rather than needing columns of their own.
 
 import React from "react";
-import { supabase, isSupabaseConfigured, NAZAR_BUSINESS_ID } from "../lib/supabase";
 import { cn, EMAIL_RE, normalizePhone } from "../lib/form";
 import { getUtmOrNull } from "../lib/utm";
+import { submitSignup } from "../lib/signup";
+import TurnstileWidget from "./TurnstileWidget";
+import { turnstileSiteKey } from "../lib/formConfig";
 import { useLang } from "./Language";
 import { t } from "./i18n";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
@@ -29,6 +31,8 @@ export default function CateringRequestForm({ className }: { className?: string 
 
   // Bots fill every field they can see; humans never touch a hidden one.
   const [honeypot, setHoneypot] = React.useState("");
+  const [turnstileToken, setTurnstileToken] = React.useState("");
+  const [resetSignal, setResetSignal] = React.useState(0);
 
   const submitting = status === "submitting";
 
@@ -41,7 +45,7 @@ export default function CateringRequestForm({ className }: { className?: string 
     const trimmedPhone = phone.trim();
     const trimmedMessage = message.trim();
 
-    if (!isSupabaseConfigured || !supabase) {
+    if (!turnstileSiteKey) {
       setStatus("error");
       setErrorKey("catering.errorOffline");
       return;
@@ -66,6 +70,12 @@ export default function CateringRequestForm({ className }: { className?: string 
       return;
     }
 
+    if (!turnstileToken) {
+      setStatus("error");
+      setErrorKey("catering.errorVerification");
+      return;
+    }
+
     // Silently accept the bot so it doesn't retry, but write nothing.
     if (honeypot.trim()) {
       setStatus("success");
@@ -73,30 +83,25 @@ export default function CateringRequestForm({ className }: { className?: string 
       return;
     }
 
-    // Only carry keys the customer actually filled in — an empty string in the
-    // meta blob reads as "answered blank" to whoever picks this up.
-    const meta: Record<string, unknown> = {};
-    if (eventDate) meta.event_date = eventDate;
-    if (guests.trim()) meta.guests = Number(guests);
-    if (trimmedMessage) meta.message = trimmedMessage;
-
     setStatus("submitting");
     setErrorKey(null);
 
-    const { error } = await supabase.rpc("submit_signup", {
-      p_business_id: NAZAR_BUSINESS_ID,
-      p_name: trimmedName || null,
-      p_email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
-      p_phone: normalizedPhone,
-      p_source: "catering",
-      p_consent_email: false,
-      p_consent_sms: false,
-      p_utm: getUtmOrNull(),
-      p_meta: Object.keys(meta).length > 0 ? meta : null,
+    const ok = await submitSignup({
+      kind: "catering",
+      name: trimmedName,
+      email: trimmedEmail.toLowerCase(),
+      phone: normalizedPhone || "",
+      consentEmail: false,
+      turnstileToken,
+      extra: honeypot,
+      utm: getUtmOrNull(),
+      eventDate,
+      guests,
+      message: trimmedMessage,
     });
-
-    if (error) {
-      console.error("[catering] submit_signup failed", error);
+    setTurnstileToken("");
+    setResetSignal((value) => value + 1);
+    if (!ok) {
       setStatus("error");
       setErrorKey("catering.errorGeneric");
       return;
@@ -264,6 +269,8 @@ export default function CateringRequestForm({ className }: { className?: string 
           onChange={(e) => setHoneypot(e.target.value)}
         />
       </div>
+
+      <TurnstileWidget onToken={setTurnstileToken} resetSignal={resetSignal} />
 
       {errorKey && (
         <p role="alert" className="text-sm font-bold text-red-700">
