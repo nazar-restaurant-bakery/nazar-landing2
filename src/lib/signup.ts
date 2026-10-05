@@ -1,3 +1,7 @@
+export type CateringChoice =
+  | { type: "package"; id: string }
+  | { type: "custom"; itemIds: string[] };
+
 export type SignupPayload = {
   kind: "vip" | "catering";
   name: string;
@@ -10,6 +14,7 @@ export type SignupPayload = {
   eventDate?: string;
   guests?: string;
   message?: string;
+  menuChoice?: CateringChoice | null;
 };
 
 export async function submitSignup(payload: SignupPayload): Promise<boolean> {

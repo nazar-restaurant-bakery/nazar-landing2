@@ -89,6 +89,37 @@ test("catering data stays separate from marketing consent", async () => {
   assert.deepEqual(sent.p_meta, { event_date: "2027-01-20", guests: 25, message: "Test order" });
 });
 
+test("catering menu choices reach the existing request message field", async () => {
+  const sent = [];
+  globalThis.fetch = async (_address, options) => {
+    sent.push(options);
+    return sent.length % 2 === 1
+      ? Response.json({ success: true, hostname: "www.nazarrestaurantandbakery.com" })
+      : new Response(null, { status: 204 });
+  };
+  const base = { ...vip(), kind: "catering", consentEmail: false, eventDate: "", guests: "", message: "" };
+  assert.equal((await onRequestPost({ request: request({ ...base, menuChoice: { type: "package", id: "doner-gyro" } }), env })).status, 200);
+  assert.equal(JSON.parse(sent[1].body).p_meta.message, "Requested catering menu: Doner & Gyro Table (doner-gyro)");
+  assert.equal((await onRequestPost({ request: request({ ...base, message: "No onions", menuChoice: { type: "custom", itemIds: ["falafel-6pcs", "baklava-4pcs"] } }), env })).status, 200);
+  assert.equal(JSON.parse(sent[3].body).p_meta.message, "Create your own: Falafel, Baklava\n\nNo onions");
+  assert.equal(JSON.parse(sent[3].body).p_consent_email, false);
+});
+
+test("unknown or empty catering menu choices are rejected before verification", async () => {
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; throw new Error("Unexpected network call"); };
+  const base = { ...vip(), kind: "catering", consentEmail: false, eventDate: "", guests: "", message: "" };
+  for (const menuChoice of [
+    { type: "package", id: "unknown" },
+    { type: "custom", itemIds: [] },
+    { type: "custom", itemIds: ["shawarma"] },
+    { type: "custom", itemIds: ["rice-pilav", "rice-pilav"] },
+  ]) {
+    assert.equal((await onRequestPost({ request: request({ ...base, menuChoice }), env })).status, 400);
+  }
+  assert.equal(calls, 0);
+});
+
 test("database failure is not shown as a successful signup", async () => {
   let count = 0;
   globalThis.fetch = async () => {

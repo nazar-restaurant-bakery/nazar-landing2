@@ -13,11 +13,13 @@ import TurnstileWidget from "./TurnstileWidget";
 import { turnstileSiteKey } from "../lib/formConfig";
 import { useLang } from "./Language";
 import { t } from "./i18n";
+import { CATERING_PACKAGES, cateringItemName } from "../data/cateringMenus";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
+import type { CateringChoice } from "../lib/signup";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-export default function CateringRequestForm({ className }: { className?: string }) {
+export default function CateringRequestForm({ className, menuChoice, onSuccess }: { className?: string; menuChoice?: CateringChoice | null; onSuccess?: () => void }) {
   const { lang } = useLang();
 
   React.useEffect(() => {
@@ -75,6 +77,12 @@ export default function CateringRequestForm({ className }: { className?: string 
       return;
     }
 
+    if (menuChoice?.type === "custom" && menuChoice.itemIds.length === 0) {
+      setStatus("error");
+      setErrorKey("catering.errorCustomItems");
+      return;
+    }
+
     if (!turnstileToken) {
       setStatus("error");
       setErrorKey("catering.errorVerification");
@@ -103,6 +111,7 @@ export default function CateringRequestForm({ className }: { className?: string 
       eventDate,
       guests,
       message: trimmedMessage,
+      menuChoice,
     });
     setTurnstileToken("");
     setResetSignal((value) => value + 1);
@@ -120,6 +129,7 @@ export default function CateringRequestForm({ className }: { className?: string 
     setEventDate("");
     setGuests("");
     setMessage("");
+    onSuccess?.();
   }
 
   if (status === "success") {
@@ -158,6 +168,16 @@ export default function CateringRequestForm({ className }: { className?: string 
 
   return (
     <form onSubmit={handleSubmit} noValidate className={cn("space-y-4", className)}>
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950" aria-live="polite">
+        <p className="font-extrabold">{t("catering.selectedMenu", lang)}</p>
+        {menuChoice?.type === "package" ? (
+          <p className="mt-1">{CATERING_PACKAGES.find((menu) => menu.id === menuChoice.id)?.title[lang] ?? menuChoice.id}</p>
+        ) : menuChoice?.type === "custom" ? (
+          <p className="mt-1">{t("catering.customTitle", lang)}: {menuChoice.itemIds.map((id) => cateringItemName(id, lang)).join(", ") || "—"}</p>
+        ) : (
+          <p className="mt-1">{t("catering.noMenu", lang)}</p>
+        )}
+      </div>
       <div>
         <label htmlFor="cat-name" className={labelClass}>
           {t("catering.name", lang)}
