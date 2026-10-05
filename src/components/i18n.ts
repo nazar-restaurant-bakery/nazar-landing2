@@ -139,6 +139,7 @@ export const translations = {
     menuNote: { tr: "Bu seçenekler teklif talebi içindir; kesin paket, miktar ve fiyat sipariş öncesinde onaylanır.", en: "These are quote ideas. We’ll confirm the final menu, quantities and price before any order.", ar: "هذه أفكار لطلب عرض سعر. سنؤكد القائمة والكميات والسعر النهائي قبل أي طلب." },
     continueToQuote: { tr: "Teklif formuna git", en: "Go to quote form", ar: "انتقل إلى نموذج عرض السعر" },
     selectedMenu: { tr: "Seçtiğiniz menü", en: "Your menu selection", ar: "القائمة التي اخترتها" },
+    viewMenus: { tr: "Menüleri gör / değiştir", en: "View / change menus", ar: "عرض القوائم / تغييرها" },
     noMenu: { tr: "Henüz menü seçilmedi; genel teklif isteyebilirsiniz.", en: "No menu selected yet; you can still request a general quote.", ar: "لم تختر قائمة بعد؛ لا يزال بإمكانك طلب عرض سعر عام." },
     errorCustomItems: { tr: "Kendi menünüz için en az bir ürün seçin.", en: "Choose at least one dish for your custom menu.", ar: "اختر طبقًا واحدًا على الأقل لقائمتك الخاصة." },
     subtitle: {
