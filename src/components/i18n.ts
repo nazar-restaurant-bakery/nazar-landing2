@@ -127,6 +127,21 @@ export const translations = {
   },
   catering: {
     title: { tr: "Catering ve Büyük Siparişler", en: "Catering & Large Orders", ar: "التموين والطلبات الكبيرة" },
+    menusTitle: { tr: "Catering menülerimiz", en: "Explore catering menus", ar: "اكتشف قوائم التموين" },
+    menusIntro: { tr: "Beş örnek menüden birini seçin veya kendi menünüzü oluşturun. Kişi sayısı, porsiyon ve fiyatı talebinize göre birlikte netleştirelim.", en: "Choose one of five sample menus or create your own. We’ll confirm portions, availability and pricing for your event.", ar: "اختر إحدى القوائم الخمس المقترحة أو أنشئ قائمتك الخاصة. سنؤكد الكميات والتوفر والسعر حسب مناسبتك." },
+    menusTeaserStart: { tr: "Sizin için hazırladığımız seçenekleri ", en: "Explore the options we've prepared for you in our ", ar: "اطّلع على الخيارات التي أعددناها لك في قسم " },
+    menusLinkLabel: { tr: "Catering menülerimizde", en: "Catering Menus", ar: "قوائم التموين" },
+    menusTeaserEnd: { tr: " görebilir veya kendi menünüzü oluşturabilirsiniz.", en: " section, or create your own menu.", ar: "، أو أنشئ قائمتك الخاصة." },
+    chooseMenu: { tr: "Bu menüyü seç", en: "Choose this menu", ar: "اختر هذه القائمة" },
+    selected: { tr: "Seçildi", en: "Selected", ar: "تم الاختيار" },
+    customTitle: { tr: "Kendi menünü oluştur", en: "Create your own", ar: "أنشئ قائمتك الخاصة" },
+    customIntro: { tr: "İstediğiniz ürünleri işaretleyin. Özel istekleri teklif formunun mesaj alanına ekleyebilirsiniz.", en: "Pick the dishes you’d like. Add special requests in the quote form’s message box.", ar: "اختر الأطباق التي تريدها. أضف الطلبات الخاصة في خانة الرسالة بنموذج عرض السعر." },
+    menuNote: { tr: "Bu seçenekler teklif talebi içindir; kesin paket, miktar ve fiyat sipariş öncesinde onaylanır.", en: "These are quote ideas. We’ll confirm the final menu, quantities and price before any order.", ar: "هذه أفكار لطلب عرض سعر. سنؤكد القائمة والكميات والسعر النهائي قبل أي طلب." },
+    continueToQuote: { tr: "Teklif formuna git", en: "Go to quote form", ar: "انتقل إلى نموذج عرض السعر" },
+    selectedMenu: { tr: "Seçtiğiniz menü", en: "Your menu selection", ar: "القائمة التي اخترتها" },
+    viewMenus: { tr: "Menüleri gör / değiştir", en: "View / change menus", ar: "عرض القوائم / تغييرها" },
+    noMenu: { tr: "Henüz menü seçilmedi; genel teklif isteyebilirsiniz.", en: "No menu selected yet; you can still request a general quote.", ar: "لم تختر قائمة بعد؛ لا يزال بإمكانك طلب عرض سعر عام." },
+    errorCustomItems: { tr: "Kendi menünüz için en az bir ürün seçin.", en: "Choose at least one dish for your custom menu.", ar: "اختر طبقًا واحدًا على الأقل لقائمتك الخاصة." },
     subtitle: {
       tr: "Doğum günü, ofis toplantısı, düğün — tepsi usulü hazırlıyoruz. Detayları bırakın, size dönelim.",
       en: "Birthdays, office lunches, weddings — we cook by the tray. Leave your details and we’ll get back to you.",
@@ -137,6 +152,10 @@ export const translations = {
     phone: { tr: "Telefon", en: "Phone", ar: "رقم الهاتف" },
     eventDate: { tr: "Etkinlik tarihi", en: "Event date", ar: "تاريخ المناسبة" },
     guests: { tr: "Kişi sayısı", en: "Guest count", ar: "عدد الضيوف" },
+    capacityNote: { tr: "Standart catering kapasitemiz 10–60 kişidir. Daha kalabalık bir etkinlik için kişi sayısını girin; uygunluğu birlikte değerlendirelim.", en: "Our standard catering range is 10–60 guests. For a larger event, enter your guest count and we’ll check what’s possible.", ar: "نطاق التموين المعتاد لدينا من 10 إلى 60 ضيفًا. للمناسبات الأكبر، أدخل عدد الضيوف وسنتحقق من الخيارات المتاحة." },
+    overCapacityNote: { tr: "60 kişiden fazla mı? Etkinliğinizin ayrıntılarını aşağıdaki mesaj alanına yazabilirsiniz. Talebinizi değerlendirip size döneceğiz.", en: "More than 60 guests? Tell us about your event in the message box below. We’ll review your request and get back to you.", ar: "أكثر من 60 ضيفًا؟ اكتب تفاصيل مناسبتك في خانة الرسالة أدناه. سنراجع طلبك ونرد عليك." },
+    largeEventMessage: { tr: "Büyük etkinlik ayrıntıları / mesaj", en: "Large event details / message", ar: "تفاصيل المناسبة الكبيرة / الرسالة" },
+    largeEventPlaceholder: { tr: "Örn. 80 kişi, etkinlik tarihi, servis şekli ve istediğiniz yemekler…", en: "e.g. 80 guests, event date, serving style and dishes you’d like…", ar: "مثال: 80 ضيفًا، تاريخ المناسبة، طريقة التقديم والأطباق المطلوبة…" },
     message: { tr: "Mesaj / istediğiniz ürünler", en: "Message / items you’d like", ar: "رسالة / الأصناف المطلوبة" },
     messagePlaceholder: {
       tr: "Örn. 40 kişilik karışık ızgara tepsisi, 2 tepsi lahmacun…",
@@ -221,7 +240,12 @@ export const translations = {
 export function t(path: string, lang: Lang): string {
   // path ör: "menu.note" veya "nav.home"
   const parts = path.split(".");
-  let cur: any = translations;
-  for (const p of parts) cur = cur?.[p];
-  return cur?.[lang] ?? cur?.en ?? "";
+  let cur: unknown = translations;
+  for (const p of parts) {
+    if (typeof cur !== "object" || cur === null || !(p in cur)) return "";
+    cur = (cur as Record<string, unknown>)[p];
+  }
+  if (typeof cur !== "object" || cur === null) return "";
+  const localized = cur as Partial<Record<Lang, string>>;
+  return localized[lang] ?? localized.en ?? "";
 }

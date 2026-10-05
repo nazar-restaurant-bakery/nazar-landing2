@@ -13,11 +13,13 @@ import TurnstileWidget from "./TurnstileWidget";
 import { turnstileSiteKey } from "../lib/formConfig";
 import { useLang } from "./Language";
 import { t } from "./i18n";
+import { CATERING_PACKAGES, cateringItemName } from "../data/cateringMenus";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
+import type { CateringChoice } from "../lib/signup";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-export default function CateringRequestForm({ className }: { className?: string }) {
+export default function CateringRequestForm({ className, menuChoice, onSuccess }: { className?: string; menuChoice?: CateringChoice | null; onSuccess?: () => void }) {
   const { lang } = useLang();
 
   React.useEffect(() => {
@@ -40,6 +42,7 @@ export default function CateringRequestForm({ className }: { className?: string 
   const [resetSignal, setResetSignal] = React.useState(0);
 
   const submitting = status === "submitting";
+  const overCapacity = Number(guests) > 60;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -75,6 +78,12 @@ export default function CateringRequestForm({ className }: { className?: string 
       return;
     }
 
+    if (menuChoice?.type === "custom" && menuChoice.itemIds.length === 0) {
+      setStatus("error");
+      setErrorKey("catering.errorCustomItems");
+      return;
+    }
+
     if (!turnstileToken) {
       setStatus("error");
       setErrorKey("catering.errorVerification");
@@ -103,6 +112,7 @@ export default function CateringRequestForm({ className }: { className?: string 
       eventDate,
       guests,
       message: trimmedMessage,
+      menuChoice,
     });
     setTurnstileToken("");
     setResetSignal((value) => value + 1);
@@ -120,6 +130,7 @@ export default function CateringRequestForm({ className }: { className?: string 
     setEventDate("");
     setGuests("");
     setMessage("");
+    onSuccess?.();
   }
 
   if (status === "success") {
@@ -158,6 +169,21 @@ export default function CateringRequestForm({ className }: { className?: string 
 
   return (
     <form onSubmit={handleSubmit} noValidate className={cn("space-y-4", className)}>
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950" aria-live="polite">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-extrabold">{t("catering.selectedMenu", lang)}</p>
+          <a href="#catering-menus" className="font-bold text-[#1E7A3A] underline underline-offset-2 hover:text-emerald-800">
+            {t("catering.viewMenus", lang)}
+          </a>
+        </div>
+        {menuChoice?.type === "package" ? (
+          <p className="mt-1">{CATERING_PACKAGES.find((menu) => menu.id === menuChoice.id)?.title[lang] ?? menuChoice.id}</p>
+        ) : menuChoice?.type === "custom" ? (
+          <p className="mt-1">{t("catering.customTitle", lang)}: {menuChoice.itemIds.map((id) => cateringItemName(id, lang)).join(", ") || "—"}</p>
+        ) : (
+          <p className="mt-1">{t("catering.noMenu", lang)}</p>
+        )}
+      </div>
       <div>
         <label htmlFor="cat-name" className={labelClass}>
           {t("catering.name", lang)}
@@ -236,14 +262,19 @@ export default function CateringRequestForm({ className }: { className?: string 
             value={guests}
             onChange={(e) => setGuests(e.target.value)}
             placeholder="40"
+            aria-describedby="cat-capacity-note"
             className={cn(fieldClass, "mt-1.5")}
           />
         </div>
       </div>
 
+      <p id="cat-capacity-note" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
+        {t("catering.overCapacityNote", lang)}
+      </p>
+
       <div>
         <label htmlFor="cat-message" className={labelClass}>
-          {t("catering.message", lang)} {optional}
+          {t(overCapacity ? "catering.largeEventMessage" : "catering.message", lang)} {optional}
         </label>
         <textarea
           id="cat-message"
@@ -251,7 +282,7 @@ export default function CateringRequestForm({ className }: { className?: string 
           rows={4}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder={t("catering.messagePlaceholder", lang)}
+          placeholder={t(overCapacity ? "catering.largeEventPlaceholder" : "catering.messagePlaceholder", lang)}
           className={cn(fieldClass, "mt-1.5 resize-y")}
         />
       </div>

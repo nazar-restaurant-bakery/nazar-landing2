@@ -9,6 +9,21 @@ type Context = { request: Request; env: Env };
 const SUPABASE_URL = "https://khgczybubufouraqyrcj.supabase.co";
 const BUSINESS_ID = "a358eba4-b197-4309-805b-46f43a718454";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// Keep these server-side allowlists aligned with src/data/cateringMenus.ts.
+const PACKAGE_LABELS: Record<string, string> = {
+  "grill-favorites": "Grill Favorites", "doner-gyro": "Doner & Gyro Table",
+  "office-wraps": "Office Wrap Lunch", "lahmacun-pide": "Lahmacun & Pide",
+  "vegetarian-table": "Vegetarian Table",
+};
+const CUSTOM_ITEM_LABELS: Record<string, string> = {
+  "mixed-grill": "Mixed Grill", "chicken-shish-plate": "Chicken Shish",
+  "chicken-gyro-plate": "Chicken Gyro", "meat-gyro-plate": "Meat Gyro",
+  "falafel-6pcs": "Falafel", "lahmacun-3pcs": "Lahmacun",
+  "cheese-pie-kasarli": "Cheese Pide", "mixed-vegetable-pie": "Vegetable Pide",
+  "mixed-cold-appetizers": "Mixed Meze", "rice-pilav": "Rice Pilav",
+  "side-salad": "Side Salad", "traditional-turkish-bread": "Turkish Bread",
+  "borek-feta-cheese": "Feta Borek", "baklava-4pcs": "Baklava",
+};
 
 function response(status: number, code: string): Response {
   return new Response(JSON.stringify({ code }), {
@@ -82,7 +97,29 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     }
     if (date) meta.event_date = date;
     if (guests !== "" && guests !== null && guests !== undefined) meta.guests = Number(guests);
-    if (message) meta.message = message;
+    let menuSummary = "";
+    if (data.menuChoice !== undefined && data.menuChoice !== null) {
+      const choice = data.menuChoice;
+      if (!choice || typeof choice !== "object" || Array.isArray(choice)) return response(400, "invalid_input");
+      const selected = choice as Record<string, unknown>;
+      if (selected.type === "package") {
+        if (typeof selected.id !== "string" || !Object.hasOwn(PACKAGE_LABELS, selected.id)) {
+          return response(400, "invalid_input");
+        }
+        menuSummary = `Requested catering menu: ${PACKAGE_LABELS[selected.id]} (${selected.id})`;
+      } else if (selected.type === "custom") {
+        const ids = selected.itemIds;
+        if (!Array.isArray(ids) || ids.length < 1 || ids.length > Object.keys(CUSTOM_ITEM_LABELS).length ||
+            new Set(ids).size !== ids.length ||
+            !ids.every((id) => typeof id === "string" && Object.hasOwn(CUSTOM_ITEM_LABELS, id))) {
+          return response(400, "invalid_input");
+        }
+        menuSummary = `Create your own: ${ids.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
+      } else {
+        return response(400, "invalid_input");
+      }
+    }
+    if (menuSummary || message) meta.message = [menuSummary, message].filter(Boolean).join("\n\n");
   }
 
   let utm: Record<string, string> | null = null;
