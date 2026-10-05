@@ -42,6 +42,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
   const [resetSignal, setResetSignal] = React.useState(0);
 
   const submitting = status === "submitting";
+  const overCapacity = Number(guests) > 60;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -256,14 +257,19 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
             value={guests}
             onChange={(e) => setGuests(e.target.value)}
             placeholder="40"
+            aria-describedby="cat-capacity-note"
             className={cn(fieldClass, "mt-1.5")}
           />
         </div>
       </div>
 
+      <p id="cat-capacity-note" className={`rounded-xl px-4 py-3 text-sm font-semibold ${overCapacity ? "border border-amber-200 bg-amber-50 text-amber-950" : "bg-zinc-50 text-zinc-600"}`} aria-live="polite">
+        {t(overCapacity ? "catering.overCapacityNote" : "catering.capacityNote", lang)}
+      </p>
+
       <div>
         <label htmlFor="cat-message" className={labelClass}>
-          {t("catering.message", lang)} {optional}
+          {t(overCapacity ? "catering.largeEventMessage" : "catering.message", lang)} {optional}
         </label>
         <textarea
           id="cat-message"
@@ -271,7 +277,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
           rows={4}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder={t("catering.messagePlaceholder", lang)}
+          placeholder={t(overCapacity ? "catering.largeEventPlaceholder" : "catering.messagePlaceholder", lang)}
           className={cn(fieldClass, "mt-1.5 resize-y")}
         />
       </div>
