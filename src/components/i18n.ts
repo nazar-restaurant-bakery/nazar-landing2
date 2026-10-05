@@ -149,6 +149,10 @@ export const translations = {
     phone: { tr: "Telefon", en: "Phone", ar: "رقم الهاتف" },
     eventDate: { tr: "Etkinlik tarihi", en: "Event date", ar: "تاريخ المناسبة" },
     guests: { tr: "Kişi sayısı", en: "Guest count", ar: "عدد الضيوف" },
+    capacityNote: { tr: "Standart catering kapasitemiz 10–60 kişidir. Daha kalabalık bir etkinlik için kişi sayısını girin; uygunluğu birlikte değerlendirelim.", en: "Our standard catering range is 10–60 guests. For a larger event, enter your guest count and we’ll check what’s possible.", ar: "نطاق التموين المعتاد لدينا من 10 إلى 60 ضيفًا. للمناسبات الأكبر، أدخل عدد الضيوف وسنتحقق من الخيارات المتاحة." },
+    overCapacityNote: { tr: "60 kişiden fazla mı? Etkinliğinizin ayrıntılarını aşağıdaki mesaj alanına yazabilirsiniz. Talebinizi değerlendirip size döneceğiz.", en: "More than 60 guests? Tell us about your event in the message box below. We’ll review your request and get back to you.", ar: "أكثر من 60 ضيفًا؟ اكتب تفاصيل مناسبتك في خانة الرسالة أدناه. سنراجع طلبك ونرد عليك." },
+    largeEventMessage: { tr: "Büyük etkinlik ayrıntıları / mesaj", en: "Large event details / message", ar: "تفاصيل المناسبة الكبيرة / الرسالة" },
+    largeEventPlaceholder: { tr: "Örn. 80 kişi, etkinlik tarihi, servis şekli ve istediğiniz yemekler…", en: "e.g. 80 guests, event date, serving style and dishes you’d like…", ar: "مثال: 80 ضيفًا، تاريخ المناسبة، طريقة التقديم والأطباق المطلوبة…" },
     message: { tr: "Mesaj / istediğiniz ürünler", en: "Message / items you’d like", ar: "رسالة / الأصناف المطلوبة" },
     messagePlaceholder: {
       tr: "Örn. 40 kişilik karışık ızgara tepsisi, 2 tepsi lahmacun…",

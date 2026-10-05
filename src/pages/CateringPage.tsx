@@ -10,9 +10,9 @@ import type { CateringChoice } from "../lib/signup";
 
 const HIGHLIGHTS = [
   {
-    en: "Trays for 10 to 60 — kebabs, lahmacun, mezes, bakery boxes",
-    tr: "10’dan 60 kişiye tepsiler — kebap, lahmacun, meze, fırın kutuları",
-    ar: "صواني من 10 إلى 60 شخصًا — كباب، لحم بعجين، مقبلات، علب مخبوزات",
+    en: "Standard catering for 10–60 guests; ask us about larger events",
+    tr: "Standart catering 10–60 kişi; daha büyük etkinlikler için bize yazın",
+    ar: "التموين المعتاد من 10 إلى 60 ضيفًا؛ راسلنا للمناسبات الأكبر",
   },
   {
     en: "Ask about halal, vegetarian and kid-friendly options",
@@ -27,7 +27,7 @@ const HIGHLIGHTS = [
 ] as const;
 
 export default function CateringPage() {
-  useSeo("Turkish Catering in West Haven", "Turkish platters, fresh bread and baklava for 10 to 60 people. One order, one pickup. Serving West Haven and New Haven.", "/catering");
+  useSeo("Turkish Catering in West Haven", "Turkish platters, fresh bread and baklava. Standard catering for 10 to 60 guests; ask us about larger events in West Haven and New Haven.", "/catering");
 
   const { lang } = useLang();
   const [choice, setChoice] = React.useState<CateringChoice | null>(null);
