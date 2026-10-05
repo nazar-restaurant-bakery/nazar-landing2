@@ -7,9 +7,9 @@ import { useSeo } from "../hooks/useSeo";
 
 const HIGHLIGHTS = [
   {
-    en: "Trays for 10 to 200 — kebabs, lahmacun, mezes, bakery boxes",
-    tr: "10’dan 200 kişiye tepsiler — kebap, lahmacun, meze, fırın kutuları",
-    ar: "صواني من 10 إلى 200 شخص — كباب، لحم بعجين، مقبلات، علب مخبوزات",
+    en: "Trays for 10 to 60 — kebabs, lahmacun, mezes, bakery boxes",
+    tr: "10’dan 60 kişiye tepsiler — kebap, lahmacun, meze, fırın kutuları",
+    ar: "صواني من 10 إلى 60 شخصًا — كباب، لحم بعجين، مقبلات، علب مخبوزات",
   },
   {
     en: "Halal, vegetarian and kid-friendly options on every menu",

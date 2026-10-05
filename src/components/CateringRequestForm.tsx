@@ -6,8 +6,9 @@
 
 import React from "react";
 import { cn, EMAIL_RE, normalizePhone } from "../lib/form";
-import { getUtmOrNull } from "../lib/utm";
+import { captureUtm, getUtmOrNull } from "../lib/utm";
 import { submitSignup } from "../lib/signup";
+import { trackCateringRequestSubmitted } from "../lib/analytics";
 import TurnstileWidget from "./TurnstileWidget";
 import { turnstileSiteKey } from "../lib/formConfig";
 import { useLang } from "./Language";
@@ -18,6 +19,10 @@ type Status = "idle" | "submitting" | "success" | "error";
 
 export default function CateringRequestForm({ className }: { className?: string }) {
   const { lang } = useLang();
+
+  React.useEffect(() => {
+    captureUtm();
+  }, []);
 
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -107,6 +112,7 @@ export default function CateringRequestForm({ className }: { className?: string 
       return;
     }
 
+    trackCateringRequestSubmitted();
     setStatus("success");
     setName("");
     setEmail("");
