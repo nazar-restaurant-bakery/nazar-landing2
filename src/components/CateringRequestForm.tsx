@@ -263,8 +263,8 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
         </div>
       </div>
 
-      <p id="cat-capacity-note" className={`rounded-xl px-4 py-3 text-sm font-semibold ${overCapacity ? "border border-amber-200 bg-amber-50 text-amber-950" : "bg-zinc-50 text-zinc-600"}`} aria-live="polite">
-        {t(overCapacity ? "catering.overCapacityNote" : "catering.capacityNote", lang)}
+      <p id="cat-capacity-note" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
+        {t("catering.overCapacityNote", lang)}
       </p>
 
       <div>
