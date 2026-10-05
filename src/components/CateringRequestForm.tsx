@@ -170,7 +170,12 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
   return (
     <form onSubmit={handleSubmit} noValidate className={cn("space-y-4", className)}>
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950" aria-live="polite">
-        <p className="font-extrabold">{t("catering.selectedMenu", lang)}</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-extrabold">{t("catering.selectedMenu", lang)}</p>
+          <a href="#catering-menus" className="font-bold text-[#1E7A3A] underline underline-offset-2 hover:text-emerald-800">
+            {t("catering.viewMenus", lang)}
+          </a>
+        </div>
         {menuChoice?.type === "package" ? (
           <p className="mt-1">{CATERING_PACKAGES.find((menu) => menu.id === menuChoice.id)?.title[lang] ?? menuChoice.id}</p>
         ) : menuChoice?.type === "custom" ? (
