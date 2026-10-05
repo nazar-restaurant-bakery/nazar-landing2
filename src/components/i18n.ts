@@ -129,6 +129,7 @@ export const translations = {
     title: { tr: "Catering ve Büyük Siparişler", en: "Catering & Large Orders", ar: "التموين والطلبات الكبيرة" },
     menusTitle: { tr: "Catering menülerimiz", en: "Explore catering menus", ar: "اكتشف قوائم التموين" },
     menusIntro: { tr: "Beş örnek menüden birini seçin veya kendi menünüzü oluşturun. Kişi sayısı, porsiyon ve fiyatı talebinize göre birlikte netleştirelim.", en: "Choose one of five sample menus or create your own. We’ll confirm portions, availability and pricing for your event.", ar: "اختر إحدى القوائم الخمس المقترحة أو أنشئ قائمتك الخاصة. سنؤكد الكميات والتوفر والسعر حسب مناسبتك." },
+    menusTeaser: { tr: "Sizin için hazırladığımız catering seçeneklerini bu sayfadaki Catering menülerimiz bölümünde görebilir veya kendi menünüzü oluşturabilirsiniz.", en: "Explore the catering options we've put together for you in the Catering Menus section below, or create your own menu.", ar: "تعرّف على خيارات التموين التي أعددناها لك في قسم قوائم التموين أدناه، أو أنشئ قائمتك الخاصة." },
     browseMenus: { tr: "Catering menülerini gör", en: "Browse catering menus", ar: "تصفح قوائم التموين" },
     chooseMenu: { tr: "Bu menüyü seç", en: "Choose this menu", ar: "اختر هذه القائمة" },
     selected: { tr: "Seçildi", en: "Selected", ar: "تم الاختيار" },
