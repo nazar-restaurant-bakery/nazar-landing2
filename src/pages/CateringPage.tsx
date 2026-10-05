@@ -81,11 +81,12 @@ export default function CateringPage() {
           </ul>
 
           <p className="mt-6 text-sm font-semibold text-zinc-700">
-            {t("catering.menusTeaser", lang)}
+            {t("catering.menusTeaserStart", lang)}
+            <a href="#catering-menus" className="font-extrabold text-[#1E7A3A] underline underline-offset-2 hover:text-emerald-800">
+              {t("catering.menusLinkLabel", lang)}
+            </a>
+            {t("catering.menusTeaserEnd", lang)}
           </p>
-          <a href="#catering-menus" className="mt-3 inline-flex rounded-full border border-[#1E7A3A] px-5 py-2 text-sm font-extrabold text-[#1E7A3A] hover:bg-emerald-50">
-            {t("catering.browseMenus", lang)}
-          </a>
 
           <p className="mt-6 text-sm font-semibold text-zinc-600">
             <a
