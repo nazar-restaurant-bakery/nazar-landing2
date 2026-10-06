@@ -130,15 +130,15 @@ function DetailsModal({
       aria-modal="true"
     >
       <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          <div className="h-64 bg-brand-bg md:h-full">
+        <div className={cn("grid grid-cols-1", item.id !== "deluxe-add-on" && "md:grid-cols-2")}>
+          {item.id !== "deluxe-add-on" && (<div className="h-64 bg-brand-bg md:h-full">
             <img
               src={getItemImg(categoryId, item.image)}
               alt={itemTitle(item)}
               className="h-full w-full object-cover"
               loading="lazy"
             />
-          </div>
+          </div>)}
 
           <div className="p-5">
             <div className="flex items-start justify-between gap-3">
@@ -369,14 +369,14 @@ export default function MenuPage() {
                           setModalCatTitle(activeCategory.title);
                         }}
                       >
-                        <div className="h-44 w-full shrink-0 bg-brand-bg flex items-center justify-center overflow-hidden">
+                        {item.id !== "deluxe-add-on" && (<div className="h-44 w-full shrink-0 bg-brand-bg flex items-center justify-center overflow-hidden">
                           <img
                             src={getItemImg(activeCategory.id, item.image)}
                             alt={itemTitle(item)}
                             className="h-full w-full object-contain"
                             loading="lazy"
                           />
-                        </div>
+                        </div>)}
 
                         <div className="p-4">
                           <h3 className="text-sm font-extrabold text-zinc-900">{item.nameEn}</h3>
