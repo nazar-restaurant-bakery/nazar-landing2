@@ -230,7 +230,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Antep Ezme",
         description:
           "Minced spicy dip prepared with tomatoes, peppers, onions, parsley, garlic, olive oil, lemon juice, and Turkish spices.",
-        image: "/images/menu/cold-appetizers/antep-ezme.jpg",
+        image: "/images/menu/cold-appetizers/antep-ezme-table-setting-v2.png",
         tags: ["Spicy"],
         price: 8.99,
       },
@@ -239,7 +239,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Baba Ganoush",
         description:
           "Roasted eggplant mashed with tahini, garlic, white pepper, mayonnaise, and olive oil.",
-        image: "/images/menu/cold-appetizers/baba-ganoush.jpeg",
+        image: "/images/menu/cold-appetizers/baba-ganoush-table-setting-v2.png",
         tags: ["Vegetarian"],
         price: 8.99,
       },
@@ -248,7 +248,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Haydari",
         description:
           "Thick labneh mixed with sour cream, dill, crushed walnuts, mayonnaise, olive oil, and a pinch of salt.",
-        image: "/images/menu/cold-appetizers/haydari.jpg",
+        image: "/images/menu/cold-appetizers/haydari-table-setting-v2.png",
         tags: ["Vegetarian"],
         price: 8.99,
       },
@@ -257,7 +257,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Humus",
         description:
           "Smooth chickpea puree mixed with tahini, garlic, olive oil, and white pepper.",
-        image: "/images/menu/cold-appetizers/humus.jpg",
+        image: "/images/menu/cold-appetizers/humus-table-setting-v2.png",
         tags: ["Vegetarian"],
         price: 8.99,
       },
@@ -267,7 +267,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Cacik",
         description:
           "Creamy yogurt blended with labneh, diced cucumber, fresh dill, and olive oil.",
-        image: "/images/menu/cold-appetizers/jajik.jpg",
+        image: "/images/menu/cold-appetizers/jajik-table-setting-v2.png",
         tags: ["Vegetarian"],
         price: 5.99,
       },
@@ -277,7 +277,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Karışık Soğuk Meze",
         description:
           "A selection of traditional Turkish cold appetizers (humus, haydari, baba ganoush, antep ezme).",
-        image: "/images/menu/mixed-cold-appetizers.jpg",
+        image: "/images/menu/cold-appetizers/mixed-cold-appetizers-table-setting-v1.png",
         tags: ["Vegetarian"],
         priceLabel: "Small",
         price: 14.99,
