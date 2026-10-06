@@ -23,7 +23,6 @@ const QUICK_CATS = [
   { id: "kebabs", label: "Kebabs" },
   { id: "lahmacun-pies", label: "Lahmacun & Pies" },
   { id: "sandwiches-wraps", label: "Sandwiches & Wraps" },
-  { id: "breakfast", label: "Breakfast (New)" },
   { id: "desserts", label: "Desserts" },
   { id: "bakery", label: "Bakery" },
 ];

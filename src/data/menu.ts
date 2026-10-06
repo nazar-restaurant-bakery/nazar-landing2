@@ -83,7 +83,6 @@ export const MENU_CATEGORIES: MenuCategory[] = [
   { id: "lahmacun-pies", title: "Lahmacun & Pies", items: [] },
   { id: "kebabs", title: "Kebabs", items: [] },
   { id: "kids-menu", title: "Kids Menu", items: [] },
-  { id: "breakfast", title: "New Item Breakfast", items: [] },
   { id: "desserts", title: "Desserts", items: [] },
   { id: "beverages", title: "Beverages", items: [] },
   { id: "bakery", title: "Bakery", items: [] },
