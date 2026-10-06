@@ -1,4 +1,4 @@
-﻿// src/data/menuData.ts
+// src/data/menuData.ts
 
 export type MenuTag = "Spicy" | "Vegetarian" | "Best Seller" | "New";
 
@@ -159,7 +159,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Lentil Soup",
         nameTr: "Mercimek",
         description: "Lentils blended with seasoning",
-        image: "/images/menu/soups/lentil-soup.jpg",
+        image: "/images/menu/soups/lentil-soup-styled-v5.png",
         tags: ["Vegetarian", "Best Seller"],
         price: 5.99,
       },
@@ -168,7 +168,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Soup of the Day",
         nameTr: "Günün Çorbası",
         description: "Please ask for the soup of the day.",
-        image: "/images/menu/soups/soup-of-the-day.jpg",
+        image: "/images/menu/soups/soup-of-the-day-styled-v4.png",
         tags: ["New"],
         price: 5.99,
       },
@@ -177,7 +177,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Trotter Soup",
         nameTr: "Paça Çorbası",
         description: "Hearty soup made from slow-simmered lamb or beef trotters.",
-        image: "/images/menu/soups/trotter-soup.png",
+        image: "/images/menu/soups/trotter-soup-styled-v5.png",
         price: 9.99,
       },
     ],
