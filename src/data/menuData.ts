@@ -316,7 +316,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
             nameTr: "Adana Dürüm",
             description:
               "Spicy minced lamb grilled over charcoal, wrapped with onion, parsley, and sumac.",
-            image: "/images/menu/sandwiches/adana-wrap.jpg",
+            image: "/images/menu/sandwiches/adana-wrap-styled-v1.png",
             tags: ["Spicy"],
             price: 12.99,
           },
@@ -326,7 +326,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
             nameTr: "Falafel Dürüm (4 Adet)",
             description:
               "Golden, crispy falafel balls made from chickpeas, herbs, and spices, wrapped with lettuce and hummus.",
-            image: "/images/menu/sandwiches/falafel-wrap.jpg",
+            image: "/images/menu/sandwiches/falafel-wrap-styled-v1.png",
             tags: ["Vegetarian"],
             price: 9.99,
           },
@@ -336,7 +336,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
             nameTr: "Tantuni Dürüm",
             description:
               "Thinly sliced sautéed veal cooked with special spices, wrapped with fresh tomatoes, onions, parsley, and red peppers. Served with lemon.",
-            image: "/images/menu/sandwiches/tantuni-wrap.jpg",
+            image: "/images/menu/sandwiches/tantuni-wrap-styled-v2.png",
             tags: ["Spicy"],
             price: 15.99,
           },
