@@ -353,7 +353,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
             nameEn: "Hamburger",
             description:
               "Classic beef burger patty seasoned with spices, topped with lettuce, tomato, and onion, served on a soft bun. Add Cheese: $1.00.",
-            image: "/images/menu/sandwiches/hamburger.jpg",
+            image: "/images/menu/sandwiches/hamburger-styled-v2.png",
             tags: ["Best Seller"],
             price: 8.99,
           },
@@ -362,7 +362,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
             nameEn: "Kokorec",
             description:
               "Charcoal-grilled lamb intestines finely chopped with spices, tomatoes, and peppers. Served in bread.",
-            image: "/images/menu/sandwiches/kokorec.jpg",
+            image: "/images/menu/sandwiches/kokorec-styled-v1.png",
             tags: ["New"],
             price: 19.99,
           },
@@ -389,7 +389,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
             nameTr: "Tavuk Şiş sandviç veya dürüm",
             description:
               "Tender marinated chicken grilled over charcoal, served in fresh bread or a wrap with onions, parsley, tomato, spices, and long hot peppers.",
-            image: "/images/menu/sandwiches/chicken-shish-wrap.jpg",
+            image: "/images/menu/sandwiches/chicken-shish-sandwich-styled-v1.png",
             price: 11.99,
           },
           {
@@ -398,7 +398,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
             nameTr: "Köfte sandviç veya dürüm",
             description:
               "Juicy beef meatballs mixed with egg, breadcrumbs, and Turkish spices, served in fresh bread or a wrap with onions, parsley, and tomato.",
-            image: "/images/menu/sandwiches/meatball-sandwich.png",
+            image: "/images/menu/sandwiches/meatball-sandwich-styled-v1.png",
             price: 10.99,
           },
           {
@@ -407,7 +407,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
             nameTr: "Et döner sandviç veya dürüm",
             description:
               "Thinly sliced, marinated beef slow-cooked on a vertical rotisserie, served with lettuce, tomatoes, and onion. Add French fries with the Deluxe add-on.",
-            image: "/images/menu/sandwiches/meat-gyro-sandwich.jpg",
+            image: "/images/menu/sandwiches/meat-gyro-sandwich-styled-v2.png",
             price: 11.99,
           },
         ],
