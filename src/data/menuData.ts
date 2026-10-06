@@ -300,6 +300,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
             id: "deluxe-add-on",
             nameEn: "Deluxe Add-On",
             description: "Add French fries to a sandwich or wrap.",
+            image: "/images/menu/photo-coming-soon.svg",
             price: 2.50,
           },
         ],
@@ -468,6 +469,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         id: "chicken-wings-deep-fried",
         nameEn: "Chicken Wings — Deep-Fried",
         description: "Crisp deep-fried wings with your choice of Hot, BBQ or Mild sauce.",
+        image: "/images/menu/photo-coming-soon.svg",
         priceLabel: "10 pcs",
         price: 13.99,
         price2Label: "20 pcs",
@@ -604,6 +606,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         id: "chicken-wings-grilled",
         nameEn: "Chicken Wings — Grilled",
         description: "Seasoned chicken wings grilled until lightly charred.",
+        image: "/images/menu/photo-coming-soon.svg",
         price: 19.99,
       },
       {
@@ -611,6 +614,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Chicken Chops",
         nameTr: "Tavuk Pirzola",
         description: "Tender chicken chops, grilled and served hot.",
+        image: "/images/menu/photo-coming-soon.svg",
         price: 18.99,
       },
       {
