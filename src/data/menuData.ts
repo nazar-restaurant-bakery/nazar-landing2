@@ -194,7 +194,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Sezar Salata",
         description:
           "Crisp romaine lettuce tossed with croutons, parmesan cheese, and classic Caesar dressing.",
-        image: "/images/menu/salads/caesar-salad.jpg",
+        image: "/images/menu/salads/caesar-salad-table-setting-v1.png",
         price: 10.99,
       },
       {
@@ -203,7 +203,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Mevsim Salata",
         description:
           "A vibrant blend of lettuce, carrots, and red cabbage, drizzled with olive oil.",
-        image: "/images/menu/salads/season-salad.jpg",
+        image: "/images/menu/salads/season-salad-table-setting-v1.png",
         tags: ["Vegetarian"],
         price: 10.99,
       },
@@ -213,7 +213,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Çoban Salata",
         description:
           "Diced tomatoes, cucumbers, peppers, parsley, and onions. Seasoned with olive oil, salt, and lemon juice.",
-        image: "/images/menu/salads/shepherd-salad.jpg",
+        image: "/images/menu/salads/shepherd-salad-table-setting-v1.png",
         tags: ["Vegetarian"],
         price: 10.99,
       },
