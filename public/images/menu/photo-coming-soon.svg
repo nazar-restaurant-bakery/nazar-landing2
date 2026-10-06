@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-labelledby="title description">
+  <title id="title">Photo coming soon</title>
+  <desc id="description">Neutral menu image placeholder</desc>
+  <rect width="640" height="400" fill="#f5f7f2"/>
+  <circle cx="320" cy="174" r="100" fill="#fff" stroke="#d8e6d9" stroke-width="8"/>
+  <circle cx="320" cy="174" r="71" fill="none" stroke="#e8efe6" stroke-width="3"/>
+  <path d="M183 118v111m-14-111v55m28-55v55m-28 0c0 19 28 19 28 0m260-55c-31 15-34 69-7 78v33" fill="none" stroke="#2c7545" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="320" y="319" text-anchor="middle" fill="#245c39" font-family="Arial, sans-serif" font-size="27" font-weight="700">Photo coming soon</text>
+</svg>
