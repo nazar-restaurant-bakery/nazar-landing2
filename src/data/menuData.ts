@@ -13,6 +13,8 @@ export type MenuItem = {
   price2Label?: string;
 
   description?: string;
+  comesWith?: string;
+  allergens?: string;
   image?: string;
   tags?: MenuTag[];
   pickupUrl?: string;
@@ -35,7 +37,8 @@ export type MenuCategory = {
 };
 
 
-export const MENU_CATEGORIES: MenuCategory[] = [
+// Keep Breakfast here for the upcoming rewrite, but do not expose it to customers yet.
+const ALL_MENU_CATEGORIES: MenuCategory[] = [
   // ---------------- Breakfast ----------------
   {
     id: "breakfast",
@@ -192,7 +195,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         description:
           "Crisp romaine lettuce tossed with croutons, parmesan cheese, and classic Caesar dressing.",
         image: "/images/menu/salads/caesar-salad.jpg",
-        price: 9.49,
+        price: 10.99,
       },
       {
         id: "season-salad",
@@ -202,7 +205,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
           "A vibrant blend of lettuce, carrots, and red cabbage, drizzled with olive oil.",
         image: "/images/menu/salads/season-salad.jpg",
         tags: ["Vegetarian"],
-        price: 9.49,
+        price: 10.99,
       },
       {
         id: "shepherd-salad",
@@ -212,7 +215,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
           "Diced tomatoes, cucumbers, peppers, parsley, and onions. Seasoned with olive oil, salt, and lemon juice.",
         image: "/images/menu/salads/shepherd-salad.jpg",
         tags: ["Vegetarian"],
-        price: 9.49,
+        price: 10.99,
       },
     ],
   },
@@ -229,7 +232,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
           "Minced spicy dip prepared with tomatoes, peppers, onions, parsley, garlic, olive oil, lemon juice, and Turkish spices.",
         image: "/images/menu/cold-appetizers/antep-ezme.jpg",
         tags: ["Spicy"],
-        price: 7.99,
+        price: 8.99,
       },
       {
         id: "baba-ganoush",
@@ -238,7 +241,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
           "Roasted eggplant mashed with tahini, garlic, white pepper, mayonnaise, and olive oil.",
         image: "/images/menu/cold-appetizers/baba-ganoush.jpeg",
         tags: ["Vegetarian"],
-        price: 7.99,
+        price: 8.99,
       },
       {
         id: "haydari",
@@ -247,7 +250,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
           "Thick labneh mixed with sour cream, dill, crushed walnuts, mayonnaise, olive oil, and a pinch of salt.",
         image: "/images/menu/cold-appetizers/haydari.jpg",
         tags: ["Vegetarian"],
-        price: 7.99,
+        price: 8.99,
       },
       {
         id: "humus",
@@ -256,7 +259,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
           "Smooth chickpea puree mixed with tahini, garlic, olive oil, and white pepper.",
         image: "/images/menu/cold-appetizers/humus.jpg",
         tags: ["Vegetarian"],
-        price: 7.99,
+        price: 8.99,
       },
       {
         id: "jajik",
@@ -266,7 +269,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
           "Creamy yogurt blended with labneh, diced cucumber, fresh dill, and olive oil.",
         image: "/images/menu/cold-appetizers/jajik.jpg",
         tags: ["Vegetarian"],
-        price: 4.99,
+        price: 5.99,
       },
       {
         id: "mixed-cold-appetizers",
@@ -277,9 +280,9 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         image: "/images/menu/mixed-cold-appetizers.jpg",
         tags: ["Vegetarian"],
         priceLabel: "Small",
-        price: 13.99,
+        price: 14.99,
         price2Label: "Large",
-        price2: 18.99,
+        price2: 19.99,
       },
     ],
   },
@@ -289,6 +292,18 @@ export const MENU_CATEGORIES: MenuCategory[] = [
     id: "sandwich-wrap",
     title: "Sandwich & Wrap",
     subcategories: [
+      {
+        id: "extras",
+        title: "Extras",
+        items: [
+          {
+            id: "deluxe-add-on",
+            nameEn: "Deluxe Add-On",
+            description: "Add French fries to a sandwich or wrap.",
+            price: 2.50,
+          },
+        ],
+      },
       // Wraps
       {
         id: "wraps",
@@ -312,7 +327,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
               "Golden, crispy falafel balls made from chickpeas, herbs, and spices, wrapped with lettuce and hummus.",
             image: "/images/menu/sandwiches/falafel-wrap.jpg",
             tags: ["Vegetarian"],
-            price: 8.99,
+            price: 9.99,
           },
           {
             id: "tantuni-wrap",
@@ -322,7 +337,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
               "Thinly sliced sautéed veal cooked with special spices, wrapped with fresh tomatoes, onions, parsley, and red peppers. Served with lemon.",
             image: "/images/menu/sandwiches/tantuni-wrap.jpg",
             tags: ["Spicy"],
-            price: 13.99,
+            price: 15.99,
           },
         ],
       },
@@ -339,7 +354,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
               "Classic beef burger patty seasoned with spices, topped with lettuce, tomato, and onion, served on a soft bun. Add Cheese: $1.00.",
             image: "/images/menu/sandwiches/hamburger.jpg",
             tags: ["Best Seller"],
-            price: 7.99,
+            price: 8.99,
           },
           {
             id: "kokorec",
@@ -363,9 +378,9 @@ export const MENU_CATEGORIES: MenuCategory[] = [
             nameEn: "Chicken Gyro Sandwich or Wrap",
             nameTr: "Tavuk Döner sandviç veya dürüm",
             description:
-              "Thinly sliced, marinated chicken slow-cooked on a vertical rotisserie, served with lettuce, tomatoes, and onion. Add french fries upon request in your sandwich or wrap.",
+              "Thinly sliced, marinated chicken slow-cooked on a vertical rotisserie, served with lettuce, tomatoes, and onion. Add French fries with the Deluxe add-on.",
             image: "/images/menu/sandwiches/chicken-gyro-wrap.jpg",
-            price: 9.99,
+            price: 10.99,
           },
           {
             id: "chicken-shish-sandwich-wrap",
@@ -374,7 +389,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
             description:
               "Tender marinated chicken grilled over charcoal, served in fresh bread or a wrap with onions, parsley, tomato, spices, and long hot peppers.",
             image: "/images/menu/sandwiches/chicken-shish-wrap.jpg",
-            price: 10.99,
+            price: 11.99,
           },
           {
             id: "meatball-sandwich-wrap",
@@ -383,16 +398,16 @@ export const MENU_CATEGORIES: MenuCategory[] = [
             description:
               "Juicy beef meatballs mixed with egg, breadcrumbs, and Turkish spices, served in fresh bread or a wrap with onions, parsley, and tomato.",
             image: "/images/menu/sandwiches/meatball-sandwich.png",
-            price: 9.99,
+            price: 10.99,
           },
           {
             id: "meat-gyro-sandwich-wrap",
             nameEn: "Meat Gyro Sandwich or Wrap",
             nameTr: "Et döner sandviç veya dürüm",
             description:
-              "Thinly sliced, marinated beef slow-cooked on a vertical rotisserie, served with lettuce, tomatoes, and onion. Add french fries upon request in your sandwich or wrap.",
+              "Thinly sliced, marinated beef slow-cooked on a vertical rotisserie, served with lettuce, tomatoes, and onion. Add French fries with the Deluxe add-on.",
             image: "/images/menu/sandwiches/meat-gyro-sandwich.jpg",
-            price: 10.99,
+            price: 11.99,
           },
         ],
       },
@@ -410,7 +425,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
               "Grilled Turkish sandwich with melted mozzarella cheese on crispy toasted bread.",
             image: "/images/menu/sandwiches/grilled-cheese.jpg",
             tags: ["Vegetarian"],
-            price: 5.99,
+            price: 6.99,
           },
       {
         id: "sujuk-cheese-toast",
@@ -418,7 +433,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Kaşarlı Sucuklu",
         description:"Grilled Turkish sandwich with melted mozzarella cheese and sujuk on crispy toasted bread.",
         image: "/images/menu/sandwiches/sujuk-and-cheese.png",
-        price: 6.99
+        price: 8.99
       }
     ]
   }
@@ -438,7 +453,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         description: "Crispy fried phyllo rolls filled with feta cheese and parsley.",
         image: "/images/menu/hot-appetizers/cheese-rolls.jpg",
         tags: ["Vegetarian"],
-        price: 7.99,
+        price: 8.99,
       },
       {
         id: "falafel-4pcs",
@@ -447,15 +462,24 @@ export const MENU_CATEGORIES: MenuCategory[] = [
           "Deep-fried patties made from ground chickpeas, celery, garlic, parsley, white pepper, and flour.",
         image: "/images/menu/hot-appetizers/falafel.jpg",
         tags: ["Vegetarian"],
-        price: 7.99,
+        price: 9.99,
+      },
+      {
+        id: "chicken-wings-deep-fried",
+        nameEn: "Chicken Wings — Deep-Fried",
+        description: "Crisp deep-fried wings with your choice of Hot, BBQ or Mild sauce.",
+        priceLabel: "10 pcs",
+        price: 13.99,
+        price2Label: "20 pcs",
+        price2: 24.99,
       },
       {
         id: "findik-lahmacun-3pcs",
         nameEn: "Fındık Lahmacun (3 pcs)",
         description:
-          "Brick oven baked thin crispy dough topped with minced beef, tomatoes, peppers, onions, and Turkish spices.",
+          "Brick oven baked thin crispy dough topped with minced beef, tomatoes, peppers, onions, and Turkish spices. Additional pieces $3 each.",
         image: "/images/menu/hot-appetizers/findik-lahmacun.jpg",
-        price: 9.99,
+        price: 10.99,
       },
       {
         id: "french-fries",
@@ -463,7 +487,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         description: "Golden crispy fries, lightly salted and served with ketchup or mayonnaise.",
         image: "/images/menu/hot-appetizers/french-fries.jpg",
         tags: ["Vegetarian"],
-        price: 4.99,
+        price: 5.99,
       },
       {
         id: "pan-fried-liver",
@@ -472,7 +496,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         description:
           "Pan-fried cubes of liver coated in seasoned flour, served warm with sautéed onions, parsley, and red pepper flakes.",
         image: "/images/menu/hot-appetizers/pan-fried-liver.jpg",
-        price: 13.99,
+        price: 14.99,
       },
     ],
   },
@@ -497,7 +521,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         description: "Crispy dough topped with melted mozzarella cheese, baked to perfection.",
         image: "/images/menu/lahmacun-and-pides/cheese-pie.jpg",
         tags: ["Vegetarian"],
-        price: 12.99,
+        price: 13.99,
       },
       {
         id: "cubed-meat-pie-kusbasi",
@@ -505,7 +529,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Kuşbasi Pide",
         description: "Crispy dough topped with tender marinated cubes of beef and mozzarella.",
         image: "/images/menu/lahmacun-and-pides/cubed-meat-pie.jpg",
-        price: 15.99,
+        price: 17.99,
       },
       {
         id: "ground-beef-pie-kiymali",
@@ -514,7 +538,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         description:
           "Crispy dough topped with seasoned ground beef, onions, tomatoes, Turkish spices, and mozzarella.",
         image: "/images/menu/lahmacun-and-pides/ground-beef-pie.jpg",
-        price: 14.99,
+        price: 15.99,
       },
       {
         id: "pastrami-pie-pastirmali",
@@ -522,7 +546,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Pastırmalı Pide",
         description: "Crispy dough topped with thinly sliced pastrami and melted mozzarella.",
         image: "/images/menu/lahmacun-and-pides/pastrami-pie.jpg",
-        price: 17.99,
+        price: 18.99,
       },
       {
         id: "sujuk-pie-sucuklu",
@@ -530,7 +554,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Sucuklu Pide",
         description: "Crispy dough topped with sujuk and melted mozzarella cheese.",
         image: "/images/menu/lahmacun-and-pides/sujuk-pie.jpg",
-        price: 15.99,
+        price: 16.99,
       },
       {
         id: "mixed-protein-pie",
@@ -549,7 +573,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
           "Crispy dough topped with tomatoes, mushrooms, green & red pepper, eggplant, black olive, and mozzarella.",
         image: "/images/menu/lahmacun-and-pides/mixed-vegetable-pie.webp",
         tags: ["Vegetarian"],
-        price: 17.99,
+        price: 18.99,
       },
     ],
   },
@@ -559,6 +583,36 @@ export const MENU_CATEGORIES: MenuCategory[] = [
     id: "kebabs",
     title: "Kebabs",
     items: [
+      {
+        id: "chicken-gyro-plate",
+        nameEn: "Chicken Gyro Plate",
+        nameTr: "Tavuk Döner",
+        description: "Served with rice and salad, and Turkish bread.",
+        image: "/images/menu/kebabs/chicken-gyro.jpg",
+        price: 17.99,
+      },
+      {
+        id: "chicken-shish-plate",
+        nameEn: "Chicken Shish Plate",
+        nameTr: "Tavuk Şiş",
+        description:
+          "Tender pieces of chicken marinated with special spices, skewered and grilled over charcoal. Served with fresh bread, onions, parsley, tomato, spices, and long hot peppers.",
+        image: "/images/menu/kebabs/chicken-shish.jpg",
+        price: 18.99,
+      },
+      {
+        id: "chicken-wings-grilled",
+        nameEn: "Chicken Wings — Grilled",
+        description: "Seasoned chicken wings grilled until lightly charred.",
+        price: 19.99,
+      },
+      {
+        id: "chicken-chops-plate",
+        nameEn: "Chicken Chops",
+        nameTr: "Tavuk Pirzola",
+        description: "Tender chicken chops, grilled and served hot.",
+        price: 18.99,
+      },
       {
         id: "adana-shish-plate",
         nameEn: "Adana Shish Plate",
@@ -570,40 +624,13 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         price: 20.99,
       },
       {
-        id: "chicken-gyro-plate",
-        nameEn: "Chicken Gyro Plate",
-        nameTr: "Tavuk Döner",
-        description: "Served with rice and salad, and Turkish bread.",
-        image: "/images/menu/kebabs/chicken-gyro.jpg",
-        price: 15.99,
-      },
-      {
-        id: "chicken-shish-plate",
-        nameEn: "Chicken Shish Plate",
-        nameTr: "Tavuk Şiş",
-        description:
-          "Tender pieces of chicken marinated with special spices, skewered and grilled over charcoal. Served with fresh bread, onions, parsley, tomato, spices, and long hot peppers.",
-        image: "/images/menu/kebabs/chicken-shish.jpg",
-        price: 17.99,
-      },
-      {
-        id: "falafel-6pcs",
-        nameEn: "Falafel (6 pcs) Plate",
-        nameTr: "Falafel (6 Adet)",
-        description:
-          "Deep-fried patties made from ground chickpeas, celery, garlic, parsley, and flour.",
-        image: "/images/menu/kebabs/falafel.jpg",
-        tags: ["Vegetarian"],
-        price: 11.99,
-      },
-      {
         id: "grilled-meatballs-6",
         nameEn: "Grilled Meatballs (6) Plate",
         nameTr: "Izgara Köfte",
         description:
           "Juicy grilled beef meatballs with Turkish spices, served with grilled vegetables.",
         image: "/images/menu/kebabs/grilled-meatballs.jpg",
-        price: 16.99,
+        price: 17.99,
       },
       {
         id: "meat-gyro-plate",
@@ -611,7 +638,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Et Döner",
         description: "Served with rice and salad, and Turkish bread.",
         image: "/images/menu/kebabs/meat-gyro.jpg",
-        price: 17.99,
+        price: 18.99,
       },
       {
         id: "iskender-kebab",
@@ -632,12 +659,14 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         price: 29.99,
       },
       {
-        id: "manti",
-        nameEn: "Manti",
+        id: "falafel-6pcs",
+        nameEn: "Falafel (6 pcs) Plate",
+        nameTr: "Falafel (6 Adet)",
         description:
-          "Small handmade dumplings filled with seasoned ground beef, served with garlic yogurt and drizzled with spiced butter sauce.",
-        image: "/images/menu/kebabs/manti.jpg",
-        price: 18.99,
+          "Deep-fried patties made from ground chickpeas, celery, garlic, parsley, and flour.",
+        image: "/images/menu/kebabs/falafel.jpg",
+        tags: ["Vegetarian"],
+        price: 14.99,
       },
     ],
   },
@@ -652,21 +681,21 @@ export const MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Kids Chicken Tenders",
         description: "Crispy breaded chicken strips. (Served with French fries.)",
         image: "/images/menu/kids/kids-chicken-tenders.jpg",
-        price: 7.99,
+        price: 9.99,
       },
       {
         id: "kids-hamburger",
         nameEn: "Kids Hamburger",
         description: "Juicy mini beef patty in a soft bun. (Served with French fries.)",
         image: "/images/menu/kids/kids-hamburger.jpg",
-        price: 7.99,
+        price: 9.99,
       },
       {
         id: "kids-kofte",
         nameEn: "Kids Köfte",
         description: "Grilled Turkish meatballs in a soft bun. (Served with French fries.)",
         image: "/images/menu/kids/kids-kofte.jpg",
-        price: 7.99,
+        price: 9.99,
       },
     ],
   },
@@ -782,3 +811,7 @@ export const MENU_CATEGORIES: MenuCategory[] = [
   { id: "specials", title: "Specials", items: [] },
   { id: "catering", title: "Catering", items: [] },
 ];
+
+export const MENU_CATEGORIES: MenuCategory[] = ALL_MENU_CATEGORIES.filter(
+  (category) => category.id !== "breakfast"
+);

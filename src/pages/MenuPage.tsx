@@ -50,7 +50,7 @@ function itemTitle(item: MenuItem) {
 
 function cardPriceLine(item: MenuItem) {
   if (typeof item.price === "number" && typeof item.price2 === "number") {
-    return `From ${formatPrice(Math.min(item.price, item.price2))}`;
+    return `${item.priceLabel ?? "Small"} ${formatPrice(item.price)} / ${item.price2Label ?? "Large"} ${formatPrice(item.price2)}`;
   }
   if (typeof item.price === "number") return formatPrice(item.price);
   if (typeof item.price2 === "number") return formatPrice(item.price2);
@@ -117,9 +117,8 @@ function DetailsModal({
   // flow. item.pickupUrl stays as a per-item override if one is ever needed.
   const orderHref = item.pickupUrl ?? CLOVER_PICKUP_URL;
 
-  // Optional fields (if you add later)
-  const comesWith = (item as any).comesWith as string | undefined;
-  const allergens = (item as any).allergens as string | undefined;
+  const comesWith = item.comesWith;
+  const allergens = item.allergens;
 
   return (
     <div
