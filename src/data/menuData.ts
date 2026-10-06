@@ -513,7 +513,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Lahmacun (3 pcs)",
         description:
           "Thin crispy dough topped with minced beef, tomatoes, peppers, onions, and Turkish spices.",
-        image: "/images/menu/lahmacun-and-pides/lahmacun.jpg",
+        image: "/images/menu/lahmacun-and-pides/lahmacun-styled-v1.png",
         price: 14.99,
       },
       {
@@ -521,7 +521,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Cheese Pie",
         nameTr: "Kaşarlı Pide",
         description: "Crispy dough topped with melted mozzarella cheese, baked to perfection.",
-        image: "/images/menu/lahmacun-and-pides/cheese-pie.jpg",
+        image: "/images/menu/lahmacun-and-pides/cheese-pie-styled-v1.png",
         tags: ["Vegetarian"],
         price: 13.99,
       },
@@ -530,7 +530,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Cubed Meat Pie",
         nameTr: "Kuşbasi Pide",
         description: "Crispy dough topped with tender marinated cubes of beef and mozzarella.",
-        image: "/images/menu/lahmacun-and-pides/cubed-meat-pie.jpg",
+        image: "/images/menu/lahmacun-and-pides/cubed-meat-pie-styled-v1.png",
         price: 17.99,
       },
       {
@@ -539,7 +539,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Kıymalı Pide",
         description:
           "Crispy dough topped with seasoned ground beef, onions, tomatoes, Turkish spices, and mozzarella.",
-        image: "/images/menu/lahmacun-and-pides/ground-beef-pie.jpg",
+        image: "/images/menu/lahmacun-and-pides/ground-beef-pie-styled-v1.png",
         price: 15.99,
       },
       {
@@ -547,7 +547,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Pastrami Pie",
         nameTr: "Pastırmalı Pide",
         description: "Crispy dough topped with thinly sliced pastrami and melted mozzarella.",
-        image: "/images/menu/lahmacun-and-pides/pastrami-pie.jpg",
+        image: "/images/menu/lahmacun-and-pides/pastrami-pie-styled-v1.png",
         price: 18.99,
       },
       {
@@ -555,7 +555,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Sujuk Pie",
         nameTr: "Sucuklu Pide",
         description: "Crispy dough topped with sujuk and melted mozzarella cheese.",
-        image: "/images/menu/lahmacun-and-pides/sujuk-pie.jpg",
+        image: "/images/menu/lahmacun-and-pides/sujuk-pie-styled-v1.png",
         price: 16.99,
       },
       {
@@ -564,7 +564,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Karışık Proteinli",
         description:
           "Crispy dough topped with ground beef, cubes of beef, pastrami, sujuk, eggs, and mozzarella.",
-        image: "/images/menu/lahmacun-and-pides/mixed-protein-pie.jfif",
+        image: "/images/menu/lahmacun-and-pides/mixed-protein-pie-styled-v1.png",
         price: 19.99,
       },
       {
@@ -573,7 +573,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Karışık Sebzeli",
         description:
           "Crispy dough topped with tomatoes, mushrooms, green & red pepper, eggplant, black olive, and mozzarella.",
-        image: "/images/menu/lahmacun-and-pides/mixed-vegetable-pie.webp",
+        image: "/images/menu/lahmacun-and-pides/mixed-vegetable-pie-styled-v1.png",
         tags: ["Vegetarian"],
         price: 18.99,
       },
