@@ -816,6 +816,11 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
   { id: "catering", title: "Catering", items: [] },
 ];
 
+// Keep bakery börek records for later, but hide them from the customer menu.
 export const MENU_CATEGORIES: MenuCategory[] = ALL_MENU_CATEGORIES.filter(
   (category) => category.id !== "breakfast"
+).map((category) =>
+  category.id === "bakery"
+    ? { ...category, items: category.items?.filter((item) => !item.id.startsWith("borek-")) }
+    : category
 );
