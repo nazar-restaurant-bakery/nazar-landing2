@@ -363,13 +363,13 @@ export default function MenuPage() {
                       <button
                         key={item.id}
                         type="button"
-                        className="text-left overflow-hidden rounded-2xl border border-brand-border bg-white"
+                        className="flex flex-col text-left overflow-hidden rounded-2xl border border-brand-border bg-white"
                         onClick={() => {
                           setModalItem(item);
                           setModalCatTitle(activeCategory.title);
                         }}
                       >
-                        <div className="h-44 bg-brand-bg flex items-center justify-center overflow-hidden">
+                        <div className="h-44 w-full shrink-0 bg-brand-bg flex items-center justify-center overflow-hidden">
                           <img
                             src={getItemImg(activeCategory.id, item.image)}
                             alt={itemTitle(item)}
