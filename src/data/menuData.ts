@@ -424,7 +424,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
             nameTr: "Kaşarlı Toast",
             description:
               "Grilled Turkish sandwich with melted mozzarella cheese on crispy toasted bread.",
-            image: "/images/menu/sandwiches/grilled-cheese.jpg",
+            image: "/images/menu/sandwiches/grilled-cheese-styled-v1.png",
             tags: ["Vegetarian"],
             price: 6.99,
           },
@@ -433,7 +433,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Sujuk & Cheese Toast",
         nameTr: "Kaşarlı Sucuklu",
         description:"Grilled Turkish sandwich with melted mozzarella cheese and sujuk on crispy toasted bread.",
-        image: "/images/menu/sandwiches/sujuk-and-cheese.png",
+        image: "/images/menu/sandwiches/sujuk-and-cheese-styled-v1.png",
         price: 8.99
       }
     ]
