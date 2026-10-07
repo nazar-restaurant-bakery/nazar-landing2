@@ -590,7 +590,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Chicken Gyro Plate",
         nameTr: "Tavuk Döner",
         description: "Served with rice and salad, and Turkish bread.",
-        image: "/images/menu/kebabs/chicken-gyro.jpg",
+        image: "/images/menu/kebabs/chicken-gyro-styled-v1.png",
         price: 17.99,
       },
       {
@@ -599,14 +599,14 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Tavuk Şiş",
         description:
           "Tender pieces of chicken marinated with special spices, skewered and grilled over charcoal. Served with fresh bread, onions, parsley, tomato, spices, and long hot peppers.",
-        image: "/images/menu/kebabs/chicken-shish.jpg",
+        image: "/images/menu/kebabs/chicken-shish-styled-v1.png",
         price: 18.99,
       },
       {
         id: "chicken-wings-grilled",
         nameEn: "Chicken Wings — Grilled",
         description: "Seasoned chicken wings grilled until lightly charred.",
-        image: "/images/menu/photo-coming-soon.svg",
+        image: "/images/menu/kebabs/chicken-wings-grilled-styled-v1.png",
         price: 19.99,
       },
       {
@@ -614,7 +614,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Chicken Chops",
         nameTr: "Tavuk Pirzola",
         description: "Tender chicken chops, grilled and served hot.",
-        image: "/images/menu/photo-coming-soon.svg",
+        image: "/images/menu/kebabs/chicken-chops-styled-v1.png",
         price: 18.99,
       },
       {
@@ -623,7 +623,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Adana Şiş",
         description:
           "Spicy minced lamb blended with herbs and grilled over charcoal. Served with fresh bread, onions, parsley, tomato, spices, and long hot peppers.",
-        image: "/images/menu/kebabs/adana-shish.jpg",
+        image: "/images/menu/kebabs/adana-shish-styled-v1.png",
         tags: ["Spicy"],
         price: 20.99,
       },
@@ -633,7 +633,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Izgara Köfte",
         description:
           "Juicy grilled beef meatballs with Turkish spices, served with grilled vegetables.",
-        image: "/images/menu/kebabs/grilled-meatballs.jpg",
+        image: "/images/menu/kebabs/grilled-meatballs-styled-v1.png",
         price: 17.99,
       },
       {
@@ -641,7 +641,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Meat Gyro Plate",
         nameTr: "Et Döner",
         description: "Served with rice and salad, and Turkish bread.",
-        image: "/images/menu/kebabs/meat-gyro.jpg",
+        image: "/images/menu/kebabs/meat-gyro-styled-v1.png",
         price: 18.99,
       },
       {
@@ -650,7 +650,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "İskender Kebab",
         description:
           "Sliced gyro kebab over cubes of pita bread, long peppers, topped with tomato sauce, yogurt, and melted butter.",
-        image: "/images/menu/kebabs/iskender-kebab.jpg",
+        image: "/images/menu/kebabs/iskender-kebab-styled-v1.png",
         price: 19.99,
       },
       {
@@ -659,7 +659,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Karışık Izgara",
         description:
           "A generous platter featuring Adana Shish, Chicken Shish, Meat Gyro, Chicken Gyro, and Köfte (1 pc). Served with fresh bread, onions, parsley, and grilled vegetables.",
-        image: "/images/menu/kebabs/mixed-grill.jpg",
+        image: "/images/menu/kebabs/mixed-grill-styled-v1.png",
         price: 29.99,
       },
       {
@@ -668,7 +668,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameTr: "Falafel (6 Adet)",
         description:
           "Deep-fried patties made from ground chickpeas, celery, garlic, parsley, and flour.",
-        image: "/images/menu/kebabs/falafel.jpg",
+        image: "/images/menu/kebabs/falafel-styled-v1.png",
         tags: ["Vegetarian"],
         price: 14.99,
       },
