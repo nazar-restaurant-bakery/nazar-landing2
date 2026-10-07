@@ -58,8 +58,8 @@ export default function HomePage() {
   // Popular cards (your existing approach)
   // ✅ Keep using heroImg for now (as your comment says)
   const popular = [
-    { title: "Lentil Soup", sub: "Mercimek", img: "/images/menu/soups/lentil-soup.jpg" },
-    { title: "Mixed Grill", sub: "Karışık Izgara", img: "/images/menu/kebabs/mixed-grill.jpg" },
+    { title: "Lentil Soup", sub: "Mercimek", img: "/images/menu/soups/lentil-soup-styled-v5.png" },
+    { title: "Mixed Grill", sub: "Karışık Izgara", img: "/images/menu/kebabs/mixed-grill-styled-v1.png" },
     { title: "Lahmacun", sub: "Lahmacun", img: "/images/menu/lahmacun-and-pides/lahmacun.jpg" },
   ];
 
