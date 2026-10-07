@@ -272,6 +272,15 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         price: 5.99,
       },
       {
+        id: "saksuka",
+        nameEn: "Şakşuka",
+        description:
+          "Fried eggplant, potatoes and peppers in a garlicky tomato sauce.",
+        image: "/images/menu/photo-coming-soon.svg",
+        tags: ["Vegetarian"],
+        price: 8.99,
+      },
+      {
         id: "mixed-cold-appetizers",
         nameEn: "Mixed Cold Appetizers",
         nameTr: "Karışık Soğuk Meze",
