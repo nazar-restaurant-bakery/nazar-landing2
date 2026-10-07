@@ -322,8 +322,8 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
           },
           {
             id: "falafel-wrap-4pcs",
-            nameEn: "Falafel Wrap (4 pcs)",
-            nameTr: "Falafel Dürüm (4 Adet)",
+            nameEn: "Falafel Wrap",
+            nameTr: "Falafel Dürüm",
             description:
               "Golden, crispy falafel balls made from chickpeas, herbs, and spices, wrapped with lettuce and hummus.",
             image: "/images/menu/sandwiches/falafel-wrap-styled-v1.png",
@@ -604,7 +604,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
       },
       {
         id: "chicken-wings-grilled",
-        nameEn: "Chicken Wings — Grilled",
+        nameEn: "Chicken Wings",
         description: "Seasoned chicken wings grilled until lightly charred.",
         image: "/images/menu/kebabs/chicken-wings-grilled-styled-v1.png",
         price: 19.99,
@@ -629,7 +629,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
       },
       {
         id: "grilled-meatballs-6",
-        nameEn: "Grilled Meatballs (6) Plate",
+        nameEn: "Grilled Meatballs Plate",
         nameTr: "Izgara Köfte",
         description:
           "Juicy grilled beef meatballs with Turkish spices, served with grilled vegetables.",
