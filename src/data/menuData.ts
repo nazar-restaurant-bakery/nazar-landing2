@@ -276,7 +276,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
         nameEn: "Şakşuka",
         description:
           "Fried eggplant, potatoes and peppers in a garlicky tomato sauce.",
-        image: "/images/menu/photo-coming-soon.svg",
+        image: "/images/menu/cold-appetizers/exec-e88e8b33-adec-4ff9-a864-03ef3ba79e78.png",
         tags: ["Vegetarian"],
         price: 8.99,
       },
