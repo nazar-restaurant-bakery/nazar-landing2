@@ -811,9 +811,6 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
     ],
   },
 
-  // ---------------- Empty for now ----------------
-  { id: "specials", title: "Specials", items: [] },
-  { id: "catering", title: "Catering", items: [] },
 ];
 
 // Keep hidden bakery product records for later, but hide them from the customer menu.
