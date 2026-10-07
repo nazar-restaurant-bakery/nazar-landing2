@@ -290,7 +290,7 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
   // ---------------- Sandwich & Wrap ----------------
   {
     id: "sandwich-wrap",
-    title: "Sandwich & Wrap",
+    title: "Sandwich & Wraps",
     subcategories: [
       {
         id: "extras",
