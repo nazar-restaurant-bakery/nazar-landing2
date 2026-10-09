@@ -171,6 +171,9 @@ export default function CateringPage() {
                   {CATERING_TRAYS.filter((tray) => tray.group === group.id).map((tray) => (
                     <article key={tray.id} className="rounded-2xl border border-[#e7dccb] bg-white p-4 shadow-sm">
                       <h5 className="font-extrabold text-zinc-900">{tray.title[lang]}</h5>
+                      {"withRice" in tray && tray.withRice && (
+                        <p className="mt-1 text-xs text-zinc-600">{t("catering.withRice", lang)}</p>
+                      )}
                       {tray.id === "cold-appetizers-platter" && (
                         <p className="mt-1 text-xs text-zinc-600">{t("catering.platterNote", lang)}</p>
                       )}

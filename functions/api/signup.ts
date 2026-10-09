@@ -45,6 +45,10 @@ const SPECIAL_TRAY_QUANTITIES: Record<string, number[]> = {
   "chicken-wings": [70, 140, 210, 350], "chicken-chops": [30, 60, 90, 150],
   "meat-gyro": [3.5, 7, 11, 18], "chicken-gyro": [4, 8, 12, 20],
 };
+const RICE_TRAY_IDS = new Set([
+  "falafel", "grilled-meatballs", "chicken-chops", "adana-shish",
+  "chicken-shish", "meat-gyro", "chicken-gyro",
+]);
 
 function response(status: number, code: string): Response {
   return new Response(JSON.stringify({ code }), {
@@ -159,7 +163,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
           seen.add(tray.id);
           const index = [10, 20, 30, 50].indexOf(tray.size);
           const quantity = SPECIAL_TRAY_QUANTITIES[tray.id]?.[index] ?? tray.size;
-          labels.push(`${TRAY_LABELS[tray.id]} (${quantity} ${TRAY_UNITS[tray.id]}, ${tray.size}-guest option)`);
+          labels.push(`${TRAY_LABELS[tray.id]} (${quantity} ${TRAY_UNITS[tray.id]}, ${tray.size}-guest option${RICE_TRAY_IDS.has(tray.id) ? ", with rice pilav" : ""})`);
         }
         menuSummary = `Catering trays: ${labels.join(", ")}`;
         if (itemIds.length) menuSummary += `; additional dishes: ${itemIds.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
