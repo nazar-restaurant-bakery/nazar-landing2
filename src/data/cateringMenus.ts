@@ -10,9 +10,9 @@ export const CATERING_SIZES = [10, 20, 30, 50] as const;
 // priced deep-fried appetizer is a different preparation.
 export const CATERING_TRAYS = [
   { id: "lentil-soup", group: "soup-salad", title: { en: "Lentil Soup", tr: "Mercimek Çorbası", ar: "شوربة العدس" }, unit: "servings", prices: [50, 90, 130, 200] },
-  { id: "caesar-salad", group: "soup-salad", title: { en: "Caesar Salad", tr: "Sezar Salata", ar: "سلطة سيزر" }, unit: "servings", prices: [65, 110, 150, 230] },
-  { id: "season-salad", group: "soup-salad", title: { en: "Season Salad", tr: "Mevsim Salata", ar: "سلطة الموسم" }, unit: "servings", prices: [65, 110, 150, 230] },
-  { id: "shepherd-salad", group: "soup-salad", title: { en: "Shepherd Salad", tr: "Çoban Salata", ar: "سلطة الراعي" }, unit: "servings", prices: [65, 110, 150, 230] },
+  { id: "caesar-salad", group: "soup-salad", title: { en: "Caesar Salad", tr: "Sezar Salata", ar: "سلطة سيزر" }, unit: "servings", prices: [95, 180, 255, 375] },
+  { id: "season-salad", group: "soup-salad", title: { en: "Season Salad", tr: "Mevsim Salata", ar: "سلطة الموسم" }, unit: "servings", prices: [95, 180, 255, 375] },
+  { id: "shepherd-salad", group: "soup-salad", title: { en: "Shepherd Salad", tr: "Çoban Salata", ar: "سلطة الراعي" }, unit: "servings", prices: [95, 180, 255, 375] },
   { id: "cold-appetizers-platter", group: "appetizers", title: { en: "Cold Appetizers Platter", tr: "Soğuk Meze Tabağı", ar: "طبق المقبلات الباردة" }, unit: "servings", prices: [70, 120, 160, 250] },
   { id: "cheese-rolls", group: "appetizers", title: { en: "Cheese Rolls", tr: "Peynirli Börek", ar: "لفائف الجبن" }, unit: "pieces", prices: [15, 27, 35, 55] },
   { id: "falafel", group: "appetizers", title: { en: "Falafel", tr: "Falafel", ar: "فلافل" }, unit: "pieces", prices: [22, 40, 57, 90], withRice: true },

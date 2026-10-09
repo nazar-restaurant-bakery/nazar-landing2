@@ -595,8 +595,8 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
       },
       {
         id: "chicken-shish-plate",
-        nameEn: "Chicken Shish Plate",
-        nameTr: "Tavuk Şiş",
+        nameEn: "Chicken Shish Plate (2 skewers)",
+        nameTr: "Tavuk Şiş (2 Şiş)",
         description:
           "Tender pieces of chicken marinated with special spices, skewered and grilled over charcoal. Served with fresh bread, onions, parsley, tomato, spices, and long hot peppers.",
         image: "/images/menu/kebabs/chicken-shish-styled-v1.png",
@@ -612,8 +612,8 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
       },
       {
         id: "chicken-chops-plate",
-        nameEn: "Chicken Chops",
-        nameTr: "Tavuk Pirzola",
+        nameEn: "Chicken Chops (3 pcs)",
+        nameTr: "Tavuk Pirzola (3 Adet)",
         description: "Tender chicken chops, grilled and served hot.",
         image: "/images/menu/kebabs/chicken-chops-styled-v1.png",
         price: 18.99,
@@ -630,8 +630,8 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
       },
       {
         id: "grilled-meatballs-6",
-        nameEn: "Grilled Meatballs Plate",
-        nameTr: "Izgara Köfte",
+        nameEn: "Grilled Meatballs (6 pcs) Plate",
+        nameTr: "Izgara Köfte (6 Adet)",
         description:
           "Juicy grilled beef meatballs with Turkish spices, served with grilled vegetables.",
         image: "/images/menu/kebabs/grilled-meatballs-styled-v1.png",
