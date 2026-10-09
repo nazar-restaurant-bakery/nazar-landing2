@@ -3,7 +3,7 @@ import React from "react";
 import CateringRequestForm from "../components/CateringRequestForm";
 import { useLang } from "../components/Language";
 import { t } from "../components/i18n";
-import { CATERING_CUSTOM_ITEM_IDS, CATERING_PACKAGES, CATERING_SIZES, CATERING_TRAYS, cateringItemName } from "../data/cateringMenus";
+import { CATERING_CUSTOM_ITEM_IDS, CATERING_SIZES, CATERING_TRAYS, cateringItemName } from "../data/cateringMenus";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
 import { useSeo } from "../hooks/useSeo";
 import type { CateringChoice } from "../lib/signup";
@@ -55,10 +55,6 @@ export default function CateringPage() {
 
   const { lang } = useLang();
   const [choice, setChoice] = React.useState<CateringChoice | null>(null);
-
-  function choosePackage(id: string) {
-    setChoice({ type: "package", id });
-  }
 
   function toggleCustomItem(id: string) {
     setChoice((current) => {
@@ -112,7 +108,7 @@ export default function CateringPage() {
         <div className="mt-6 flex flex-col gap-3 border-t border-[#d7cbbb] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm font-semibold text-zinc-700">
             {t("catering.menusTeaserStart", lang)}
-            <a href="#catering-menus" className="font-extrabold text-[#1E7A3A] underline underline-offset-2 hover:text-emerald-800">{t("catering.menusLinkLabel", lang)}</a>
+            <a href="#catering-trays" className="font-extrabold text-[#1E7A3A] underline underline-offset-2 hover:text-emerald-800">{t("catering.menusLinkLabel", lang)}</a>
             {t("catering.menusTeaserEnd", lang)}
           </p>
           <a href={`tel:${PHONE_NUMBER_TEL}`} className="shrink-0 text-sm font-extrabold text-[#1E7A3A] underline underline-offset-2">{PHONE_NUMBER_DISPLAY}</a>
@@ -143,33 +139,7 @@ export default function CateringPage() {
         </div>
       </div>
 
-      <div id="catering-menus" className="mt-14 scroll-mt-24">
-        <p className="text-xs font-extrabold uppercase tracking-widest text-[#1E7A3A]">Nazar catering</p>
-        <h2 className="mt-2 text-2xl font-extrabold text-zinc-900 sm:text-3xl">{t("catering.menusTitle", lang)}</h2>
-        <p className="mt-2 max-w-3xl text-sm text-zinc-600">{t("catering.menusIntro", lang)}</p>
-
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {CATERING_PACKAGES.map((menu) => {
-            const selected = choice?.type === "package" && choice.id === menu.id;
-            return (
-              <article key={menu.id} className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${selected ? "border-[#1E7A3A] ring-2 ring-[#1E7A3A]" : "border-zinc-200"}`}>
-                <img src={menu.image} alt="" className="h-40 w-full object-cover" loading="lazy" />
-                <div className="p-5">
-                  <h3 className="text-lg font-extrabold text-zinc-900">{menu.title[lang]}</h3>
-                  <p className="mt-1 text-sm text-zinc-600">{menu.description[lang]}</p>
-                  <ul className="mt-3 space-y-1 text-sm text-zinc-700">
-                    {menu.itemIds.map((id) => <li key={id}>• {cateringItemName(id, lang)}</li>)}
-                  </ul>
-                  <button type="button" aria-pressed={selected} onClick={() => choosePackage(menu.id)} className="mt-5 rounded-full border border-[#1E7A3A] px-5 py-2 text-sm font-bold text-[#1E7A3A] hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-[#1E7A3A] focus:ring-offset-2">
-                    {selected ? t("catering.selected", lang) : t("catering.chooseMenu", lang)}
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-
-        <div id="catering-trays" className="mt-12 scroll-mt-24 rounded-3xl bg-[#faf5eb] p-5 sm:p-8">
+      <div id="catering-trays" className="mt-14 scroll-mt-24 rounded-3xl bg-[#faf5eb] p-5 sm:p-8">
           <p className="text-xs font-extrabold uppercase tracking-widest text-[#1E7A3A]">Nazar catering</p>
           <h3 className="mt-2 text-2xl font-extrabold text-zinc-900">{t("catering.traysTitle", lang)}</h3>
           <p className="mt-2 max-w-3xl text-sm text-zinc-700">{t("catering.traysIntro", lang)}</p>
@@ -182,13 +152,18 @@ export default function CateringPage() {
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   {CATERING_TRAYS.filter((tray) => tray.group === group.id).map((tray) => (
                     <article key={tray.id} className="rounded-2xl border border-[#e7dccb] bg-white p-4 shadow-sm">
-                      <h5 className="font-extrabold text-zinc-900">{tray.title[lang]}</h5>
-                      {"withRice" in tray && tray.withRice && (
-                        <p className="mt-1 text-xs text-zinc-600">{t("catering.withRice", lang)}</p>
-                      )}
-                      {tray.id === "cold-appetizers-platter" && (
-                        <p className="mt-1 text-xs text-zinc-600">{t("catering.platterNote", lang)}</p>
-                      )}
+                      <div className="flex items-start gap-4">
+                        <img src={tray.image} alt="" loading="lazy" className="h-24 w-28 shrink-0 rounded-xl bg-[#faf5eb] object-cover" />
+                        <div>
+                          <h5 className="font-extrabold text-zinc-900">{tray.title[lang]}</h5>
+                          {"withRice" in tray && tray.withRice && (
+                            <p className="mt-1 text-xs text-zinc-600">{t("catering.withRice", lang)}</p>
+                          )}
+                          {tray.id === "cold-appetizers-platter" && (
+                            <p className="mt-1 text-xs text-zinc-600">{t("catering.platterNote", lang)}</p>
+                          )}
+                        </div>
+                      </div>
                       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4">
                         {CATERING_SIZES.map((size, index) => {
                           const quantity = "quantities" in tray ? tray.quantities[index] : size;
@@ -211,8 +186,6 @@ export default function CateringPage() {
             ))}
           </div>
           <p className="mt-6 text-sm text-zinc-700">{t("catering.traysQuoteNote", lang)}</p>
-        </div>
-
       </div>
     </section>
   );
