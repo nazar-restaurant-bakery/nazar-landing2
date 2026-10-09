@@ -126,7 +126,9 @@ export const translations = {
     },
   },
   catering: {
-    title: { tr: "Catering ve Büyük Siparişler", en: "Catering & Large Orders", ar: "التموين والطلبات الكبيرة" },
+    eyebrow: { tr: "Nazar catering", en: "Nazar catering", ar: "نازار للتموين" },
+    title: { tr: "Catering ve Kutlamalar", en: "Catering & Parties", ar: "التموين والاحتفالات" },
+    eventTypesLabel: { tr: "Hizmet verdiğimiz etkinlikler", en: "Events we cater", ar: "المناسبات التي نخدمها" },
     menusTitle: { tr: "Catering menülerimiz", en: "Explore catering menus", ar: "اكتشف قوائم التموين" },
     menusIntro: { tr: "Beş örnek menüden birini seçin veya kendi menünüzü oluşturun. Kişi sayısı, porsiyon ve fiyatı talebinize göre birlikte netleştirelim.", en: "Choose one of five sample menus or create your own. We’ll confirm portions, availability and pricing for your event.", ar: "اختر إحدى القوائم الخمس المقترحة أو أنشئ قائمتك الخاصة. سنؤكد الكميات والتوفر والسعر حسب مناسبتك." },
     traysTitle: { tr: "Catering tepsileri ve kendi seçiminiz", en: "Catering trays & your own selection", ar: "صواني التموين واختيارك الخاص" },
@@ -151,9 +153,9 @@ export const translations = {
     noMenu: { tr: "Henüz menü seçilmedi; genel teklif isteyebilirsiniz.", en: "No menu selected yet; you can still request a general quote.", ar: "لم تختر قائمة بعد؛ لا يزال بإمكانك طلب عرض سعر عام." },
     errorCustomItems: { tr: "Kendi menünüz için en az bir ürün seçin.", en: "Choose at least one dish for your custom menu.", ar: "اختر طبقًا واحدًا على الأقل لقائمتك الخاصة." },
     subtitle: {
-      tr: "Doğum günü, ofis toplantısı, düğün — tepsi usulü hazırlıyoruz. Detayları bırakın, size dönelim.",
-      en: "Birthdays, office lunches, weddings — we cook by the tray. Leave your details and we’ll get back to you.",
-      ar: "أعياد ميلاد، غداء مكتبي، أعراس — نحضّر بالصواني. اترك بياناتك وسنعاود التواصل معك.",
+      tr: "Aile kutlamalarından iş yeri buluşmalarına, sofranıza uygun Türk lezzetleri hazırlıyoruz. Hazır menü seçin veya kendi menünüzü oluşturun.",
+      en: "From family celebrations to workplace gatherings, we prepare Turkish favorites for your table. Choose a menu or create your own.",
+      ar: "من احتفالات العائلة إلى لقاءات العمل، نحضّر الأطباق التركية المفضلة لمائدتكم. اختر قائمة جاهزة أو أنشئ قائمتك الخاصة.",
     },
     name: { tr: "Ad Soyad", en: "Name", ar: "الاسم" },
     email: { tr: "E-posta", en: "Email", ar: "البريد الإلكتروني" },

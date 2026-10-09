@@ -26,6 +26,15 @@ const HIGHLIGHTS = [
   },
 ] as const;
 
+const EVENT_TYPES = [
+  { en: "Engagements", tr: "Nişanlar", ar: "حفلات الخطوبة" },
+  { en: "Weddings", tr: "Düğünler", ar: "حفلات الزفاف" },
+  { en: "Birthdays", tr: "Doğum günleri", ar: "أعياد الميلاد" },
+  { en: "Sünnet celebrations", tr: "Sünnet kutlamaları", ar: "احتفالات الختان" },
+  { en: "Office lunches", tr: "Ofis öğle yemekleri", ar: "غداء العمل" },
+  { en: "Family gatherings", tr: "Aile buluşmaları", ar: "اللقاءات العائلية" },
+] as const;
+
 const TRAY_GROUPS = [
   { id: "soup-salad", title: { en: "Soups & salads", tr: "Çorbalar ve salatalar", ar: "الشوربات والسلطات" } },
   { id: "appetizers", title: { en: "Appetizers", tr: "Mezeler", ar: "المقبلات" } },
@@ -42,7 +51,7 @@ const TRAY_UNITS = {
 } as const;
 
 export default function CateringPage() {
-  useSeo("Turkish Catering in West Haven", "Turkish platters, fresh bread and baklava. Standard catering for 10 to 60 guests; ask us about larger events in West Haven and New Haven.", "/catering");
+  useSeo("Turkish Catering & Parties in West Haven", "Turkish catering for engagements, weddings, birthdays, family celebrations and office lunches. Standard catering for 10 to 60 guests; ask us about larger events.", "/catering");
 
   const { lang } = useLang();
   const [choice, setChoice] = React.useState<CateringChoice | null>(null);
@@ -77,9 +86,9 @@ export default function CateringPage() {
     <section className="mx-auto w-full max-w-6xl px-4 py-10">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-start">
         {/* Pitch */}
-        <div>
+        <div id="catering-intro" className="rounded-3xl border border-[#e7dccb] bg-[#faf5eb] p-6 sm:p-8">
           <p className="text-xs font-extrabold uppercase tracking-widest text-[#1E7A3A]">
-            Nazar
+            {t("catering.eyebrow", lang)}
           </p>
 
           <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
@@ -89,6 +98,14 @@ export default function CateringPage() {
           <p className="mt-3 text-lg font-semibold text-zinc-700">
             {t("catering.subtitle", lang)}
           </p>
+
+          <div className="mt-6 flex flex-wrap gap-2" aria-label={t("catering.eventTypesLabel", lang)}>
+            {EVENT_TYPES.map((event) => (
+              <span key={event.en} className="rounded-full border border-[#d7cbbb] bg-white px-3 py-1.5 text-xs font-bold text-zinc-700">
+                {event[lang] ?? event.en}
+              </span>
+            ))}
+          </div>
 
           <ul className="mt-6 space-y-3">
             {HIGHLIGHTS.map((item) => (
