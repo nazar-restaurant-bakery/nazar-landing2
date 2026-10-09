@@ -6,8 +6,8 @@ export type Localized = Record<Lang, string>;
 export const CATERING_SIZES = [10, 20, 30, 50] as const;
 
 // Tray quantities and prices are separate from the restaurant's plated menu.
-// Chicken wings stay quote-only until their large gap from the dine-in price
-// is explained. The duplicate Chicken Gyro row was removed in Yücel's revision.
+// Chicken wings here are grilled, like the dine-in entree; the separately
+// priced deep-fried appetizer is a different preparation.
 export const CATERING_TRAYS = [
   { id: "lentil-soup", group: "soup-salad", title: { en: "Lentil Soup", tr: "Mercimek Çorbası", ar: "شوربة العدس" }, unit: "servings", prices: [50, 90, 130, 200] },
   { id: "caesar-salad", group: "soup-salad", title: { en: "Caesar Salad", tr: "Sezar Salata", ar: "سلطة سيزر" }, unit: "servings", prices: [65, 110, 150, 230] },
@@ -16,12 +16,12 @@ export const CATERING_TRAYS = [
   { id: "cold-appetizers-platter", group: "appetizers", title: { en: "Cold Appetizers Platter", tr: "Soğuk Meze Tabağı", ar: "طبق المقبلات الباردة" }, unit: "servings", prices: [70, 120, 160, 250] },
   { id: "cheese-rolls", group: "appetizers", title: { en: "Cheese Rolls", tr: "Peynirli Börek", ar: "لفائف الجبن" }, unit: "pieces", prices: [15, 27, 35, 55] },
   { id: "falafel", group: "appetizers", title: { en: "Falafel", tr: "Falafel", ar: "فلافل" }, unit: "pieces", prices: [22, 40, 57, 90], withRice: true },
-  { id: "grilled-meatballs", group: "grill", title: { en: "Grilled Meatballs", tr: "Izgara Köfte", ar: "كفتة مشوية" }, unit: "pieces", prices: [25, 45, 68, 105], withRice: true },
-  { id: "chicken-wings", group: "grill", title: { en: "Chicken Wings", tr: "Tavuk Kanadı", ar: "أجنحة الدجاج" }, unit: "wings", quantities: [70, 140, 210, 350], prices: null },
+  { id: "grilled-meatballs", group: "grill", title: { en: "Grilled Meatballs", tr: "Izgara Köfte", ar: "كفتة مشوية" }, unit: "pieces", prices: [25, 45, 66, 105], withRice: true },
+  { id: "chicken-wings", group: "grill", title: { en: "Grilled Chicken Wings", tr: "Izgara Tavuk Kanadı", ar: "أجنحة دجاج مشوية" }, unit: "wings", quantities: [70, 140, 210, 350], prices: [170, 320, 450, 720] },
   { id: "chicken-chops", group: "grill", title: { en: "Chicken Chops", tr: "Tavuk Pirzola", ar: "قطع الدجاج المشوية" }, unit: "pieces", quantities: [30, 60, 90, 150], prices: [150, 280, 400, 650], withRice: true },
   { id: "adana-shish", group: "grill", title: { en: "Adana Shish", tr: "Adana Şiş", ar: "شيش أضنة" }, unit: "skewers", prices: [95, 165, 240, 390], withRice: true },
   { id: "chicken-shish", group: "grill", title: { en: "Chicken Shish", tr: "Tavuk Şiş", ar: "شيش دجاج" }, unit: "skewers", prices: [85, 160, 230, 375], withRice: true },
-  { id: "meat-gyro", group: "gyro", title: { en: "Meat Gyro", tr: "Et Döner", ar: "جيرو اللحم" }, unit: "lb", quantities: [3.5, 7, 11, 18], prices: [150, 285, 410, 680], withRice: true },
+  { id: "meat-gyro", group: "gyro", title: { en: "Meat Gyro", tr: "Et Döner", ar: "جيرو اللحم" }, unit: "lb", quantities: [3.5, 7, 11, 18], prices: [150, 285, 420, 680], withRice: true },
   { id: "chicken-gyro", group: "gyro", title: { en: "Chicken Gyro", tr: "Tavuk Döner", ar: "جيرو الدجاج" }, unit: "lb", quantities: [4, 8, 12, 20], prices: [140, 265, 365, 580], withRice: true },
 ] as const;
 

@@ -29,7 +29,7 @@ const TRAY_LABELS: Record<string, string> = {
   "season-salad": "Season Salad", "shepherd-salad": "Shepherd Salad",
   "cold-appetizers-platter": "Cold Appetizers Platter", "cheese-rolls": "Cheese Rolls",
   falafel: "Falafel", "grilled-meatballs": "Grilled Meatballs",
-  "chicken-wings": "Chicken Wings", "chicken-chops": "Chicken Chops",
+  "chicken-wings": "Grilled Chicken Wings", "chicken-chops": "Chicken Chops",
   "adana-shish": "Adana Shish", "chicken-shish": "Chicken Shish",
   "meat-gyro": "Meat Gyro", "chicken-gyro": "Chicken Gyro",
 };

@@ -136,7 +136,7 @@ export const translations = {
     requestPrice: { tr: "Fiyat sor", en: "Ask for price", ar: "اسأل عن السعر" },
     guestsShort: { tr: "kişilik", en: "guests", ar: "ضيفًا" },
     withRice: { tr: "Pilav ile servis edilir.", en: "Served with rice pilav.", ar: "يقدم مع أرز بيلاف." },
-    traysQuoteNote: { tr: "Gösterilen tutarlar catering tepsisi içindir; nihai fiyat, içerik ve uygunluk siparişten önce teyit edilir. Kanat fiyatını teklif sırasında netleştiririz.", en: "Shown amounts are for catering trays; we confirm final price, contents and availability before an order. Ask us for chicken wings pricing.", ar: "الأسعار المعروضة لصواني التموين؛ نؤكد السعر النهائي والمحتوى والتوفر قبل الطلب. اسألنا عن سعر أجنحة الدجاج." },
+    traysQuoteNote: { tr: "Gösterilen tutarlar catering tepsisi içindir; nihai fiyat, içerik ve uygunluk siparişten önce teyit edilir. Tavuk kanadı ızgarada hazırlanır.", en: "Shown amounts are for catering trays; we confirm final price, contents and availability before an order. Chicken wings are grilled.", ar: "الأسعار المعروضة لصواني التموين؛ نؤكد السعر النهائي والمحتوى والتوفر قبل الطلب. أجنحة الدجاج مشوية." },
     menusTeaserStart: { tr: "Sizin için hazırladığımız seçenekleri ", en: "Explore the options we've prepared for you in our ", ar: "اطّلع على الخيارات التي أعددناها لك في قسم " },
     menusLinkLabel: { tr: "Catering menülerimizde", en: "Catering Menus", ar: "قوائم التموين" },
     menusTeaserEnd: { tr: " görebilir veya kendi menünüzü oluşturabilirsiniz.", en: " section, or create your own menu.", ar: "، أو أنشئ قائمتك الخاصة." },

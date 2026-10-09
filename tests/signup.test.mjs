@@ -124,7 +124,7 @@ test("selected catering trays and quantities reach the quote request", async () 
   };
   assert.equal((await onRequestPost({ request: request(payload), env })).status, 200);
   assert.equal(JSON.parse(sent[1].body).p_meta.message,
-    "Catering trays: Cold Appetizers Platter (30 servings, 30-guest option), Chicken Wings (210 wings, 30-guest option), Falafel (10 pieces, 10-guest option, with rice pilav); additional dishes: Baklava\n\nMixed cold appetizers, please");
+    "Catering trays: Cold Appetizers Platter (30 servings, 30-guest option), Grilled Chicken Wings (210 wings, 30-guest option), Falafel (10 pieces, 10-guest option, with rice pilav); additional dishes: Baklava\n\nMixed cold appetizers, please");
 });
 
 test("unknown or empty catering menu choices are rejected before verification", async () => {
