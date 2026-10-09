@@ -84,63 +84,45 @@ export default function CateringPage() {
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-10">
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-start">
-        {/* Pitch */}
-        <div className="space-y-6">
-        <div id="catering-intro" className="rounded-3xl border border-[#e7dccb] bg-[#faf5eb] p-6 sm:p-8">
-          <p className="text-xs font-extrabold uppercase tracking-widest text-[#1E7A3A]">
-            {t("catering.eyebrow", lang)}
-          </p>
-
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
-            {t("catering.title", lang)}
-          </h1>
-
-          <p className="mt-3 text-lg font-semibold text-zinc-700">
-            {t("catering.subtitle", lang)}
-          </p>
-
-          <div className="mt-6 flex flex-wrap gap-2" aria-label={t("catering.eventTypesLabel", lang)}>
-            {EVENT_TYPES.map((event) => (
-              <span key={event.en} className="rounded-full border border-[#d7cbbb] bg-white px-3 py-1.5 text-xs font-bold text-zinc-700">
-                {event[lang] ?? event.en}
-              </span>
-            ))}
+      <div id="catering-intro" className="rounded-3xl border border-[#e7dccb] bg-[#faf5eb] p-6 sm:p-8">
+        <div className="grid gap-6 md:grid-cols-2 md:gap-10">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#1E7A3A]">{t("catering.eyebrow", lang)}</p>
+            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">{t("catering.title", lang)}</h1>
+            <p className="mt-3 text-lg font-semibold text-zinc-700">{t("catering.subtitle", lang)}</p>
           </div>
-
-          <ul className="mt-6 space-y-3">
-            {HIGHLIGHTS.map((item) => (
-              <li
-                key={item.en}
-                className="flex items-start gap-3 text-sm font-semibold text-zinc-700"
-              >
-                <span
-                  aria-hidden="true"
-                  className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#1E7A3A] text-[11px] font-extrabold text-white"
-                >
-                  ✓
+          <div>
+            <div className="flex flex-wrap gap-2" aria-label={t("catering.eventTypesLabel", lang)}>
+              {EVENT_TYPES.map((event) => (
+                <span key={event.en} className="rounded-full border border-[#d7cbbb] bg-white px-3 py-1.5 text-xs font-bold text-zinc-700">
+                  {event[lang] ?? event.en}
                 </span>
-                <span>{item[lang] ?? item.en}</span>
-              </li>
-            ))}
-          </ul>
-
-          <p className="mt-6 text-sm font-semibold text-zinc-700">
+              ))}
+            </div>
+            <ul className="mt-5 space-y-2">
+              {HIGHLIGHTS.map((item) => (
+                <li key={item.en} className="flex items-start gap-3 text-sm font-semibold text-zinc-700">
+                  <span aria-hidden="true" className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#1E7A3A] text-[11px] font-extrabold text-white">✓</span>
+                  <span>{item[lang] ?? item.en}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="mt-6 flex flex-col gap-3 border-t border-[#d7cbbb] pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-semibold text-zinc-700">
             {t("catering.menusTeaserStart", lang)}
-            <a href="#catering-menus" className="font-extrabold text-[#1E7A3A] underline underline-offset-2 hover:text-emerald-800">
-              {t("catering.menusLinkLabel", lang)}
-            </a>
+            <a href="#catering-menus" className="font-extrabold text-[#1E7A3A] underline underline-offset-2 hover:text-emerald-800">{t("catering.menusLinkLabel", lang)}</a>
             {t("catering.menusTeaserEnd", lang)}
           </p>
+          <a href={`tel:${PHONE_NUMBER_TEL}`} className="shrink-0 text-sm font-extrabold text-[#1E7A3A] underline underline-offset-2">{PHONE_NUMBER_DISPLAY}</a>
+        </div>
+      </div>
 
-          <p className="mt-6 text-sm font-semibold text-zinc-600">
-            <a
-              href={`tel:${PHONE_NUMBER_TEL}`}
-              className="font-extrabold text-[#1E7A3A] underline underline-offset-2"
-            >
-              {PHONE_NUMBER_DISPLAY}
-            </a>
-          </p>
+      <div className="mt-8 grid gap-8 md:grid-cols-2">
+        {/* Quote form on the left, custom menu on the right. */}
+        <div id="catering-request" className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+          <CateringRequestForm menuChoice={choice} onSuccess={() => setChoice(null)} />
         </div>
 
         <div id="catering-custom" className="scroll-mt-24 rounded-3xl border border-emerald-200 bg-emerald-50/50 p-6 sm:p-8">
@@ -158,12 +140,6 @@ export default function CateringPage() {
           <button type="button" onClick={() => document.getElementById("catering-request")?.scrollIntoView({ behavior: "smooth" })} className="mt-4 rounded-full bg-[#1E7A3A] px-6 py-3 text-sm font-extrabold text-white hover:opacity-95">
             {t("catering.continueToQuote", lang)}
           </button>
-        </div>
-        </div>
-
-        {/* Form */}
-        <div id="catering-request" className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-          <CateringRequestForm menuChoice={choice} onSuccess={() => setChoice(null)} />
         </div>
       </div>
 
