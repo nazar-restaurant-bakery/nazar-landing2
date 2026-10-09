@@ -24,6 +24,27 @@ const CUSTOM_ITEM_LABELS: Record<string, string> = {
   "side-salad": "Side Salad", "traditional-turkish-bread": "Turkish Bread",
   "borek-feta-cheese": "Feta Borek", "baklava-4pcs": "Baklava",
 };
+const TRAY_LABELS: Record<string, string> = {
+  "lentil-soup": "Lentil Soup", "caesar-salad": "Caesar Salad",
+  "season-salad": "Season Salad", "shepherd-salad": "Shepherd Salad",
+  "cold-appetizers-platter": "Cold Appetizers Platter", "cheese-rolls": "Cheese Rolls",
+  falafel: "Falafel", "grilled-meatballs": "Grilled Meatballs",
+  "chicken-wings": "Chicken Wings", "chicken-chops": "Chicken Chops",
+  "adana-shish": "Adana Shish", "chicken-shish": "Chicken Shish",
+  "meat-gyro": "Meat Gyro", "chicken-gyro": "Chicken Gyro",
+};
+const TRAY_SIZES = new Set([10, 20, 30, 50]);
+const TRAY_UNITS: Record<string, string> = {
+  "lentil-soup": "servings", "caesar-salad": "servings", "season-salad": "servings",
+  "shepherd-salad": "servings", "cold-appetizers-platter": "servings",
+  "cheese-rolls": "pieces", falafel: "pieces", "grilled-meatballs": "pieces",
+  "chicken-wings": "wings", "chicken-chops": "pieces", "adana-shish": "skewers",
+  "chicken-shish": "skewers", "meat-gyro": "lb", "chicken-gyro": "lb",
+};
+const SPECIAL_TRAY_QUANTITIES: Record<string, number[]> = {
+  "chicken-wings": [70, 140, 210, 350], "chicken-chops": [30, 60, 90, 150],
+  "meat-gyro": [3.5, 7, 11, 18], "chicken-gyro": [4, 8, 12, 20],
+};
 
 function response(status: number, code: string): Response {
   return new Response(JSON.stringify({ code }), {
@@ -115,6 +136,33 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
           return response(400, "invalid_input");
         }
         menuSummary = `Create your own: ${ids.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
+      } else if (selected.type === "trays") {
+        const selections = selected.selections;
+        const itemIds = selected.itemIds;
+        if (!Array.isArray(selections) || selections.length < 1 || selections.length > Object.keys(TRAY_LABELS).length) {
+          return response(400, "invalid_input");
+        }
+        if (!Array.isArray(itemIds) || itemIds.length > Object.keys(CUSTOM_ITEM_LABELS).length ||
+            new Set(itemIds).size !== itemIds.length ||
+            !itemIds.every((id) => typeof id === "string" && Object.hasOwn(CUSTOM_ITEM_LABELS, id))) {
+          return response(400, "invalid_input");
+        }
+        const seen = new Set<string>();
+        const labels: string[] = [];
+        for (const entry of selections) {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry)) return response(400, "invalid_input");
+          const tray = entry as Record<string, unknown>;
+          if (typeof tray.id !== "string" || !Object.hasOwn(TRAY_LABELS, tray.id) ||
+              typeof tray.size !== "number" || !TRAY_SIZES.has(tray.size) || seen.has(tray.id)) {
+            return response(400, "invalid_input");
+          }
+          seen.add(tray.id);
+          const index = [10, 20, 30, 50].indexOf(tray.size);
+          const quantity = SPECIAL_TRAY_QUANTITIES[tray.id]?.[index] ?? tray.size;
+          labels.push(`${TRAY_LABELS[tray.id]} (${quantity} ${TRAY_UNITS[tray.id]}, ${tray.size}-guest option)`);
+        }
+        menuSummary = `Catering trays: ${labels.join(", ")}`;
+        if (itemIds.length) menuSummary += `; additional dishes: ${itemIds.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
       } else {
         return response(400, "invalid_input");
       }

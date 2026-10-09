@@ -13,7 +13,7 @@ import TurnstileWidget from "./TurnstileWidget";
 import { turnstileSiteKey } from "../lib/formConfig";
 import { useLang } from "./Language";
 import { t } from "./i18n";
-import { CATERING_PACKAGES, cateringItemName } from "../data/cateringMenus";
+import { CATERING_PACKAGES, CATERING_TRAYS, cateringItemName } from "../data/cateringMenus";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
 import type { CateringChoice } from "../lib/signup";
 
@@ -180,6 +180,8 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
           <p className="mt-1">{CATERING_PACKAGES.find((menu) => menu.id === menuChoice.id)?.title[lang] ?? menuChoice.id}</p>
         ) : menuChoice?.type === "custom" ? (
           <p className="mt-1">{t("catering.customTitle", lang)}: {menuChoice.itemIds.map((id) => cateringItemName(id, lang)).join(", ") || "—"}</p>
+        ) : menuChoice?.type === "trays" ? (
+          <p className="mt-1">{menuChoice.selections.map(({ id, size }) => `${CATERING_TRAYS.find((tray) => tray.id === id)?.title[lang] ?? id} (${size})`).join(", ")}{menuChoice.itemIds.length ? `; ${t("catering.customTitle", lang)}: ${menuChoice.itemIds.map((id) => cateringItemName(id, lang)).join(", ")}` : ""}</p>
         ) : (
           <p className="mt-1">{t("catering.noMenu", lang)}</p>
         )}

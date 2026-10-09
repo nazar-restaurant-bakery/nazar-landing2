@@ -105,6 +105,27 @@ test("catering menu choices reach the existing request message field", async () 
   assert.equal(JSON.parse(sent[3].body).p_consent_email, false);
 });
 
+test("selected catering trays and quantities reach the quote request", async () => {
+  const sent = [];
+  globalThis.fetch = async (_address, options) => {
+    sent.push(options);
+    return sent.length === 1
+      ? Response.json({ success: true, hostname: "www.nazarrestaurantandbakery.com" })
+      : new Response(null, { status: 204 });
+  };
+  const payload = {
+    ...vip(), kind: "catering", consentEmail: false, eventDate: "", guests: "30",
+    message: "Mixed cold appetizers, please",
+    menuChoice: { type: "trays", selections: [
+      { id: "cold-appetizers-platter", size: 30 },
+      { id: "chicken-wings", size: 30 },
+    ], itemIds: ["baklava-4pcs"] },
+  };
+  assert.equal((await onRequestPost({ request: request(payload), env })).status, 200);
+  assert.equal(JSON.parse(sent[1].body).p_meta.message,
+    "Catering trays: Cold Appetizers Platter (30 servings, 30-guest option), Chicken Wings (210 wings, 30-guest option); additional dishes: Baklava\n\nMixed cold appetizers, please");
+});
+
 test("unknown or empty catering menu choices are rejected before verification", async () => {
   let calls = 0;
   globalThis.fetch = async () => { calls++; throw new Error("Unexpected network call"); };
@@ -114,6 +135,10 @@ test("unknown or empty catering menu choices are rejected before verification", 
     { type: "custom", itemIds: [] },
     { type: "custom", itemIds: ["shawarma"] },
     { type: "custom", itemIds: ["rice-pilav", "rice-pilav"] },
+    { type: "trays", selections: [], itemIds: [] },
+    { type: "trays", selections: [{ id: "chicken-wings", size: 40 }], itemIds: [] },
+    { type: "trays", selections: [{ id: "unknown", size: 10 }], itemIds: [] },
+    { type: "trays", selections: [{ id: "falafel", size: 10 }, { id: "falafel", size: 20 }], itemIds: [] },
   ]) {
     assert.equal((await onRequestPost({ request: request({ ...base, menuChoice }), env })).status, 400);
   }

@@ -1,6 +1,7 @@
 export type CateringChoice =
   | { type: "package"; id: string }
-  | { type: "custom"; itemIds: string[] };
+  | { type: "custom"; itemIds: string[] }
+  | { type: "trays"; selections: { id: string; size: 10 | 20 | 30 | 50 }[]; itemIds: string[] };
 
 export type SignupPayload = {
   kind: "vip" | "catering";
