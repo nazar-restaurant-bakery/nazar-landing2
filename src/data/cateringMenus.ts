@@ -75,8 +75,14 @@ const allMenuItems = MENU_CATEGORIES.flatMap((category) =>
   category.items ?? category.subcategories?.flatMap((subcategory) => subcategory.items) ?? []
 );
 const menuById = new Map(allMenuItems.map((item) => [item.id, item]));
+const CATERING_ONLY_NAMES: Record<string, Localized> = {
+  "traditional-turkish-bread": { en: "Traditional Turkish Bread", tr: "Geleneksel Türk Ekmeği", ar: "خبز تركي تقليدي" },
+  "borek-feta-cheese": { en: "Feta Cheese Börek", tr: "Beyaz Peynirli Börek", ar: "بورك بالجبن الأبيض" },
+};
 
 export function cateringItemName(id: string, lang: Lang): string {
+  const cateringOnlyName = CATERING_ONLY_NAMES[id];
+  if (cateringOnlyName) return cateringOnlyName[lang];
   const item = menuById.get(id);
   if (!item) return id;
   return lang === "tr" ? item.nameTr ?? item.nameEn : item.nameEn;

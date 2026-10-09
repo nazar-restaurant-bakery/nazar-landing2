@@ -172,7 +172,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950" aria-live="polite">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="font-extrabold">{t("catering.selectedMenu", lang)}</p>
-          <a href="#catering-menus" className="font-bold text-[#1E7A3A] underline underline-offset-2 hover:text-emerald-800">
+          <a href={menuChoice?.type === "custom" ? "#catering-custom" : menuChoice?.type === "trays" ? "#catering-trays" : "#catering-menus"} className="font-bold text-[#1E7A3A] underline underline-offset-2 hover:text-emerald-800">
             {t("catering.viewMenus", lang)}
           </a>
         </div>

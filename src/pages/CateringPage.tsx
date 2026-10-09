@@ -86,6 +86,7 @@ export default function CateringPage() {
     <section className="mx-auto w-full max-w-6xl px-4 py-10">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-start">
         {/* Pitch */}
+        <div className="space-y-6">
         <div id="catering-intro" className="rounded-3xl border border-[#e7dccb] bg-[#faf5eb] p-6 sm:p-8">
           <p className="text-xs font-extrabold uppercase tracking-widest text-[#1E7A3A]">
             {t("catering.eyebrow", lang)}
@@ -140,6 +141,24 @@ export default function CateringPage() {
               {PHONE_NUMBER_DISPLAY}
             </a>
           </p>
+        </div>
+
+        <div id="catering-custom" className="scroll-mt-24 rounded-3xl border border-emerald-200 bg-emerald-50/50 p-6 sm:p-8">
+          <h2 className="text-xl font-extrabold text-zinc-900">{t("catering.customTitle", lang)}</h2>
+          <p className="mt-2 text-sm text-zinc-600">{t("catering.customIntro", lang)}</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {CATERING_CUSTOM_ITEM_IDS.map((id) => (
+              <label key={id} className="flex cursor-pointer items-start gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm font-semibold text-zinc-800">
+                <input type="checkbox" checked={(choice?.type === "custom" || choice?.type === "trays") && choice.itemIds.includes(id)} onChange={() => toggleCustomItem(id)} className="mt-0.5 accent-[#1E7A3A]" />
+                {cateringItemName(id, lang)}
+              </label>
+            ))}
+          </div>
+          <p className="mt-4 text-sm text-zinc-600">{t("catering.menuNote", lang)}</p>
+          <button type="button" onClick={() => document.getElementById("catering-request")?.scrollIntoView({ behavior: "smooth" })} className="mt-4 rounded-full bg-[#1E7A3A] px-6 py-3 text-sm font-extrabold text-white hover:opacity-95">
+            {t("catering.continueToQuote", lang)}
+          </button>
+        </div>
         </div>
 
         {/* Form */}
@@ -218,22 +237,6 @@ export default function CateringPage() {
           <p className="mt-6 text-sm text-zinc-700">{t("catering.traysQuoteNote", lang)}</p>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-zinc-200 bg-emerald-50/50 p-5 sm:p-6">
-          <h3 className="text-xl font-extrabold text-zinc-900">{t("catering.customTitle", lang)}</h3>
-          <p className="mt-1 text-sm text-zinc-600">{t("catering.customIntro", lang)}</p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {CATERING_CUSTOM_ITEM_IDS.map((id) => (
-              <label key={id} className="flex cursor-pointer items-start gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm font-semibold text-zinc-800">
-                <input type="checkbox" checked={(choice?.type === "custom" || choice?.type === "trays") && choice.itemIds.includes(id)} onChange={() => toggleCustomItem(id)} className="mt-0.5 accent-[#1E7A3A]" />
-                {cateringItemName(id, lang)}
-              </label>
-            ))}
-          </div>
-        </div>
-        <p className="mt-4 text-sm text-zinc-600">{t("catering.menuNote", lang)}</p>
-        <button type="button" onClick={() => document.getElementById("catering-request")?.scrollIntoView({ behavior: "smooth" })} className="mt-4 rounded-full bg-[#1E7A3A] px-6 py-3 text-sm font-extrabold text-white hover:opacity-95">
-          {t("catering.continueToQuote", lang)}
-        </button>
       </div>
     </section>
   );
