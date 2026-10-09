@@ -604,9 +604,9 @@ const ALL_MENU_CATEGORIES: MenuCategory[] = [
       },
       {
         id: "chicken-wings-grilled",
-        nameEn: "Grilled Chicken Wings",
+        nameEn: "Grilled Chicken Wings (7 pcs)",
         nameTr: "Izgara Tavuk Kanadı",
-        description: "Seasoned chicken wings grilled until lightly charred.",
+        description: "Seven seasoned chicken wings grilled until lightly charred.",
         image: "/images/menu/kebabs/chicken-wings-grilled-styled-v1.png",
         price: 19.99,
       },
