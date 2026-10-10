@@ -122,7 +122,7 @@ export default function CateringPage() {
 
       <div className="mt-8 grid gap-8 md:grid-cols-2">
         {/* Quote form on the left, custom menu on the right. */}
-        <div id="catering-request" className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+        <div id="catering-request" className="scroll-mt-24 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
           <CateringRequestForm menuChoice={choice} onSuccess={() => setChoice(null)} />
         </div>
 
