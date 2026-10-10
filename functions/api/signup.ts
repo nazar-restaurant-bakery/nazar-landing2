@@ -27,7 +27,8 @@ const CUSTOM_ITEM_LABELS: Record<string, string> = {
 const TRAY_LABELS: Record<string, string> = {
   "lentil-soup": "Lentil Soup", "caesar-salad": "Caesar Salad",
   "season-salad": "Season Salad", "shepherd-salad": "Shepherd Salad",
-  "cold-appetizers-platter": "Cold Appetizers Platter", "cheese-rolls": "Cheese Rolls",
+  "cold-appetizers-platter": "Cold Appetizers Platter", jajik: "Jajik (Cacık)",
+  "cheese-rolls": "Cheese Rolls",
   falafel: "Falafel", "grilled-meatballs": "Grilled Meatballs",
   "chicken-wings": "Grilled Chicken Wings", "chicken-chops": "Chicken Chops",
   "adana-shish": "Adana Shish", "chicken-shish": "Chicken Shish",
@@ -36,7 +37,7 @@ const TRAY_LABELS: Record<string, string> = {
 const TRAY_SIZES = new Set([10, 20, 30, 50]);
 const TRAY_UNITS: Record<string, string> = {
   "lentil-soup": "servings", "caesar-salad": "servings", "season-salad": "servings",
-  "shepherd-salad": "servings", "cold-appetizers-platter": "servings",
+  "shepherd-salad": "servings", "cold-appetizers-platter": "servings", jajik: "servings",
   "cheese-rolls": "pieces", falafel: "pieces", "grilled-meatballs": "pieces",
   "chicken-wings": "wings", "chicken-chops": "pieces", "adana-shish": "skewers",
   "chicken-shish": "skewers", "meat-gyro": "lb", "chicken-gyro": "lb",
