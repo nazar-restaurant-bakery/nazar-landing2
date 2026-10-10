@@ -35,6 +35,17 @@ const TRAY_LABELS: Record<string, string> = {
   "meat-gyro": "Meat Gyro", "chicken-gyro": "Chicken Gyro",
 };
 const TRAY_SIZES = new Set([10, 20, 30, 50]);
+// Keep these prices aligned with src/data/cateringMenus.ts. Client prices are never trusted.
+const TRAY_PRICES: Record<string, number[]> = {
+  "lentil-soup": [50, 90, 130, 200], "caesar-salad": [75, 140, 200, 300],
+  "season-salad": [75, 140, 200, 300], "shepherd-salad": [75, 140, 200, 300],
+  "cold-appetizers-platter": [70, 120, 160, 250], jajik: [50, 90, 130, 200],
+  "cheese-rolls": [15, 27, 35, 55], falafel: [22, 40, 57, 90],
+  "grilled-meatballs": [25, 45, 66, 105], "chicken-wings": [170, 320, 450, 720],
+  "chicken-chops": [150, 280, 400, 650], "adana-shish": [95, 165, 240, 390],
+  "chicken-shish": [85, 160, 230, 375], "meat-gyro": [150, 285, 420, 680],
+  "chicken-gyro": [140, 265, 365, 580],
+};
 const TRAY_UNITS: Record<string, string> = {
   "lentil-soup": "servings", "caesar-salad": "servings", "season-salad": "servings",
   "shepherd-salad": "servings", "cold-appetizers-platter": "servings", jajik: "servings",
@@ -154,6 +165,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
         }
         const seen = new Set<string>();
         const labels: string[] = [];
+        let subtotal = 0;
         for (const entry of selections) {
           if (!entry || typeof entry !== "object" || Array.isArray(entry)) return response(400, "invalid_input");
           const tray = entry as Record<string, unknown>;
@@ -164,9 +176,11 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
           seen.add(tray.id);
           const index = [10, 20, 30, 50].indexOf(tray.size);
           const quantity = SPECIAL_TRAY_QUANTITIES[tray.id]?.[index] ?? tray.size;
-          labels.push(`${TRAY_LABELS[tray.id]} (${quantity} ${TRAY_UNITS[tray.id]}, ${tray.size}-guest option${RICE_TRAY_IDS.has(tray.id) ? ", with rice pilav" : ""})`);
+          const price = TRAY_PRICES[tray.id][index];
+          subtotal += price;
+          labels.push(`${TRAY_LABELS[tray.id]} (${quantity} ${TRAY_UNITS[tray.id]}, ${tray.size}-guest option${RICE_TRAY_IDS.has(tray.id) ? ", with rice pilav" : ""}) $${price.toFixed(2)}`);
         }
-        menuSummary = `Catering trays: ${labels.join(", ")}`;
+        menuSummary = `Catering trays: ${labels.join(", ")}; shown tray subtotal: $${subtotal.toFixed(2)}`;
         if (itemIds.length) menuSummary += `; additional dishes: ${itemIds.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
       } else {
         return response(400, "invalid_input");

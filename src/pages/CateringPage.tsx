@@ -55,6 +55,11 @@ export default function CateringPage() {
 
   const { lang } = useLang();
   const [choice, setChoice] = React.useState<CateringChoice | null>(null);
+  const selectedTrays = choice?.type === "trays" ? choice.selections.map(({ id, size }) => {
+    const tray = CATERING_TRAYS.find((item) => item.id === id);
+    return { id, size, title: tray?.title[lang] ?? id, price: tray?.prices[CATERING_SIZES.indexOf(size)] ?? 0 };
+  }) : [];
+  const traySubtotal = selectedTrays.reduce((sum, tray) => sum + tray.price, 0);
 
   function toggleCustomItem(id: string) {
     setChoice((current) => {
@@ -186,6 +191,32 @@ export default function CateringPage() {
             ))}
           </div>
           <p className="mt-6 text-sm text-zinc-700">{t("catering.traysQuoteNote", lang)}</p>
+          <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5" aria-live="polite">
+            <h4 className="font-extrabold text-zinc-900">{t("catering.traySelectionTitle", lang)}</h4>
+            {selectedTrays.length ? (
+              <>
+                <ul className="mt-3 space-y-2 text-sm text-zinc-700">
+                  {selectedTrays.map((tray) => (
+                    <li key={tray.id} className="flex justify-between gap-4">
+                      <span>{tray.title} · {tray.size} {t("catering.guestsShort", lang)}</span>
+                      <span className="font-bold">${tray.price.toFixed(2)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-4 flex justify-between border-t border-zinc-200 pt-3 text-base font-extrabold text-zinc-900">
+                  <span>{t("catering.traySubtotal", lang)}</span>
+                  <span>${traySubtotal.toFixed(2)}</span>
+                </div>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-zinc-600">{t("catering.noTraysSelected", lang)}</p>
+            )}
+            <button type="button" disabled={!selectedTrays.length}
+              onClick={() => document.getElementById("catering-request")?.scrollIntoView({ behavior: "smooth" })}
+              className="mt-4 rounded-full bg-[#1E7A3A] px-6 py-3 text-sm font-extrabold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50">
+              {t("catering.continueToQuote", lang)}
+            </button>
+          </div>
       </div>
     </section>
   );
