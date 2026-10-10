@@ -10,10 +10,11 @@ export const CATERING_SIZES = [10, 20, 30, 50] as const;
 // priced deep-fried appetizer is a different preparation.
 export const CATERING_TRAYS = [
   { id: "lentil-soup", group: "soup-salad", title: { en: "Lentil Soup", tr: "Mercimek Çorbası", ar: "شوربة العدس" }, image: "/images/menu/soups/lentil-soup-styled-v5.png", unit: "servings", prices: [50, 90, 130, 200] },
-  { id: "caesar-salad", group: "soup-salad", title: { en: "Caesar Salad", tr: "Sezar Salata", ar: "سلطة سيزر" }, image: "/images/menu/salads/caesar-salad-table-setting-v1.png", unit: "servings", prices: [95, 180, 255, 375] },
-  { id: "season-salad", group: "soup-salad", title: { en: "Season Salad", tr: "Mevsim Salata", ar: "سلطة الموسم" }, image: "/images/menu/salads/season-salad-table-setting-v1.png", unit: "servings", prices: [95, 180, 255, 375] },
-  { id: "shepherd-salad", group: "soup-salad", title: { en: "Shepherd Salad", tr: "Çoban Salata", ar: "سلطة الراعي" }, image: "/images/menu/salads/shepherd-salad-table-setting-v1.png", unit: "servings", prices: [95, 180, 255, 375] },
+  { id: "caesar-salad", group: "soup-salad", title: { en: "Caesar Salad", tr: "Sezar Salata", ar: "سلطة سيزر" }, image: "/images/menu/salads/caesar-salad-table-setting-v1.png", unit: "servings", prices: [75, 140, 200, 300] },
+  { id: "season-salad", group: "soup-salad", title: { en: "Season Salad", tr: "Mevsim Salata", ar: "سلطة الموسم" }, image: "/images/menu/salads/season-salad-table-setting-v1.png", unit: "servings", prices: [75, 140, 200, 300] },
+  { id: "shepherd-salad", group: "soup-salad", title: { en: "Shepherd Salad", tr: "Çoban Salata", ar: "سلطة الراعي" }, image: "/images/menu/salads/shepherd-salad-table-setting-v1.png", unit: "servings", prices: [75, 140, 200, 300] },
   { id: "cold-appetizers-platter", group: "appetizers", title: { en: "Cold Appetizers Platter", tr: "Soğuk Meze Tabağı", ar: "طبق المقبلات الباردة" }, image: "/images/menu/cold-appetizers/mixed-cold-appetizers-table-setting-v1.png", unit: "servings", prices: [70, 120, 160, 250] },
+  { id: "jajik", group: "appetizers", title: { en: "Jajik (Cacık)", tr: "Cacık", ar: "جاجيك" }, image: "/images/menu/cold-appetizers/jajik-table-setting-v2.png", unit: "servings", prices: [50, 90, 130, 200] },
   { id: "cheese-rolls", group: "appetizers", title: { en: "Cheese Rolls", tr: "Peynirli Börek", ar: "لفائف الجبن" }, image: "/images/menu/hot-appetizers/cheese-rolls-styled-v1.png", unit: "pieces", prices: [15, 27, 35, 55] },
   { id: "falafel", group: "appetizers", title: { en: "Falafel", tr: "Falafel", ar: "فلافل" }, image: "/images/menu/kebabs/falafel-styled-v1.png", unit: "pieces", prices: [22, 40, 57, 90], withRice: true },
   { id: "grilled-meatballs", group: "grill", title: { en: "Grilled Meatballs", tr: "Izgara Köfte", ar: "كفتة مشوية" }, image: "/images/menu/kebabs/grilled-meatballs-styled-v1.png", unit: "pieces", prices: [25, 45, 66, 105], withRice: true },
