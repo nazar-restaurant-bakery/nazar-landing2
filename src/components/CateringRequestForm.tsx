@@ -270,6 +270,8 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
         </div>
       </div>
 
+      <p className="text-sm font-semibold text-zinc-700">{t("catering.leadTimeNote", lang)}</p>
+
       <p id="cat-capacity-note" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
         {t("catering.overCapacityNote", lang)}
       </p>

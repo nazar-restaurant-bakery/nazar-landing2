@@ -148,6 +148,7 @@ export default function CateringPage() {
           <p className="text-xs font-extrabold uppercase tracking-widest text-[#1E7A3A]">Nazar catering</p>
           <h3 className="mt-2 text-2xl font-extrabold text-zinc-900">{t("catering.traysTitle", lang)}</h3>
           <p className="mt-2 max-w-3xl text-sm text-zinc-700">{t("catering.traysIntro", lang)}</p>
+          <p className="mt-2 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">{t("catering.leadTimeNote", lang)}</p>
           <p className="mt-2 max-w-3xl text-xs text-zinc-600">{t("catering.traysDetails", lang)}</p>
 
           <div className="mt-6 space-y-8">
