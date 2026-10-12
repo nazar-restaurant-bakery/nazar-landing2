@@ -157,6 +157,7 @@ export const translations = {
     traysQuoteNote: { tr: "Gösterilen tutarlar catering tepsisi içindir; nihai fiyat, içerik ve uygunluk siparişten önce teyit edilir. Tavuk kanadı ızgarada hazırlanır.", en: "Shown amounts are for catering trays; we confirm final price, contents and availability before an order. Chicken wings are grilled.", ar: "الأسعار المعروضة لصواني التموين؛ نؤكد السعر النهائي والمحتوى والتوفر قبل الطلب. أجنحة الدجاج مشوية." },
     traySelectionTitle: { tr: "Catering sepetiniz", en: "Your catering cart", ar: "سلة التموين الخاصة بك" },
     inCart: { tr: "Sepette", en: "In cart", ar: "في السلة" },
+    viewCart: { tr: "Sepeti gör", en: "View cart", ar: "عرض السلة" },
     quantity: { tr: "Adet", en: "Quantity", ar: "الكمية" },
     perTray: { tr: "/ tepsi", en: "/ tray", ar: "/ صينية" },
     decreaseQuantity: { tr: "Adedi azalt", en: "Decrease quantity", ar: "تقليل الكمية" },

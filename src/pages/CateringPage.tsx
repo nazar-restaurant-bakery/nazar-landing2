@@ -54,7 +54,26 @@ export default function CateringPage() {
   useSeo("Turkish Catering & Parties in West Haven", "Turkish catering for engagements, weddings, birthdays, family celebrations and office lunches. Standard catering for 10 to 60 guests; ask us about larger events.", "/catering");
 
   const { lang } = useLang();
-  const [choice, setChoice] = React.useState<CateringChoice | null>(null);
+  const [choice, setChoice] = React.useState<CateringChoice | null>(() => {
+    try {
+      const saved = window.sessionStorage.getItem("nazar-catering-cart");
+      if (!saved) return null;
+      const parsed: unknown = JSON.parse(saved);
+      if (!parsed || typeof parsed !== "object" || !("type" in parsed) || parsed.type !== "trays" ||
+          !("selections" in parsed) || !Array.isArray(parsed.selections)) return null;
+      const selections = parsed.selections.filter((entry: unknown) => {
+        if (!entry || typeof entry !== "object" || !("id" in entry) || !("size" in entry) || !("count" in entry)) return false;
+        return CATERING_TRAYS.some((tray) => tray.id === entry.id) &&
+          CATERING_SIZES.some((size) => size === entry.size) && Number.isInteger(entry.count) &&
+          (entry.count as number) >= 1 && (entry.count as number) <= 20;
+      }) as { id: string; size: 10 | 20 | 30 | 50; count: number }[];
+      return selections.length ? { type: "trays", selections, itemIds: [] } : null;
+    } catch { return null; }
+  });
+  React.useEffect(() => {
+    if (choice?.type === "trays") window.sessionStorage.setItem("nazar-catering-cart", JSON.stringify(choice));
+    else window.sessionStorage.removeItem("nazar-catering-cart");
+  }, [choice]);
   const selectedTrays = choice?.type === "trays" ? choice.selections.map(({ id, size, count }) => {
     const tray = CATERING_TRAYS.find((item) => item.id === id);
     return { id, size, count, title: tray?.title[lang] ?? id, image: tray?.image, price: tray?.prices[CATERING_SIZES.indexOf(size)] ?? 0 };
@@ -162,6 +181,11 @@ export default function CateringPage() {
           <p className="text-xs font-extrabold uppercase tracking-widest text-[#1E7A3A]">Nazar catering</p>
           <h3 className="mt-2 text-2xl font-extrabold text-zinc-900">{t("catering.traysTitle", lang)}</h3>
           <p className="mt-2 max-w-3xl text-sm text-zinc-700">{t("catering.traysIntro", lang)}</p>
+          {selectedTrays.length > 0 && (
+            <a href="#catering-cart" className="mt-3 inline-flex rounded-full bg-[#1E7A3A] px-4 py-2 text-sm font-bold text-white hover:opacity-95">
+              {t("catering.viewCart", lang)} ({selectedTrays.reduce((sum, tray) => sum + tray.count, 0)}) · ${traySubtotal.toFixed(2)}
+            </a>
+          )}
           <p className="mt-2 max-w-3xl text-xs text-zinc-600">{t("catering.traysDetails", lang)}</p>
 
           <div className="mt-6 space-y-8">
