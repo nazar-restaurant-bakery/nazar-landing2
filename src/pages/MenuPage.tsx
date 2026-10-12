@@ -1,8 +1,10 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { MENU_CATEGORIES } from "../data/menuData";
 import type { MenuCategory, MenuItem, MenuTag } from "../data/menuData";
 import { CLOVER_PICKUP_URL } from "../data/menu";
 import { useSeo } from "../hooks/useSeo";
+import { getUtm } from "../lib/utm";
 
 const PH = "/images/placeholder.jpg";
 
@@ -218,6 +220,8 @@ function DetailsModal({
 export default function MenuPage() {
   useSeo("Turkish Menu, Kebabs & Pide", "Kebabs, döner, pide, lahmacun, mezze and daily bakery. See the full Nazar menu and order direct in West Haven, CT.", "/menu");
 
+  const fromKevin = getUtm().utm_campaign === "onscene_20261013";
+
   const [activeCatId, setActiveCatId] = React.useState<string>(MENU_CATEGORIES[0]?.id ?? "");
   const [search, setSearch] = React.useState("");
   const [activeFilters, setActiveFilters] = React.useState<Set<MenuTag>>(new Set());
@@ -278,6 +282,24 @@ export default function MenuPage() {
 
   return (
     <div className="bg-brand-bg">
+      {fromKevin && (
+        <section className="border-b border-emerald-200 bg-emerald-50">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-extrabold text-emerald-900">Stay connected with Nazar</p>
+              <p className="mt-1 text-sm text-emerald-950">
+                Join our VIP list for weekly specials and bakery updates, directly from us.
+              </p>
+            </div>
+            <Link
+              to="/vip"
+              className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#1E7A3A] px-5 py-2.5 text-sm font-extrabold text-white hover:opacity-95"
+            >
+              Join Nazar VIP
+            </Link>
+          </div>
+        </section>
+      )}
       {/* Sticky header */}
       <section className="sticky top-0 z-30 border-b border-brand-border bg-brand-bg/90 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4 py-4">
