@@ -89,7 +89,11 @@ export default function StaffPage() {
     const { error } = await client.auth.signInWithOtp({
       email: email.trim(), options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/staff` },
     });
-    setMessage(error ? "Could not send the sign-in link. Ask the owner to invite this address first." : "Check your email for the sign-in link.");
+    setMessage(error?.status === 429
+      ? "Sign-in email limit reached. Please try again later."
+      : error
+        ? "Could not send the sign-in link. Check that this address was invited, then try again."
+        : "Check your email for the sign-in link.");
     setBusy(false);
   }
 
