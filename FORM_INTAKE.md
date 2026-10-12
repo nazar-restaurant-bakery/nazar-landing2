@@ -24,7 +24,7 @@ Keep the existing Nazar-production `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 
 If forms must be stopped, run `database/20260923_form_intake_pause.sql` in Nazar-production. This stops new records without removing existing data. Restoring an earlier Pages deployment alone does not restore the previous database grants, so keep the new site deployment or pause intake during rollback.
 
-The VIP consent is recorded as pending review by the existing database function. This change does not connect Klaviyo, send marketing email/SMS, or establish consent evidence beyond the submitted form values.
+The VIP consent is recorded as pending review by the existing database function. The website VIP form also requests **email-only** subscription to the dedicated Klaviyo list `UeJynm` after the Nazar database accepts the record. That list is set to double opt-in: Klaviyo sends a confirmation email, and the visitor is not subscribed until they confirm. The browser uses only the public Klaviyo site ID; no private key is stored in client code. The existing Supabase `pending_review` rows are not bulk-imported. SMS is not subscribed. If Klaviyo rejects the request, the UI says the Nazar record was saved and offers a retry without resubmitting it. This still needs a live end-to-end test before it can be called operational; a successful local build alone does not verify delivery or confirmation.
 
 ## Local verification
 

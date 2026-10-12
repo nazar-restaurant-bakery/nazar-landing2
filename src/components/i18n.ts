@@ -60,9 +60,24 @@ export const translations = {
     submit: { tr: "VIP Kulübe Katıl", en: "Join the VIP Club", ar: "انضم إلى نادي VIP" },
     submitting: { tr: "Gönderiliyor…", en: "Joining…", ar: "جارٍ الإرسال…" },
     success: {
-      tr: "VIP başvurunuzu aldık. Fırsatlar hazır olduğunda haber vereceğiz.",
-      en: "We received your VIP request. We’ll be in touch when offers are ready.",
-      ar: "تلقّينا طلب انضمامك إلى VIP. سنتواصل معك عندما تصبح العروض جاهزة.",
+      tr: "VIP kaydınızı aldık. E-postanızı kontrol edip üyeliğinizi onaylayın.",
+      en: "We received your VIP signup. Check your email to confirm your subscription.",
+      ar: "تلقّينا طلب انضمامك إلى VIP. تحقّق من بريدك الإلكتروني لتأكيد اشتراكك.",
+    },
+    confirmationStarting: {
+      tr: "Kaydınız Nazar'a ulaştı. E-posta onayı hazırlanıyor…",
+      en: "Nazar received your signup. Preparing your email confirmation…",
+      ar: "وصل تسجيلك إلى نازار. يجري إعداد رسالة تأكيد البريد الإلكتروني…",
+    },
+    savedSyncError: {
+      tr: "Kaydınız Nazar'a ulaştı, ancak onay e-postasını şu anda başlatamadık. Lütfen tekrar deneyin; bilgilerinizi yeniden girmenize gerek yok.",
+      en: "Nazar received your signup, but we couldn't start the confirmation email. Please retry; you don't need to enter your details again.",
+      ar: "وصل تسجيلك إلى نازار، لكن تعذّر بدء رسالة التأكيد. حاول مرة أخرى دون إعادة إدخال بياناتك.",
+    },
+    retryConfirmation: {
+      tr: "Onay e-postasını tekrar dene",
+      en: "Retry confirmation email",
+      ar: "أعد محاولة إرسال رسالة التأكيد",
     },
     errorContact: {
       tr: "Lütfen e-posta veya telefon numarası girin.",

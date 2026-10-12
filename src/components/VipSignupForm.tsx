@@ -2,6 +2,7 @@
 import React from "react";
 import { captureUtm, getUtmOrNull } from "../lib/utm";
 import { submitSignup } from "../lib/signup";
+import { subscribeVipEmail } from "../lib/klaviyo";
 import TurnstileWidget from "./TurnstileWidget";
 import { turnstileSiteKey } from "../lib/formConfig";
 // Shared with CateringRequestForm so both forms validate identically.
@@ -10,7 +11,7 @@ import { useLang } from "./Language";
 import { t } from "./i18n";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
 
-type Status = "idle" | "submitting" | "success" | "error";
+type Status = "idle" | "submitting" | "success" | "error" | "sync_error";
 
 type Props = {
   className?: string;
@@ -28,6 +29,9 @@ export default function VipSignupForm({
 
   const [status, setStatus] = React.useState<Status>("idle");
   const [errorKey, setErrorKey] = React.useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = React.useState<{
+    email: string; name: string; campaign: string | null;
+  } | null>(null);
 
   // Bots fill every field they can see; humans never touch a hidden one.
   const [honeypot, setHoneypot] = React.useState("");
@@ -39,6 +43,20 @@ export default function VipSignupForm({
   }, []);
 
   const submitting = status === "submitting";
+
+  async function finishEmailConfirmation(details: NonNullable<typeof pendingEmail>) {
+    setStatus("submitting");
+    if (!await subscribeVipEmail(details)) {
+      setStatus("sync_error");
+      return;
+    }
+    setPendingEmail(null);
+    setStatus("success");
+    setName("");
+    setEmail("");
+    setPhone("");
+    setConsentEmail(false);
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -95,6 +113,7 @@ export default function VipSignupForm({
     setStatus("submitting");
     setErrorKey(null);
 
+    const utm = getUtmOrNull();
     const ok = await submitSignup({
       kind: "vip",
       name: trimmedName,
@@ -103,7 +122,7 @@ export default function VipSignupForm({
       consentEmail,
       turnstileToken,
       extra: honeypot,
-      utm: getUtmOrNull(),
+      utm,
     });
     setTurnstileToken("");
     setResetSignal((value) => value + 1);
@@ -113,11 +132,31 @@ export default function VipSignupForm({
       return;
     }
 
-    setStatus("success");
-    setName("");
-    setEmail("");
-    setPhone("");
-    setConsentEmail(false);
+    const details = {
+      email: trimmedEmail.toLowerCase(),
+      name: trimmedName,
+      campaign: utm?.utm_campaign ?? null,
+    };
+    setPendingEmail(details);
+    await finishEmailConfirmation(details);
+  }
+
+  if ((status === "sync_error" || status === "submitting") && pendingEmail) {
+    return (
+      <div className={cn("rounded-2xl border border-amber-200 bg-amber-50 p-6", className)}>
+        <p role="alert" className="text-sm font-bold text-amber-950">
+          {t(status === "sync_error" ? "vip.savedSyncError" : "vip.confirmationStarting", lang)}
+        </p>
+        <button
+          type="button"
+          onClick={() => void finishEmailConfirmation(pendingEmail)}
+          disabled={status === "submitting"}
+          className="mt-4 rounded-full bg-[#1E7A3A] px-6 py-3 text-sm font-bold text-white"
+        >
+          {t("vip.retryConfirmation", lang)}
+        </button>
+      </div>
+    );
   }
 
   if (status === "success") {
