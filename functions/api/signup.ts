@@ -170,15 +170,16 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
           if (!entry || typeof entry !== "object" || Array.isArray(entry)) return response(400, "invalid_input");
           const tray = entry as Record<string, unknown>;
           if (typeof tray.id !== "string" || !Object.hasOwn(TRAY_LABELS, tray.id) ||
-              typeof tray.size !== "number" || !TRAY_SIZES.has(tray.size) || seen.has(tray.id)) {
+              typeof tray.size !== "number" || !TRAY_SIZES.has(tray.size) || seen.has(tray.id) ||
+              !Number.isInteger(tray.count) || (tray.count as number) < 1 || (tray.count as number) > 20) {
             return response(400, "invalid_input");
           }
           seen.add(tray.id);
           const index = [10, 20, 30, 50].indexOf(tray.size);
           const quantity = SPECIAL_TRAY_QUANTITIES[tray.id]?.[index] ?? tray.size;
           const price = TRAY_PRICES[tray.id][index];
-          subtotal += price;
-          labels.push(`${TRAY_LABELS[tray.id]} (${quantity} ${TRAY_UNITS[tray.id]}, ${tray.size}-guest option${RICE_TRAY_IDS.has(tray.id) ? ", with rice pilav" : ""}) $${price.toFixed(2)}`);
+          subtotal += price * (tray.count as number);
+          labels.push(`${tray.count} x ${TRAY_LABELS[tray.id]} (${quantity} ${TRAY_UNITS[tray.id]} each, ${tray.size}-guest option${RICE_TRAY_IDS.has(tray.id) ? ", with rice pilav" : ""}) $${(price * (tray.count as number)).toFixed(2)}`);
         }
         menuSummary = `Catering trays: ${labels.join(", ")}; shown tray subtotal: $${subtotal.toFixed(2)}`;
         if (itemIds.length) menuSummary += `; additional dishes: ${itemIds.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;

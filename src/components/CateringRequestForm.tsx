@@ -181,7 +181,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
         ) : menuChoice?.type === "custom" ? (
           <p className="mt-1">{t("catering.customTitle", lang)}: {menuChoice.itemIds.map((id) => cateringItemName(id, lang)).join(", ") || "—"}</p>
         ) : menuChoice?.type === "trays" ? (
-          <p className="mt-1">{menuChoice.selections.map(({ id, size }) => `${CATERING_TRAYS.find((tray) => tray.id === id)?.title[lang] ?? id} (${size})`).join(", ")}{menuChoice.itemIds.length ? `; ${t("catering.customTitle", lang)}: ${menuChoice.itemIds.map((id) => cateringItemName(id, lang)).join(", ")}` : ""}</p>
+          <p className="mt-1">{menuChoice.selections.map(({ id, size, count }) => `${CATERING_TRAYS.find((tray) => tray.id === id)?.title[lang] ?? id} (${size}) × ${count}`).join(", ")}{menuChoice.itemIds.length ? `; ${t("catering.customTitle", lang)}: ${menuChoice.itemIds.map((id) => cateringItemName(id, lang)).join(", ")}` : ""}</p>
         ) : (
           <p className="mt-1">{t("catering.noMenu", lang)}</p>
         )}
