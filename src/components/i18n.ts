@@ -115,9 +115,9 @@ export const translations = {
       ar: "نموذج VIP غير متاح حاليًا. يرجى الاتصال بنا.",
     },
     privacy: {
-      tr: "Verilerinizi yalnızca Nazar kullanır. İstediğiniz zaman çıkabilirsiniz.",
-      en: "Only Nazar uses your details. Unsubscribe any time.",
-      ar: "نحن وحدنا نستخدم بياناتك. يمكنك إلغاء الاشتراك في أي وقت.",
+      tr: "Bilgileriniz Nazar'a kaydedilir; VIP e-postaları Klaviyo üzerinden yönetilir. İstediğiniz zaman çıkabilirsiniz.",
+      en: "Nazar stores your details; Klaviyo manages VIP emails. Unsubscribe any time.",
+      ar: "تحتفظ نازار ببياناتك، وتُدار رسائل VIP عبر Klaviyo. يمكنك إلغاء الاشتراك في أي وقت.",
     },
   },
   specials: {
