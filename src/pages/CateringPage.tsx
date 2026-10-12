@@ -55,11 +55,11 @@ export default function CateringPage() {
 
   const { lang } = useLang();
   const [choice, setChoice] = React.useState<CateringChoice | null>(null);
-  const selectedTrays = choice?.type === "trays" ? choice.selections.map(({ id, size }) => {
+  const selectedTrays = choice?.type === "trays" ? choice.selections.map(({ id, size, count }) => {
     const tray = CATERING_TRAYS.find((item) => item.id === id);
-    return { id, size, title: tray?.title[lang] ?? id, price: tray?.prices[CATERING_SIZES.indexOf(size)] ?? 0 };
+    return { id, size, count, title: tray?.title[lang] ?? id, image: tray?.image, price: tray?.prices[CATERING_SIZES.indexOf(size)] ?? 0 };
   }) : [];
-  const traySubtotal = selectedTrays.reduce((sum, tray) => sum + tray.price, 0);
+  const traySubtotal = selectedTrays.reduce((sum, tray) => sum + tray.price * tray.count, 0);
 
   function toggleCustomItem(id: string) {
     setChoice((current) => {
@@ -76,10 +76,20 @@ export default function CateringPage() {
       const itemIds = current?.type === "trays" || current?.type === "custom" ? current.itemIds : [];
       const selected = selections.some((item) => item.id === id && item.size === size);
       const next = selected ? selections.filter((item) => item.id !== id) : [
-        ...selections.filter((item) => item.id !== id), { id, size },
+        ...selections.filter((item) => item.id !== id), { id, size, count: 1 },
       ];
       return next.length ? { type: "trays", selections: next, itemIds } :
         itemIds.length ? { type: "custom", itemIds } : null;
+    });
+  }
+
+  function updateTrayCount(id: string, count: number) {
+    setChoice((current) => {
+      if (current?.type !== "trays") return current;
+      const selections = count === 0 ? current.selections.filter((item) => item.id !== id) :
+        current.selections.map((item) => item.id === id ? { ...item, count: Math.min(20, Math.max(1, count)) } : item);
+      return selections.length ? { ...current, selections } :
+        current.itemIds.length ? { type: "custom", itemIds: current.itemIds } : null;
     });
   }
 
@@ -184,6 +194,7 @@ export default function CateringPage() {
                               <span className="block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">{size} {t("catering.guestsShort", lang)}</span>
                               <span className="block font-extrabold text-zinc-900">{quantity} {TRAY_UNITS[tray.unit][lang]}</span>
                               <span className="mt-1 block text-zinc-600">{price === undefined ? t("catering.requestPrice", lang) : `$${price}`}</span>
+                              {selected && <span className="mt-1 block font-bold text-[#1E7A3A]">{t("catering.inCart", lang)}</span>}
                             </button>
                           );
                         })}
@@ -195,15 +206,24 @@ export default function CateringPage() {
             ))}
           </div>
           <p className="mt-6 text-sm text-zinc-700">{t("catering.traysQuoteNote", lang)}</p>
-          <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5" aria-live="polite">
-            <h4 className="font-extrabold text-zinc-900">{t("catering.traySelectionTitle", lang)}</h4>
+          <div id="catering-cart" className="mt-5 scroll-mt-24 rounded-2xl border-2 border-emerald-300 bg-white p-5 shadow-sm" aria-live="polite">
+            <h4 className="text-xl font-extrabold text-zinc-900">{t("catering.traySelectionTitle", lang)}</h4>
             {selectedTrays.length ? (
               <>
-                <ul className="mt-3 space-y-2 text-sm text-zinc-700">
+                <ul className="mt-4 divide-y divide-zinc-200 border-y border-zinc-200 text-sm text-zinc-700">
                   {selectedTrays.map((tray) => (
-                    <li key={tray.id} className="flex justify-between gap-4">
-                      <span>{tray.title} · {tray.size} {t("catering.guestsShort", lang)}</span>
-                      <span className="font-bold">${tray.price.toFixed(2)}</span>
+                    <li key={tray.id} className="flex flex-wrap items-center gap-4 py-4 sm:flex-nowrap">
+                      {tray.image && <img src={tray.image} alt="" className="h-16 w-20 shrink-0 rounded-lg object-cover" />}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-zinc-900">{tray.title}</p>
+                        <p>{tray.size} {t("catering.guestsShort", lang)} · ${tray.price.toFixed(2)} {t("catering.perTray", lang)}</p>
+                      </div>
+                      <div className="flex items-center gap-2" aria-label={`${tray.title} ${t("catering.quantity", lang)}`}>
+                        <button type="button" onClick={() => updateTrayCount(tray.id, tray.count - 1)} aria-label={`${tray.title}: ${t("catering.decreaseQuantity", lang)}`} className="h-9 w-9 rounded-lg border border-zinc-300 font-bold hover:bg-zinc-50">−</button>
+                        <span className="w-6 text-center font-bold">{tray.count}</span>
+                        <button type="button" disabled={tray.count >= 20} onClick={() => updateTrayCount(tray.id, tray.count + 1)} aria-label={`${tray.title}: ${t("catering.increaseQuantity", lang)}`} className="h-9 w-9 rounded-lg border border-zinc-300 font-bold hover:bg-zinc-50 disabled:opacity-50">+</button>
+                      </div>
+                      <strong className="w-20 text-right text-zinc-900">${(tray.price * tray.count).toFixed(2)}</strong>
                     </li>
                   ))}
                 </ul>
@@ -211,6 +231,7 @@ export default function CateringPage() {
                   <span>{t("catering.traySubtotal", lang)}</span>
                   <span>${traySubtotal.toFixed(2)}</span>
                 </div>
+                <p className="mt-3 text-xs text-zinc-600">{t("catering.cartPreviewNote", lang)}</p>
               </>
             ) : (
               <p className="mt-2 text-sm text-zinc-600">{t("catering.noTraysSelected", lang)}</p>
