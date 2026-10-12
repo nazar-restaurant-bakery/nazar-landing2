@@ -20,9 +20,9 @@ const HIGHLIGHTS = [
     ar: "اسأل عن الخيارات الحلال والنباتية والمناسبة للأطفال",
   },
   {
-    en: "Pickup or drop-off across the New Haven area",
-    tr: "New Haven bölgesinde teslim alma veya adrese bırakma",
-    ar: "استلام أو توصيل في منطقة نيوهيفن",
+    en: "Pickup only at our West Haven restaurant",
+    tr: "Yalnızca West Haven restoranımızdan teslim alma",
+    ar: "الاستلام فقط من مطعمنا في ويست هيفن",
   },
 ] as const;
 
@@ -110,6 +110,10 @@ export default function CateringPage() {
             </ul>
           </div>
         </div>
+        <div role="note" className="mt-6 flex items-center gap-3 rounded-2xl border border-amber-300 border-l-4 border-l-amber-500 bg-amber-50 px-5 py-4 shadow-sm">
+          <span aria-hidden="true" className="text-2xl">⏱</span>
+          <p className="text-base font-extrabold text-amber-950 sm:text-lg">{t("catering.leadTimeNote", lang)}</p>
+        </div>
         <div className="mt-6 flex flex-col gap-3 border-t border-[#d7cbbb] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm font-semibold text-zinc-700">
             {t("catering.menusTeaserStart", lang)}
@@ -148,7 +152,6 @@ export default function CateringPage() {
           <p className="text-xs font-extrabold uppercase tracking-widest text-[#1E7A3A]">Nazar catering</p>
           <h3 className="mt-2 text-2xl font-extrabold text-zinc-900">{t("catering.traysTitle", lang)}</h3>
           <p className="mt-2 max-w-3xl text-sm text-zinc-700">{t("catering.traysIntro", lang)}</p>
-          <p className="mt-2 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">{t("catering.leadTimeNote", lang)}</p>
           <p className="mt-2 max-w-3xl text-xs text-zinc-600">{t("catering.traysDetails", lang)}</p>
 
           <div className="mt-6 space-y-8">
