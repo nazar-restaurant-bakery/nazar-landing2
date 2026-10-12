@@ -6,7 +6,11 @@ import "./index.css";
 
 import { LanguageProvider } from "./components/Language";
 import { trackCloverOrderHandoffs } from "./lib/analytics";
+import { captureUtm } from "./lib/utm";
 
+// Preserve campaign attribution when a visitor lands on /menu and later
+// navigates to the VIP or catering form without query parameters.
+captureUtm();
 trackCloverOrderHandoffs();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
