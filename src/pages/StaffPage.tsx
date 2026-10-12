@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 
 type Customer = {
@@ -44,6 +44,7 @@ export default function StaffPage() {
   const [followUp, setFollowUp] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const refreshSequence = useRef(0);
 
   useEffect(() => {
     document.title = "Nazar staff | Customer follow-up";
@@ -53,19 +54,25 @@ export default function StaffPage() {
     document.head.appendChild(robots);
     if (!client) return () => robots.remove();
     void client.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = client.auth.onAuthStateChange((_event, next) => setSession(next));
+    const { data: listener } = client.auth.onAuthStateChange((_event, next) => {
+      if (!next) refreshSequence.current += 1;
+      setSession(next);
+    });
     return () => { listener.subscription.unsubscribe(); robots.remove(); };
   }, []);
 
   const refresh = useCallback(async (query = "") => {
     if (!client || !session) return;
+    const sequence = ++refreshSequence.current;
     setBusy(true); setMessage("");
     const { data, error } = await client.rpc("crm_overview", { p_search: query });
+    if (sequence !== refreshSequence.current) return;
     if (error) {
       setOverview(null);
       setMessage(error.code === "42501" ? "This account does not have Nazar staff access." : "Could not load records. Try again.");
     } else {
       setOverview(data as Overview);
+      setMessage("");
     }
     setBusy(false);
   }, [session]);
