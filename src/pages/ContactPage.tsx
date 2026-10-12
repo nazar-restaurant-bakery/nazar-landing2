@@ -16,7 +16,7 @@ export default function ContactPage() {
   // ✅ Edit these if needed
   const addressLine1 = "39 Elm Street, Unit 1";
   const cityStateZip = "West Haven, CT";
-  const emailTo = "nazarrestaurantandbakery@gmail.com";
+  const emailTo = "info@nazarrestaurantandbakery.com";
 
   // ✅ Hours (your latest)
   const hours: HoursRow[] = [
