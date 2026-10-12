@@ -10,10 +10,12 @@ import ContactPage from "./pages/ContactPage";
 import VipPage from "./pages/VipPage";
 import SpecialsPage from "./pages/SpecialsPage";
 import CateringPage from "./pages/CateringPage";
+import StaffPage from "./pages/StaffPage";
 
 export default function App() {
   return (
     <Routes>
+      <Route path="/staff" element={<StaffPage />} />
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/menu" element={<MenuPage />} />
