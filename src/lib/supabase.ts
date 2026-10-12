@@ -75,6 +75,7 @@ export const supabase: NazarSupabaseClient | null = isSupabaseConfigured
   ? createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
       auth: {
         // No one signs in on the marketing site; skip the session machinery.
+        storageKey: "nazar-marketing-no-session",
         persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false,
