@@ -5,6 +5,9 @@ import App from "./App";
 import "./index.css";
 
 import { LanguageProvider } from "./components/Language";
+import { trackCloverOrderHandoffs } from "./lib/analytics";
+
+trackCloverOrderHandoffs();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
