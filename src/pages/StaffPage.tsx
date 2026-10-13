@@ -26,6 +26,7 @@ type CateringDecision = {
   request_status: string; customer_name: string | null;
 };
 type DecisionQueue = { items: CateringDecision[] };
+type DecisionEmailDraft = { decisionId: string; to: string; cc: string; subject: string; body: string };
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -69,6 +70,7 @@ export default function StaffPage() {
   const [taskDue, setTaskDue] = useState("");
   const [decisionQueue, setDecisionQueue] = useState<DecisionQueue | null>(null);
   const [decisionQuestion, setDecisionQuestion] = useState("");
+  const [decisionEmailDraft, setDecisionEmailDraft] = useState<DecisionEmailDraft | null>(null);
   const refreshSequence = useRef(0);
 
   useEffect(() => {
@@ -232,6 +234,27 @@ export default function StaffPage() {
     setBusy(false);
   }
 
+  async function prepareDecisionEmail(decisionId: string) {
+    if (!session?.access_token) return;
+    setBusy(true); setMessage(""); setDecisionEmailDraft(null);
+    try {
+      const response = await fetch("/api/staff/decision-email-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ decisionId }),
+      });
+      if (!response.ok) throw new Error("Draft unavailable");
+      const draft = await response.json() as Omit<DecisionEmailDraft, "decisionId">;
+      setDecisionEmailDraft({ ...draft, decisionId });
+    } catch { setMessage("Could not prepare the decision email. Please try again."); }
+    setBusy(false);
+  }
+
+  function decisionMailto(draft: DecisionEmailDraft) {
+    const query = new URLSearchParams({ cc: draft.cc, subject: draft.subject, body: draft.body });
+    return `mailto:${encodeURIComponent(draft.to)}?${query.toString()}`;
+  }
+
   async function saveRequest(event: FormEvent) {
     event.preventDefault();
     if (!client || !currentRequest) return;
@@ -294,7 +317,7 @@ export default function StaffPage() {
           </div>}
           {decisionQueue && <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-label="Price and menu decisions">
             <h2 className="font-semibold">Price and menu decisions awaiting Yücel</h2>
-            <p className="mt-1 text-sm text-stone-600">This is an internal tracking queue. It does not email Yücel. Only his separately authorized account can record a decision.</p>
+            <p className="mt-1 text-sm text-stone-600">Prepare an email to Yücel at Nazar, with Talip copied. Opening a draft does not send it or record a decision in CRM.</p>
             <div className="mt-3 space-y-2">
               {decisionQueue.items.filter((item) => !item.recorded_at).map((item) => <div key={item.id}
                 className="rounded-lg border bg-white p-3 text-sm">
@@ -303,9 +326,20 @@ export default function StaffPage() {
                 {overview?.requests.some((r) => r.id === item.request_id) && <button type="button"
                   onClick={() => { const request = overview.requests.find((r) => r.id === item.request_id); if (request) chooseRequest(request); }}
                   className="mt-2 text-green-800 underline">Open request</button>}
+                <button type="button" disabled={busy} onClick={() => void prepareDecisionEmail(item.id)}
+                  className="ml-3 mt-2 text-green-800 underline disabled:opacity-50">Prepare email to Yücel</button>
               </div>)}
               {!decisionQueue.items.some((item) => !item.recorded_at) && <p className="text-sm text-stone-600">No price or menu decisions waiting.</p>}
             </div>
+            {decisionEmailDraft && <div className="mt-4 rounded-lg border border-amber-300 bg-white p-4 text-sm">
+              <h3 className="font-semibold">Review the email draft</h3>
+              <p className="mt-2"><strong>To:</strong> {decisionEmailDraft.to}</p>
+              <p><strong>Cc:</strong> {decisionEmailDraft.cc}</p>
+              <p><strong>Subject:</strong> {decisionEmailDraft.subject}</p>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-stone-50 p-2 font-sans">{decisionEmailDraft.body}</pre>
+              <a href={decisionMailto(decisionEmailDraft)} className="mt-3 inline-block rounded-lg bg-green-800 px-4 py-2 font-semibold text-white">Open in email app</a>
+              <p className="mt-2 text-xs text-stone-600">Send the draft from your email account. Ask Yücel to reply all and sign his name. Replies are visible in email; they are not imported into CRM yet.</p>
+            </div>}
           </section>}
           {overview && <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
             <section className="rounded-2xl border bg-white p-5 shadow-sm">
@@ -371,7 +405,7 @@ export default function StaffPage() {
                   <h4 className="font-semibold">Yücel's price/menu decision</h4>
                   {pendingDecision ? <>
                     <p className="mt-2 text-sm"><strong>Question:</strong> {pendingDecision.question}</p>
-                    <p className="text-sm text-amber-800">Waiting for Yücel's own response. No email was sent by this CRM.</p>
+                    <p className="text-sm text-amber-800">Waiting for Yücel's own response. Prepare and send the email from the decision queue above.</p>
                   </> : <form onSubmit={requestDecision} className="mt-2 space-y-2">
                     <label className="block text-sm">What price or menu decision is needed?<textarea required maxLength={1000}
                       value={decisionQuestion} onChange={(e) => setDecisionQuestion(e.target.value)}
