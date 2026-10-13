@@ -20,6 +20,10 @@ The development-only `/catering-ops-local` page now reads actual catering reques
 
 Yücel supplies the final menu and price. Talip may read the decision and follow up, but must not be required to enter Yücel's answer. An approved quote captures a version number, menu, amount, pickup/delivery terms and approval time. Changing an approved quote creates a new version rather than silently overwriting what the customer saw. The customer is contacted using the method they supplied; email must not be assumed for phone-only inquiries. A sent quote and the customer's answer are recorded against the same request.
 
+The next local implementation draft uses a 48-hour, one-use review link for the shared Nazar/Yücel mailbox. Staff prepares an email containing the link; Yücel enters his name, final menu, tax-inclusive total and pickup terms on the linked screen. The database records a new immutable quote version. The signed name and possession of the mailbox link are the attribution available in this arrangement; no separate Yücel account or second factor is introduced. Issuing another link invalidates the old one. The token is held in the URL fragment so ordinary page requests do not include it. The SQL and page code are local only; the migration has not been executed on Nazar-production or the sandbox.
+
+For the first delivery version, staff opens the exact approved quote in a Nazar email draft and sends it manually. Only after sending does staff explicitly record delivery against the same quote version. Opening an email draft never marks it sent. The quote email says payment has not occurred. Cloudflare's [Email Service pricing](https://developers.cloudflare.com/email-service/platform/pricing/) requires Workers Paid for arbitrary customer addresses, so automatic sending is deferred.
+
 ## Customer follow-up
 
 Talip's page displays the request ID, current stage, last action, approved amount if available, and next follow-up. It links to the operations record but does not substitute for the operations queue. VIP email consent and marketing activity remain separate from a catering quote request.
