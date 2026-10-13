@@ -166,6 +166,8 @@ BEGIN
       sent_by = auth.uid(), sent_at = now()
   FROM core.catering_requests r JOIN core.customers c ON c.id = r.customer_id
   WHERE q.id = p_quote_id AND q.request_id = r.id AND q.stage = 'approved'
+    AND q.version = (SELECT max(q2.version) FROM core.catering_quote_versions q2
+      WHERE q2.request_id = q.request_id)
     AND c.business_id = 'a358eba4-b197-4309-805b-46f43a718454'::uuid
     AND ((p_channel = 'email' AND p_recipient = c.email AND c.email IS NOT NULL)
       OR (p_channel = 'phone' AND p_recipient = c.phone AND c.phone IS NOT NULL));

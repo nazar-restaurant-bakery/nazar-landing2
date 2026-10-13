@@ -97,14 +97,27 @@ BEGIN
   END;
 END
 $$;
+SELECT public.catering_issue_quote_link_v1('33333333-3333-4333-8333-333333333333') AS token2 \gset
+SET ROLE anon;
+SET request.jwt.claim.sub = '';
+SELECT public.catering_decide_quote_v1(:'token2', 'Updated Mixed Grill tray', 48000,
+  'Pickup October 20 at 2 PM', 'Yücel') AS quote2_id \gset
+RESET ROLE;
+SET request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
 SELECT public.catering_mark_quote_sent_v1(:'quote_id'::uuid, 'email',
+  'synthetic@example.com') AS stale_send_ok \gset
+\if :stale_send_ok
+  \echo 'FAIL: superseded quote marked sent'
+  \quit 1
+\endif
+SELECT public.catering_mark_quote_sent_v1(:'quote2_id'::uuid, 'email',
   'synthetic@example.com') AS sent_ok \gset
 \if :sent_ok
 \else
   \echo 'FAIL: send record failed'
   \quit 1
 \endif
-SELECT public.catering_mark_quote_sent_v1(:'quote_id'::uuid, 'email',
+SELECT public.catering_mark_quote_sent_v1(:'quote2_id'::uuid, 'email',
   'synthetic@example.com') AS repeat_send_ok \gset
 \if :repeat_send_ok
   \echo 'FAIL: duplicate send record accepted'
