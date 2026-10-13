@@ -26,7 +26,7 @@ type CateringDecision = {
   request_status: string; customer_name: string | null;
 };
 type DecisionQueue = { items: CateringDecision[] };
-type DecisionEmailDraft = { decisionId: string; to: string; cc: string; subject: string; body: string };
+type DecisionEmailDraft = { decisionId: string; from: string; to: string; replyTo: string; subject: string; body: string };
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -250,9 +250,20 @@ export default function StaffPage() {
     setBusy(false);
   }
 
-  function decisionMailto(draft: DecisionEmailDraft) {
-    const query = new URLSearchParams({ cc: draft.cc, subject: draft.subject, body: draft.body });
-    return `mailto:${encodeURIComponent(draft.to)}?${query.toString()}`;
+  async function sendDecisionEmail() {
+    if (!session?.access_token || !decisionEmailDraft) return;
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch("/api/staff/decision-email-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ decisionId: decisionEmailDraft.decisionId, send: true }),
+      });
+      if (!response.ok) throw new Error("Email could not be sent");
+      setDecisionEmailDraft(null);
+      setMessage("Decision request emailed to Yücel from info@nazarrestaurantandbakery.com.");
+    } catch { setMessage("Email was not confirmed as sent. Please try again after checking the inbox."); }
+    setBusy(false);
   }
 
   async function saveRequest(event: FormEvent) {
@@ -317,7 +328,7 @@ export default function StaffPage() {
           </div>}
           {decisionQueue && <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-label="Price and menu decisions">
             <h2 className="font-semibold">Price and menu decisions awaiting Yücel</h2>
-            <p className="mt-1 text-sm text-stone-600">Prepare the request email from info@ to Yücel. The copied CRM address will link his reply to this request. Opening a draft does not send it.</p>
+            <p className="mt-1 text-sm text-stone-600">Review the request, then send it from info@ to Yücel. His reply will link to this CRM request.</p>
             <div className="mt-3 space-y-2">
               {decisionQueue.items.filter((item) => !item.recorded_at).map((item) => <div key={item.id}
                 className="rounded-lg border bg-white p-3 text-sm">
@@ -340,12 +351,13 @@ export default function StaffPage() {
             </div>}
             {decisionEmailDraft && <div className="mt-4 rounded-lg border border-amber-300 bg-white p-4 text-sm">
               <h3 className="font-semibold">Review the email draft</h3>
-              <p className="mt-2"><strong>To:</strong> {decisionEmailDraft.to}</p>
-              <p><strong>Cc:</strong> {decisionEmailDraft.cc}</p>
+              <p className="mt-2"><strong>From:</strong> {decisionEmailDraft.from}</p>
+              <p><strong>To:</strong> {decisionEmailDraft.to}</p>
+              <p><strong>Reply to:</strong> {decisionEmailDraft.replyTo}</p>
               <p><strong>Subject:</strong> {decisionEmailDraft.subject}</p>
               <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-stone-50 p-2 font-sans">{decisionEmailDraft.body}</pre>
-              <a href={decisionMailto(decisionEmailDraft)} className="mt-3 inline-block rounded-lg bg-green-800 px-4 py-2 font-semibold text-white">Open in email app</a>
-              <p className="mt-2 text-xs text-stone-600">Before sending, choose info@nazarrestaurantandbakery.com as the From address. Yücel replies all from ctnazarbakery@gmail.com, placing “Decision:” and “Signed: Yücel” above the quoted message. His reply will appear here after the email connection is activated.</p>
+              <button type="button" disabled={busy} onClick={() => void sendDecisionEmail()} className="mt-3 inline-block rounded-lg bg-green-800 px-4 py-2 font-semibold text-white disabled:opacity-50">Send request to Yücel</button>
+              <p className="mt-2 text-xs text-stone-600">Yücel replies from ctnazarbakery@gmail.com, placing “Decision:” and “Signed: Yücel” above the quoted message. His reply will appear here after the email connection is activated.</p>
             </div>}
           </section>}
           {overview && <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">

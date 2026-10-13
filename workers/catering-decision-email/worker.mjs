@@ -7,7 +7,7 @@ const CAPTURE_ADDRESS = "crm-decisions@nazarrestaurantandbakery.com";
 export default {
   async email(message, env) {
     if (message.to.toLowerCase() !== CAPTURE_ADDRESS) return;
-    if (message.rawSize > 100_000) {
+    if (message.rawSize > 1_000_000) {
       console.warn("Decision email exceeded size limit");
       return;
     }
@@ -25,7 +25,7 @@ export default {
       inReplyTo: mail.inReplyTo,
       body: mail.text,
     });
-    if (!payload) return; // Draft copies and unrelated mail cannot change CRM.
+    if (!payload) return; // Unrelated mail cannot change CRM.
 
     const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/crm_import_catering_decision_email_v1`, {
       method: "POST",
@@ -36,6 +36,11 @@ export default {
       body: JSON.stringify(payload),
     });
     if (!response.ok) throw new Error(`Decision email import failed: ${response.status}`);
-    if (await response.json() !== true) console.warn("Decision email did not match a pending request");
+    if (await response.json() !== true) {
+      console.warn("Decision email did not match a pending request");
+      return;
+    }
+    // Keep a copy in the shared inbox as well as the private CRM record.
+    await message.forward("ctnazarbakery@gmail.com");
   },
 };

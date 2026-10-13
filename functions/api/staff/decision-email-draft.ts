@@ -1,4 +1,4 @@
-type Env = { VITE_SUPABASE_ANON_KEY?: string };
+type Env = { VITE_SUPABASE_ANON_KEY?: string; CLOUDFLARE_EMAIL_SEND_TOKEN?: string };
 type Context = { request: Request; env: Env };
 type Decision = { id: string; request_id: string; question: string; recorded_at: string | null };
 
@@ -17,6 +17,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
   if (!env.VITE_SUPABASE_ANON_KEY) return reply(503, "connection_unavailable");
 
   let decisionId: string;
+  let send = false;
   try {
     if (Number(request.headers.get("Content-Length") || 0) > 256) return reply(413, "too_large");
     const raw = await request.text();
@@ -26,6 +27,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     const value = (parsed as Record<string, unknown>).decisionId;
     if (typeof value !== "string" || !uuid.test(value)) return reply(400, "invalid_decision");
     decisionId = value;
+    send = (parsed as Record<string, unknown>).send === true;
   } catch { return reply(400, "invalid_decision"); }
 
   try {
@@ -56,10 +58,18 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       "Yücel,", "", "Please review this catering request and decide the final menu and price:",
       decision.question.slice(0, 1000), "",
       `Request ID: ${decision.request_id}`, "Open the request in the private CRM: https://www.nazarrestaurantandbakery.com/staff", "",
-      "Please reply all from ctnazarbakery@gmail.com. Above the quoted message, start one line with Decision: followed by the final menu and price. End with a line starting Signed: followed by your name.", "",
-      "Talip sends this request from info@nazarrestaurantandbakery.com. The copied address links your reply to the CRM request.",
+      "Please reply from ctnazarbakery@gmail.com. Above the quoted message, start one line with Decision: followed by the final menu and price. End with a line starting Signed: followed by your name.", "",
+      "Your reply goes to the private CRM address and will appear on this request. Talip will see it there.",
     ].join("\n");
-    return reply(200, "ok", { to: "ctnazarbakery@gmail.com", cc: "crm-decisions@nazarrestaurantandbakery.com", subject, body });
+    if (!send) return reply(200, "ok", { from: "info@nazarrestaurantandbakery.com", to: "ctnazarbakery@gmail.com", replyTo: "crm-decisions@nazarrestaurantandbakery.com", subject, body });
+    if (!env.CLOUDFLARE_EMAIL_SEND_TOKEN) return reply(503, "email_not_configured");
+    const sent = await fetch("https://api.cloudflare.com/client/v4/accounts/50a358ead900374fd545df744bd28bef/email/sending/send", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: "info@nazarrestaurantandbakery.com", to: "ctnazarbakery@gmail.com", replyTo: "crm-decisions@nazarrestaurantandbakery.com", subject, text: body }),
+    });
+    if (!sent.ok || (await sent.json() as { success?: boolean }).success !== true) return reply(503, "email_delivery_failed");
+    return reply(200, "sent");
   } catch { return reply(503, "connection_unavailable"); }
 }
 

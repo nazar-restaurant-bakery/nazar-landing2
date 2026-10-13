@@ -47,6 +47,7 @@ test("the email worker sends only the new reply to the decision import function"
   ].join("\r\n");
   const previousFetch = globalThis.fetch;
   let payload;
+  let forwardedTo;
   globalThis.fetch = async (_url, options) => {
     assert.equal(options.headers.apikey, "sb_secret_test");
     assert.equal(options.headers.Authorization, undefined);
@@ -56,9 +57,11 @@ test("the email worker sends only the new reply to the decision import function"
   try {
     await worker.email({
       to: base.recipient, from: base.envelopeFrom, rawSize: raw.length,
+      forward: async (address) => { forwardedTo = address; },
       raw: new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(raw)); controller.close(); } }),
     }, { SUPABASE_SECRET_KEY: "sb_secret_test" });
     assert.equal(payload.p_decision_id, decisionId);
     assert.equal(payload.p_answer, "Mixed Grill for 30 guests, $365.\n\nSigned: Yücel");
+    assert.equal(forwardedTo, "ctnazarbakery@gmail.com");
   } finally { globalThis.fetch = previousFetch; }
 });
