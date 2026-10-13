@@ -16,22 +16,28 @@ import { t } from "./i18n";
 import { CATERING_PACKAGES, CATERING_TRAYS, cateringItemName } from "../data/cateringMenus";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
 import type { CateringChoice } from "../lib/signup";
+import { clearSignupDraft, currentSignupStorage, readSignupDraft, requestIdForSignup, saveSignupDraft } from "../lib/signupRecovery";
 
 type Status = "idle" | "submitting" | "success" | "error";
+type CateringDraft = { name: string; email: string; phone: string; eventDate: string; guests: string; message: string };
+const DRAFT_KEY = "nazar-catering-request-draft-v1";
 
 export default function CateringRequestForm({ className, menuChoice, onSuccess }: { className?: string; menuChoice?: CateringChoice | null; onSuccess?: () => void }) {
   const { lang } = useLang();
+  const storage = React.useMemo(() => currentSignupStorage(), []);
+  const restored = React.useMemo(() => readSignupDraft<CateringDraft>(storage, DRAFT_KEY)?.fields, [storage]);
+  const requestMemory = React.useRef<{ signature?: string; requestId?: string }>({});
 
   React.useEffect(() => {
     captureUtm();
   }, []);
 
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [phone, setPhone] = React.useState("");
-  const [eventDate, setEventDate] = React.useState("");
-  const [guests, setGuests] = React.useState("");
-  const [message, setMessage] = React.useState("");
+  const [name, setName] = React.useState(typeof restored?.name === "string" ? restored.name : "");
+  const [email, setEmail] = React.useState(typeof restored?.email === "string" ? restored.email : "");
+  const [phone, setPhone] = React.useState(typeof restored?.phone === "string" ? restored.phone : "");
+  const [eventDate, setEventDate] = React.useState(typeof restored?.eventDate === "string" ? restored.eventDate : "");
+  const [guests, setGuests] = React.useState(typeof restored?.guests === "string" ? restored.guests : "");
+  const [message, setMessage] = React.useState(typeof restored?.message === "string" ? restored.message : "");
 
   const [status, setStatus] = React.useState<Status>("idle");
   const [errorKey, setErrorKey] = React.useState<string | null>(null);
@@ -43,6 +49,10 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
   const submitting = status === "submitting";
   const overCapacity = Number(guests) > 60;
+
+  React.useEffect(() => {
+    if (status !== "success") saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, eventDate, guests, message });
+  }, [storage, name, email, phone, eventDate, guests, message, status]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -100,15 +110,22 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
     setStatus("submitting");
     setErrorKey(null);
 
+    const utm = getUtmOrNull();
+    saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, eventDate, guests, message });
+    const requestId = requestIdForSignup(storage, DRAFT_KEY, {
+      kind: "catering", name: trimmedName, email: trimmedEmail.toLowerCase(),
+      phone: normalizedPhone || "", eventDate, guests, message: trimmedMessage, menuChoice, utm,
+    }, requestMemory.current);
     const ok = await submitSignup({
       kind: "catering",
+      requestId,
       name: trimmedName,
       email: trimmedEmail.toLowerCase(),
       phone: normalizedPhone || "",
       consentEmail: false,
       turnstileToken,
       extra: honeypot,
-      utm: getUtmOrNull(),
+      utm,
       eventDate,
       guests,
       message: trimmedMessage,
@@ -130,6 +147,8 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
     setEventDate("");
     setGuests("");
     setMessage("");
+    clearSignupDraft(storage, DRAFT_KEY);
+    requestMemory.current = {};
     onSuccess?.();
   }
 
