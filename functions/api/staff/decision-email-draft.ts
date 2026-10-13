@@ -49,9 +49,9 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       "Yücel,", "", "Please review this catering request and decide the final menu and price:",
       decision.question.slice(0, 1000), "",
       `Request ID: ${decision.request_id}`, "Open the request in the private CRM: https://www.nazarrestaurantandbakery.com/staff", "",
-      "Please reply all with your decision and sign your name. Talip is copied for visibility.",
+      "Please reply all with your decision and sign your name. The Nazar website address is copied for Talip's visibility.",
     ].join("\n");
-    return reply(200, "ok", { to: "ctnazarbakery@gmail.com", cc: "talipbalik@gmail.com", subject, body });
+    return reply(200, "ok", { to: "ctnazarbakery@gmail.com", cc: "info@nazarrestaurantandbakery.com", subject, body });
   } catch { return reply(503, "connection_unavailable"); }
 }
 
