@@ -22,6 +22,7 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const client = url && key ? createClient(url, key) : null;
 const localQuoteTestMode = import.meta.env.VITE_CATERING_QUOTE_TEST_MODE === "true"
   && url !== "https://khgczybubufouraqyrcj.supabase.co";
+const quoteActionEnabled = import.meta.env.VITE_CATERING_QUOTE_ENABLED === "true" || localQuoteTestMode;
 const active = new Set(["new", "contacted", "quoted"]);
 
 function formatDate(value: string | null, includeTime = false) {
@@ -80,7 +81,7 @@ export default function CateringOpsLocalPage() {
   }, [session]);
 
   async function markSent(quote: ApprovedQuote, request: Request) {
-    if (!client || !session || !deliveryConfirmed) return;
+    if (!client || !session || !deliveryConfirmed || !quoteActionEnabled) return;
     const channel = request.email ? "email" : "phone";
     const recipient = request.email || request.phone;
     if (!recipient) return;
@@ -98,7 +99,7 @@ export default function CateringOpsLocalPage() {
   }
 
   async function prepareReviewLink(request: Request) {
-    if (!client || !session || busy || !localQuoteTestMode) return;
+    if (!client || !session || busy || !quoteActionEnabled) return;
     setBusy(true);
     setError("");
     const { data, error: issueError } = await client.rpc("catering_issue_quote_link_v1", { p_request_id: request.id });
@@ -123,11 +124,11 @@ export default function CateringOpsLocalPage() {
     <div className="mx-auto max-w-6xl">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-green-800">Nazar catering · local staff view</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-green-800">Nazar catering · staff view</p>
           <h1 className="mt-1 text-3xl font-bold">Incoming quote requests</h1>
-          <p className="mt-2 max-w-3xl text-sm text-stone-600">Actual catering records from Nazar's existing staff database. This screen is read-only while the quote decision and customer sending workflow is being connected.</p>
+          <p className="mt-2 max-w-3xl text-sm text-stone-600">Catering requests, menu and price decisions, and customer quote delivery in one place.</p>
         </div>
-        <span className="rounded-full bg-amber-100 px-3 py-2 text-xs font-bold text-amber-900">Local only · no quotes sent</span>
+        {!quoteActionEnabled && <span className="rounded-full bg-amber-100 px-3 py-2 text-xs font-bold text-amber-900">Quote actions disabled</span>}
       </header>
 
       {!client ? <p className="rounded-xl bg-white p-5">Local staff connection is not configured.</p>
@@ -169,13 +170,13 @@ export default function CateringOpsLocalPage() {
                   <p className="mt-2 whitespace-pre-wrap rounded-xl bg-stone-50 p-4 text-sm">{selected.message || "No request text was recorded."}</p>
                   <p className="mt-3 text-xs text-stone-600">Older submissions store the selection in this text. Separate product rows and quantities will appear after the structured intake change is released and verified.</p>
                   <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><strong>Next action:</strong> {active.has(selected.status) ? "Get the final menu and price decision, then deliver the approved quote." : "This request is closed; no quote action is pending."} The email draft never sends automatically; record delivery only after sending it.</div>
-                  {quoteAvailable && localQuoteTestMode && active.has(selected.status) && <section className="mt-5 rounded-xl border border-stone-200 p-4">
+                  {quoteAvailable && quoteActionEnabled && active.has(selected.status) && <section className="mt-5 rounded-xl border border-stone-200 p-4">
                     <h3 className="font-bold">Yücel's menu and price review</h3>
                     <p className="mt-2 text-sm text-stone-600">Create a one-use link for this request. It expires in 48 hours and the email must be sent by Nazar staff.</p>
                     <button type="button" disabled={busy} onClick={() => void prepareReviewLink(selected)} className="mt-3 rounded-lg border border-green-800 px-4 py-2 text-sm font-semibold text-green-800 disabled:opacity-50">Prepare Yücel review link</button>
                     {reviewLink?.requestId === selected.id && <>
                       <a className="mt-3 block text-sm font-semibold text-green-800 underline" href={`mailto:ctnazarbakery%40gmail.com?subject=${encodeURIComponent(`Nazar catering decision ${selected.id.slice(0, 8)}`)}&body=${encodeURIComponent(`Yücel, please review this catering request and enter the final menu, total price and pickup details here:\n${reviewLink.href}\n\nThis link expires in 48 hours and works once.`)}`}>Open review email draft to Yücel</a>
-                      <p className="mt-2 text-xs text-amber-800">Local address: this link opens only on this computer. Do not send it to another device before the screen is published.</p>
+                      {import.meta.env.DEV && <p className="mt-2 text-xs text-amber-800">Local address: this link opens only on this computer. Do not send it to another device before the screen is published.</p>}
                     </>}
                   </section>}
                   <section className="mt-5 rounded-xl border border-stone-200 p-4">
@@ -188,11 +189,11 @@ export default function CateringOpsLocalPage() {
                           <p className="mt-2 text-sm"><strong>Final total:</strong> {formatDollars(selectedQuote.total_cents)}</p>
                           {selectedQuote.decision_name && <p className="mt-2 text-sm"><strong>Decision recorded as:</strong> {selectedQuote.decision_name}</p>}
                           <p className="mt-2 text-sm"><strong>Pickup details:</strong> {selectedQuote.pickup_terms}</p>
-                          {selectedQuote.stage === "approved" && selected.email && <>
+                          {quoteActionEnabled && selectedQuote.stage === "approved" && selected.email && <>
                             <textarea readOnly aria-label="Customer quote email" value={customerQuoteMessage(selected.name, selectedQuote)} className="mt-3 h-56 w-full rounded-lg border bg-stone-50 p-3 text-sm" />
                             <a href={customerQuoteMailto(selected.email, selectedQuote, selected.name)} className="mt-3 inline-block rounded-lg bg-green-800 px-4 py-2 text-sm font-semibold text-white">Open customer email draft</a>
                           </>}
-                          {selectedQuote.stage === "approved" && (selected.email || selected.phone) && <>
+                          {quoteActionEnabled && selectedQuote.stage === "approved" && (selected.email || selected.phone) && <>
                             <label className="mt-4 flex gap-2 text-sm"><input type="checkbox" checked={deliveryConfirmed} onChange={(event) => setDeliveryConfirmed(event.target.checked)} />I actually delivered this exact quote to the customer by {selected.email ? "email" : "phone"}.</label>
                             <button type="button" disabled={!deliveryConfirmed || busy} onClick={() => void markSent(selectedQuote, selected)} className="mt-3 rounded-lg border border-green-800 px-4 py-2 text-sm font-semibold text-green-800 disabled:opacity-50">Record quote as sent</button>
                           </>}

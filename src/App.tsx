@@ -23,6 +23,7 @@ export default function App() {
       {import.meta.env.DEV && <Route path="/staff-preview" element={<CrmPreviewPage />} />}
       {import.meta.env.DEV && <Route path="/catering-ops-preview" element={<CateringOpsPreviewPage />} />}
       {import.meta.env.DEV && <Route path="/catering-ops-local" element={<CateringOpsLocalPage />} />}
+      {import.meta.env.VITE_CATERING_QUOTE_ENABLED === "true" && <Route path="/staff/catering" element={<CateringOpsLocalPage />} />}
       <Route path="/quote-decision" element={<QuoteDecisionPage />} />
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
