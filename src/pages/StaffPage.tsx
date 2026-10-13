@@ -27,6 +27,7 @@ type CateringDecision = {
 };
 type DecisionQueue = { items: CateringDecision[] };
 type DecisionEmailDraft = { decisionId: string; to: string; cc: string; subject: string; body: string };
+type DecisionAccess = { eligible: boolean; verified: boolean };
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -71,6 +72,12 @@ export default function StaffPage() {
   const [decisionQueue, setDecisionQueue] = useState<DecisionQueue | null>(null);
   const [decisionQuestion, setDecisionQuestion] = useState("");
   const [decisionEmailDraft, setDecisionEmailDraft] = useState<DecisionEmailDraft | null>(null);
+  const [decisionAccess, setDecisionAccess] = useState<DecisionAccess | null>(null);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaQr, setMfaQr] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [decisionAnswer, setDecisionAnswer] = useState("");
+  const [decisionAnswerId, setDecisionAnswerId] = useState<string | null>(null);
   const refreshSequence = useRef(0);
 
   useEffect(() => {
@@ -113,6 +120,25 @@ export default function StaffPage() {
     if (!session) return;
     queueMicrotask(() => { void refresh(""); });
   }, [session, refresh]);
+
+  const refreshDecisionAccess = useCallback(async () => {
+    if (!client || !session) return;
+    const { data, error } = await client.rpc("crm_decision_maker_status_v1");
+    if (error || !data) { setDecisionAccess(null); return; }
+    const access = data as DecisionAccess;
+    setDecisionAccess(access);
+    if (access.eligible && !access.verified) {
+      const factors = await client.auth.mfa.listFactors();
+      if (!factors.error) setMfaFactorId(factors.data.totp[0]?.id || null);
+    } else {
+      setMfaFactorId(null); setMfaQr(null); setMfaCode("");
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    queueMicrotask(() => { void refreshDecisionAccess(); });
+  }, [session, refreshDecisionAccess]);
 
   useEffect(() => {
     if (!client || !session) return;
@@ -250,6 +276,38 @@ export default function StaffPage() {
     setBusy(false);
   }
 
+  async function enrollDecisionMfa() {
+    if (!client || !decisionAccess?.eligible || decisionAccess.verified) return;
+    setBusy(true); setMessage("");
+    const { data, error } = await client.auth.mfa.enroll({ factorType: "totp", friendlyName: "Yucel CRM decisions" });
+    if (error || !data) setMessage("Could not start authenticator setup. Try again.");
+    else { setMfaFactorId(data.id); setMfaQr(data.totp.qr_code); }
+    setBusy(false);
+  }
+
+  async function verifyDecisionMfa(event: FormEvent) {
+    event.preventDefault();
+    if (!client || !mfaFactorId || !/^\d{6}$/.test(mfaCode.trim())) return;
+    setBusy(true); setMessage("");
+    const { error } = await client.auth.mfa.challengeAndVerify({ factorId: mfaFactorId, code: mfaCode.trim() });
+    setMfaCode("");
+    if (error) setMessage("Authenticator code was not accepted. Check Yücel's device and try again.");
+    else { setMfaQr(null); await refreshDecisionAccess(); setMessage("Yücel's decision session is verified."); }
+    setBusy(false);
+  }
+
+  async function recordDecision(event: FormEvent, decisionId: string) {
+    event.preventDefault();
+    if (!client || !decisionAccess?.verified || !decisionAnswer.trim()) return;
+    setBusy(true); setMessage("");
+    const { data, error } = await client.rpc("crm_record_catering_decision_v1", {
+      p_decision_id: decisionId, p_decision: decisionAnswer.trim(),
+    });
+    if (error || !data) setMessage("Could not record Yücel's decision. Check his verified session and try again.");
+    else { setDecisionAnswer(""); setDecisionAnswerId(null); await refresh(search, segment); setMessage("Yücel's decision was recorded. Talip can now see it in CRM."); }
+    setBusy(false);
+  }
+
   function decisionMailto(draft: DecisionEmailDraft) {
     const query = new URLSearchParams({ cc: draft.cc, subject: draft.subject, body: draft.body });
     return `mailto:${encodeURIComponent(draft.to)}?${query.toString()}`;
@@ -318,6 +376,20 @@ export default function StaffPage() {
           {decisionQueue && <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-label="Price and menu decisions">
             <h2 className="font-semibold">Price and menu decisions awaiting Yücel</h2>
             <p className="mt-1 text-sm text-stone-600">Prepare an email to Yücel at Nazar, with the Nazar website address copied for Talip. Opening a draft does not send it or record a decision in CRM.</p>
+            {decisionAccess?.eligible && <div className="mt-3 rounded-lg border border-amber-300 bg-white p-4 text-sm">
+              {decisionAccess.verified ? <p className="font-semibold text-green-800">Yücel's authenticator verified. This session can record price and menu decisions.</p> : <>
+                <p className="font-semibold">Yücel's personal verification is required to record a decision.</p>
+                <p className="mt-1 text-stone-600">Only Yücel should set up and use the authenticator on his own device. Do not share the QR code or verification code.</p>
+                {!mfaFactorId && !mfaQr && <button type="button" disabled={busy} onClick={() => void enrollDecisionMfa()}
+                  className="mt-3 rounded-lg border px-4 py-2 disabled:opacity-50">Set up Yücel's authenticator</button>}
+                {mfaQr && <img className="mt-3 h-48 w-48" alt="Yücel authenticator setup QR code" src={`data:image/svg+xml;utf8,${encodeURIComponent(mfaQr)}`} />}
+                {mfaFactorId && <form onSubmit={verifyDecisionMfa} className="mt-3 flex flex-wrap items-end gap-2">
+                  <label className="text-sm">Code from Yücel's authenticator<input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6}
+                    value={mfaCode} onChange={(event) => setMfaCode(event.target.value)} className="mt-1 block rounded-lg border p-2" /></label>
+                  <button disabled={busy || !/^\d{6}$/.test(mfaCode)} className="rounded-lg bg-green-800 px-4 py-2 text-white disabled:opacity-50">Verify Yücel's device</button>
+                </form>}
+              </>}
+            </div>}
             <div className="mt-3 space-y-2">
               {decisionQueue.items.filter((item) => !item.recorded_at).map((item) => <div key={item.id}
                 className="rounded-lg border bg-white p-3 text-sm">
@@ -328,9 +400,23 @@ export default function StaffPage() {
                   className="mt-2 text-green-800 underline">Open request</button>}
                 <button type="button" disabled={busy} onClick={() => void prepareDecisionEmail(item.id)}
                   className="ml-3 mt-2 text-green-800 underline disabled:opacity-50">Prepare email to Yücel</button>
+                {decisionAccess?.verified && <button type="button" onClick={() => { setDecisionAnswerId(item.id); setDecisionAnswer(""); }}
+                  className="ml-3 mt-2 text-green-800 underline">Record Yücel's decision</button>}
+                {decisionAccess?.verified && decisionAnswerId === item.id && <form onSubmit={(event) => void recordDecision(event, item.id)} className="mt-3 space-y-2">
+                  <label className="block font-medium">Final menu and price decision<textarea required maxLength={2000} value={decisionAnswer}
+                    onChange={(event) => setDecisionAnswer(event.target.value)} className="mt-1 block w-full rounded-lg border p-2" /></label>
+                  <button disabled={busy || !decisionAnswer.trim()} className="rounded-lg bg-green-800 px-4 py-2 text-white disabled:opacity-50">Save decision in CRM</button>
+                </form>}
               </div>)}
               {!decisionQueue.items.some((item) => !item.recorded_at) && <p className="text-sm text-stone-600">No price or menu decisions waiting.</p>}
             </div>
+            {decisionQueue.items.some((item) => item.recorded_at) && <div className="mt-4 border-t border-amber-200 pt-3">
+              <h3 className="font-semibold">Recent decisions</h3>
+              {decisionQueue.items.filter((item) => item.recorded_at).slice(0, 10).map((item) => <p key={item.id} className="mt-2 rounded-lg border bg-white p-3 text-sm">
+                <strong>{item.customer_name || "Catering customer"}</strong> · {item.decision}
+                <span className="block text-xs text-stone-500">Recorded {date(item.recorded_at)}</span>
+              </p>)}
+            </div>}
             {decisionEmailDraft && <div className="mt-4 rounded-lg border border-amber-300 bg-white p-4 text-sm">
               <h3 className="font-semibold">Review the email draft</h3>
               <p className="mt-2"><strong>To:</strong> {decisionEmailDraft.to}</p>
