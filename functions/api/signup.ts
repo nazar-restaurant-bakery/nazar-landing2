@@ -147,6 +147,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
           return response(400, "invalid_input");
         }
         menuSummary = `Requested catering menu: ${PACKAGE_LABELS[selected.id]} (${selected.id})`;
+        meta.menu_selection = { type: "package", id: selected.id, label: PACKAGE_LABELS[selected.id] };
       } else if (selected.type === "custom") {
         const ids = selected.itemIds;
         if (!Array.isArray(ids) || ids.length < 1 || ids.length > Object.keys(CUSTOM_ITEM_LABELS).length ||
@@ -155,6 +156,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
           return response(400, "invalid_input");
         }
         menuSummary = `Create your own: ${ids.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
+        meta.menu_selection = { type: "custom", dishes: ids.map((id: string) => ({ id, label: CUSTOM_ITEM_LABELS[id], quantity: null })) };
       } else if (selected.type === "trays") {
         const selections = selected.selections;
         const itemIds = selected.itemIds;
@@ -168,6 +170,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
         }
         const seen = new Set<string>();
         const labels: string[] = [];
+        const trayItems: Record<string, unknown>[] = [];
         let subtotal = 0;
         for (const entry of selections) {
           if (!entry || typeof entry !== "object" || Array.isArray(entry)) return response(400, "invalid_input");
@@ -182,13 +185,20 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
           const price = TRAY_PRICES[tray.id][index];
           subtotal += price;
           labels.push(`${TRAY_LABELS[tray.id]} (${quantity} ${TRAY_UNITS[tray.id]}, ${tray.size}-guest option${RICE_TRAY_IDS.has(tray.id) ? ", with rice pilav" : ""}) $${price.toFixed(2)}`);
+          trayItems.push({ id: tray.id, label: TRAY_LABELS[tray.id], guest_size: tray.size,
+            quantity, unit: TRAY_UNITS[tray.id], shown_price: price,
+            includes_rice: RICE_TRAY_IDS.has(tray.id) });
         }
         menuSummary = `Catering trays: ${labels.join(", ")}; shown tray subtotal: $${subtotal.toFixed(2)}`;
         if (itemIds.length) menuSummary += `; additional dishes: ${itemIds.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
+        meta.menu_selection = { type: "trays", trays: trayItems,
+          additional_dishes: itemIds.map((id: string) => ({ id, label: CUSTOM_ITEM_LABELS[id], quantity: null })),
+          shown_subtotal: subtotal };
       } else {
         return response(400, "invalid_input");
       }
     }
+    if (message) meta.customer_message = message;
     if (menuSummary || message) meta.message = [menuSummary, message].filter(Boolean).join("\n\n");
   }
 

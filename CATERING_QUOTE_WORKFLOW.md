@@ -6,11 +6,15 @@ The public **Request a Quote** action creates one actionable request in Nazar's 
 
 Keep one stable request ID across intake, quote versions, customer communication and CRM. Store these fields separately: customer's available contact method, event date, pickup or delivery request, selected trays with sizes and quantities, custom dishes with quantities, free-text message, submitted time, and the price shown on the site if one was shown. A form-only request is valid; a combined tray and custom request must remain one request.
 
-Today `/api/signup` appends a human-readable menu summary to `p_meta.message`. That text is visible in the CRM, but it cannot reliably populate editable product rows in an operations screen. Preserve a validated structured selection alongside the readable summary before connecting the preview to real requests. Do not change the current public form's success behavior until the new intake path has passed an end-to-end test.
+Today `/api/signup` appends a human-readable menu summary to `p_meta.message`. That text is visible in the CRM, but it cannot reliably populate editable product rows in an operations screen. The local change stores a validated `menu_selection` snapshot and a separate `customer_message` alongside that readable summary. The database migration expands the metadata allowlist and preserves retries initiated before this change. It has **not** been applied to Nazar-production; deploying the API before that migration would reject new selections. Compare the deployed `submit_signup` definition with the migration before applying it so later database changes are not overwritten.
+
+The current public form records tray guest size and its displayed quantity. It does not yet ask for a quantity on custom dish ideas; those snapshots explicitly say `quantity: null` and must be clarified during the quote. Do not invent a quantity of one.
 
 ## Nazar operations queue
 
 Each new request appears with its ID, customer contact, event date, selected items, customer message and current stage. The stages are **new → reviewing → quote ready → quote sent → accepted/declined**. The queue shows who must act next and when the request last changed. A new request cannot silently become a paid order.
+
+The local `catering_ops_requests_v1` read model joins a request to the structured signup snapshot. Its access list is initially empty and grants nobody new access. The sample preview is still disconnected from this read model.
 
 Yücel supplies the final menu and price. Talip may read the decision and follow up, but must not be required to enter Yücel's answer. An approved quote captures a version number, menu, amount, pickup/delivery terms and approval time. Changing an approved quote creates a new version rather than silently overwriting what the customer saw. The customer is contacted using the method they supplied; email must not be assumed for phone-only inquiries. A sent quote and the customer's answer are recorded against the same request.
 
