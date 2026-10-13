@@ -36,7 +36,7 @@ test("authorized staff gets a draft for an existing pending decision", async () 
   assert.equal(response.status, 200);
   const draft = await response.json();
   assert.equal(draft.to, "ctnazarbakery@gmail.com");
-  assert.equal(draft.cc, "talipbalik@gmail.com");
+  assert.equal(draft.cc, "info@nazarrestaurantandbakery.com");
   assert.match(draft.body, /Confirm menu and price/);
   assert.match(draft.body, /reply all/);
   assert.equal(response.headers.get("Cache-Control"), "private, no-store");

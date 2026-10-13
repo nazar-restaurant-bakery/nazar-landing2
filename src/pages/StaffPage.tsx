@@ -317,7 +317,7 @@ export default function StaffPage() {
           </div>}
           {decisionQueue && <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-label="Price and menu decisions">
             <h2 className="font-semibold">Price and menu decisions awaiting Yücel</h2>
-            <p className="mt-1 text-sm text-stone-600">Prepare an email to Yücel at Nazar, with Talip copied. Opening a draft does not send it or record a decision in CRM.</p>
+            <p className="mt-1 text-sm text-stone-600">Prepare an email to Yücel at Nazar, with the Nazar website address copied for Talip. Opening a draft does not send it or record a decision in CRM.</p>
             <div className="mt-3 space-y-2">
               {decisionQueue.items.filter((item) => !item.recorded_at).map((item) => <div key={item.id}
                 className="rounded-lg border bg-white p-3 text-sm">
@@ -338,7 +338,7 @@ export default function StaffPage() {
               <p><strong>Subject:</strong> {decisionEmailDraft.subject}</p>
               <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-stone-50 p-2 font-sans">{decisionEmailDraft.body}</pre>
               <a href={decisionMailto(decisionEmailDraft)} className="mt-3 inline-block rounded-lg bg-green-800 px-4 py-2 font-semibold text-white">Open in email app</a>
-              <p className="mt-2 text-xs text-stone-600">Send the draft from your email account. Ask Yücel to reply all and sign his name. Replies are visible in email; they are not imported into CRM yet.</p>
+              <p className="mt-2 text-xs text-stone-600">Send the draft from your email account. Ask Yücel to reply all and sign his name. Both Nazar addresses forward to the shared inbox; replies are not imported into CRM yet.</p>
             </div>}
           </section>}
           {overview && <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
