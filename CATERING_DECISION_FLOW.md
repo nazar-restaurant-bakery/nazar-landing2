@@ -11,6 +11,13 @@ Talip tracks catering requests in the staff CRM. Yücel alone decides price and 
 - `database/20261013_catering_decision_mfa.sql` is the next migration. It requires both Nazar Auth accounts to exist, grants the website address staff viewing access, and permits the shared Nazar account to record a decision **only in an authenticator-verified AAL2 session**. Until Yücel personally enrolls his device, no decision can be recorded.
 - The staff UI contains Yücel's device setup and verification flow, a decision form shown only after verification, and a recent-decision view for Talip. Deploying the UI or migration alone does not complete the human end-to-end test.
 
+## Acceptance test when Yücel is present
+
+1. Talip opens `/staff` with the invited `info@nazarrestaurantandbakery.com` account and confirms he can view the queue but cannot record a price/menu answer.
+2. Yücel opens `/staff` with `ctnazarbakery@gmail.com` on his own device, enrolls an authenticator there, and verifies a code without sharing the QR image or code.
+3. Use one clearly labeled synthetic catering request. Talip marks it for a decision; Yücel records a test menu/price decision; Talip refreshes and sees the same recorded decision and timestamp.
+4. On a fresh unverified Nazar session, attempt decision writing and confirm the database rejects it. Keep the synthetic record labeled as a test.
+
 ## Remaining connection
 
 Talip designated the shared Nazar inbox `ctnazarbakery@gmail.com` for Yücel's operational decisions and changed his copied address to the website's `info@nazarrestaurantandbakery.com`. Both addresses reach the same shared inbox, so email alone cannot distinguish the people. An authenticator kept on Yücel's own device provides the second factor for decision writing; Talip's staff session stays read-only for decisions. Yücel's enrollment and a real sign-in must be completed on his device before claiming personal attribution. Automatic email reply ingestion is a separate future step.
