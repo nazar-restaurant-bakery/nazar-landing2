@@ -48,7 +48,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
   const [resetSignal, setResetSignal] = React.useState(0);
 
   const submitting = status === "submitting";
-  const overCapacity = Number(guests) > 60;
+  const overCapacity = Number(guests) > 50;
 
   React.useEffect(() => {
     if (status !== "success") saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, eventDate, guests, message });

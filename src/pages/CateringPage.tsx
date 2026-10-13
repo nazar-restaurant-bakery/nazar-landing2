@@ -38,9 +38,9 @@ function restoredMenuChoice(value: unknown): CateringChoice | null {
 
 const HIGHLIGHTS = [
   {
-    en: "Standard catering for 10–60 guests; ask us about larger events",
-    tr: "Standart catering 10–60 kişi; daha büyük etkinlikler için bize yazın",
-    ar: "التموين المعتاد من 10 إلى 60 ضيفًا؛ راسلنا للمناسبات الأكبر",
+    en: "Standard catering for 10–50 guests; ask us about larger events",
+    tr: "Standart catering 10–50 kişi; daha büyük etkinlikler için bize yazın",
+    ar: "التموين المعتاد من 10 إلى 50 ضيفًا؛ راسلنا للمناسبات الأكبر",
   },
   {
     en: "Ask about halal, vegetarian and kid-friendly options",
@@ -79,7 +79,7 @@ const TRAY_UNITS = {
 } as const;
 
 export default function CateringPage() {
-  useSeo("Turkish Catering & Parties in West Haven", "Turkish catering for engagements, weddings, birthdays, family celebrations and office lunches. Standard catering for 10 to 60 guests; ask us about larger events.", "/catering");
+  useSeo("Turkish Catering & Parties in West Haven", "Turkish catering for engagements, weddings, birthdays, family celebrations and office lunches. Standard catering for 10 to 50 guests; ask us about larger events.", "/catering");
 
   const { lang } = useLang();
   const storage = React.useMemo(() => currentSignupStorage(), []);
