@@ -3,6 +3,7 @@ import React from "react";
 import { captureUtm, getUtmOrNull } from "../lib/utm";
 import { submitSignup } from "../lib/signup";
 import { subscribeVipEmail } from "../lib/klaviyo";
+import { trackVipSignupSubmitted, trackVipConfirmationStarted } from "../lib/analytics";
 import TurnstileWidget from "./TurnstileWidget";
 import { turnstileSiteKey } from "../lib/formConfig";
 // Shared with CateringRequestForm so both forms validate identically.
@@ -36,7 +37,7 @@ export default function VipSignupForm({
   const [status, setStatus] = React.useState<Status>("idle");
   const [errorKey, setErrorKey] = React.useState<string | null>(null);
   const [pendingEmail, setPendingEmail] = React.useState<{
-    email: string; name: string; campaign: string | null;
+    email: string; name: string; campaign: string | null; requestId: string;
   } | null>(null);
 
   // Bots fill every field they can see; humans never touch a hidden one.
@@ -60,6 +61,7 @@ export default function VipSignupForm({
       setStatus("sync_error");
       return;
     }
+    trackVipConfirmationStarted(details.requestId);
     setPendingEmail(null);
     setStatus("success");
     setName("");
@@ -150,7 +152,9 @@ export default function VipSignupForm({
       return;
     }
 
+    trackVipSignupSubmitted(requestId);
     const details = {
+      requestId,
       email: trimmedEmail.toLowerCase(),
       name: trimmedName,
       campaign: utm?.utm_campaign ?? null,

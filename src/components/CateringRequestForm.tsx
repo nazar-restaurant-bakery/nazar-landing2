@@ -139,7 +139,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       return;
     }
 
-    trackCateringRequestSubmitted();
+    trackCateringRequestSubmitted(requestId);
     setStatus("success");
     setName("");
     setEmail("");
