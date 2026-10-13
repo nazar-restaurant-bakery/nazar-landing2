@@ -13,6 +13,7 @@ import CateringPage from "./pages/CateringPage";
 import StaffPage from "./pages/StaffPage";
 import CrmPreviewPage from "./pages/CrmPreviewPage";
 import CateringOpsPreviewPage from "./pages/CateringOpsPreviewPage";
+import CateringOpsLocalPage from "./pages/CateringOpsLocalPage";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
       <Route path="/staff" element={<StaffPage />} />
       {import.meta.env.DEV && <Route path="/staff-preview" element={<CrmPreviewPage />} />}
       {import.meta.env.DEV && <Route path="/catering-ops-preview" element={<CateringOpsPreviewPage />} />}
+      {import.meta.env.DEV && <Route path="/catering-ops-local" element={<CateringOpsLocalPage />} />}
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/menu" element={<MenuPage />} />
