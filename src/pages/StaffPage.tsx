@@ -17,6 +17,9 @@ type CateringRequest = {
 };
 type Overview = { customers: Customer[]; requests: CateringRequest[] };
 type Segment = "all" | "vip" | "kevin";
+type KlaviyoStatus = "confirmed" | "pending" | "unsubscribed" | "suppressed" | "not_on_list" | "unavailable";
+type KlaviyoResult = { email: string; status: KlaviyoStatus; checkedAt: string | null };
+type FollowUpTask = { id: string; title: string; assigned_to: string; due_at: string; completed_at: string | null };
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -53,6 +56,11 @@ export default function StaffPage() {
   const [followUp, setFollowUp] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [klaviyo, setKlaviyo] = useState<KlaviyoResult | null>(null);
+  const [tasks, setTasks] = useState<{ customerId: string; items: FollowUpTask[] } | null>(null);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskOwner, setTaskOwner] = useState("");
+  const [taskDue, setTaskDue] = useState("");
   const refreshSequence = useRef(0);
 
   useEffect(() => {
@@ -109,6 +117,74 @@ export default function StaffPage() {
   const currentCustomer = overview?.customers.find((c) => c.id === selectedCustomer);
   const currentRequest = overview?.requests.find((r) => r.id === selectedRequest);
 
+  useEffect(() => {
+    const emailAddress = currentCustomer?.email;
+    if (!emailAddress || !session?.access_token) return;
+    const controller = new AbortController();
+    queueMicrotask(() => setKlaviyo(null));
+    void fetch("/api/staff/klaviyo-status", {
+      method: "POST", signal: controller.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ email: emailAddress }),
+    }).then(async (response) => {
+      if (!response.ok) throw new Error("Klaviyo lookup failed");
+      return response.json() as Promise<{ status: KlaviyoStatus; checkedAt: string }>;
+    }).then((data) => { if (!controller.signal.aborted) setKlaviyo({ email: emailAddress, status: data.status, checkedAt: data.checkedAt }); })
+      .catch(() => { if (!controller.signal.aborted) setKlaviyo({ email: emailAddress, status: "unavailable", checkedAt: null }); });
+    return () => controller.abort();
+  }, [currentCustomer?.email, session?.access_token]);
+
+  useEffect(() => {
+    const customerId = currentCustomer?.id;
+    if (!client || !session || !customerId) return;
+    let active = true;
+    queueMicrotask(() => setTasks(null));
+    void client.rpc("crm_customer_tasks_v1", { p_customer_id: customerId })
+      .then(({ data, error }) => {
+        if (!active) return;
+        setTasks({ customerId, items: !error && Array.isArray(data) ? data as FollowUpTask[] : [] });
+        if (error) setMessage("Could not load follow-up tasks.");
+      });
+    return () => { active = false; };
+  }, [currentCustomer?.id, session]);
+
+  async function createTask(event: FormEvent) {
+    event.preventDefault();
+    if (!client || !currentCustomer || !taskTitle.trim() || !taskOwner.trim() || !taskDue) return;
+    setBusy(true); setMessage("");
+    const { error } = await client.rpc("crm_create_task_v1", {
+      p_customer_id: currentCustomer.id, p_title: taskTitle.trim(),
+      p_assigned_to: taskOwner.trim(), p_due_at: new Date(taskDue).toISOString(),
+    });
+    if (error) setMessage("Could not save the follow-up task.");
+    else {
+      const result = await client.rpc("crm_customer_tasks_v1", { p_customer_id: currentCustomer.id });
+      if (!result.error && Array.isArray(result.data)) setTasks({ customerId: currentCustomer.id, items: result.data as FollowUpTask[] });
+      setTaskTitle(""); setTaskDue(""); setMessage("Follow-up task saved.");
+    }
+    setBusy(false);
+  }
+
+  async function completeTask(taskId: string) {
+    if (!client || !currentCustomer) return;
+    setBusy(true); setMessage("");
+    const { data, error } = await client.rpc("crm_complete_task_v1", { p_task_id: taskId });
+    if (error || !data) setMessage("Could not complete the task.");
+    else {
+      setTasks((previous) => previous?.customerId === currentCustomer.id
+        ? { ...previous, items: previous.items.map((task) => task.id === taskId
+          ? { ...task, completed_at: new Date().toISOString() } : task) } : previous);
+      setMessage("Task completed.");
+    }
+    setBusy(false);
+  }
+
+  const klaviyoLabel: Record<KlaviyoStatus, string> = {
+    confirmed: "Confirmed in Klaviyo", pending: "Confirmation not completed",
+    unsubscribed: "Unsubscribed", suppressed: "Suppressed — do not email",
+    not_on_list: "Not on the Nazar VIP list", unavailable: "Could not verify now",
+  };
+
   function chooseRequest(request: CateringRequest) {
     setSelectedRequest(request.id);
     setStatus(request.status);
@@ -146,8 +222,8 @@ export default function StaffPage() {
     setBusy(false);
   }
 
-  return <main className="min-h-screen bg-stone-50 px-4 py-8 text-stone-900">
-    <div className="mx-auto max-w-6xl">
+  return <main className="min-h-screen bg-[#f6f7f4] px-4 py-8 text-stone-900">
+    <div className="mx-auto max-w-7xl">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div><p className="text-xs font-bold uppercase tracking-widest text-green-800">Nazar staff</p><h1 className="text-3xl font-bold">Customer follow-up</h1></div>
         {session && <button className="rounded-lg border px-4 py-2" onClick={() => { void client?.auth.signOut(); setOverview(null); }}>Sign out</button>}
@@ -171,7 +247,13 @@ export default function StaffPage() {
               {item.label}
             </button>)}
           </nav>
-          {overview && <div className="grid gap-6 lg:grid-cols-2">
+          {overview && <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="rounded-xl border bg-white p-4"><span className="text-xs text-stone-500">Customers shown</span><strong className="block text-2xl">{overview.customers.length}</strong></div>
+            <div className="rounded-xl border bg-white p-4"><span className="text-xs text-stone-500">VIP form records shown</span><strong className="block text-2xl">{overview.customers.filter((c) => c.vip_signup_count > 0).length}</strong></div>
+            <div className="rounded-xl border bg-white p-4"><span className="text-xs text-stone-500">Open catering requests shown</span><strong className="block text-2xl">{overview.requests.filter((r) => activeStatuses.has(r.status)).length}</strong></div>
+            <div className="rounded-xl border bg-white p-4"><span className="text-xs text-stone-500">Kevin records shown</span><strong className="block text-2xl">{overview.customers.filter((c) => c.kevin_signup_count > 0).length}</strong></div>
+          </div>}
+          {overview && <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
             <section className="rounded-2xl border bg-white p-5 shadow-sm">
               <h2 className="mb-3 text-xl font-semibold">Customers <span className="text-sm font-normal text-stone-500">({overview.customers.length}, up to 100)</span></h2>
               <div className="max-h-96 space-y-2 overflow-auto">
@@ -183,25 +265,41 @@ export default function StaffPage() {
                 </button>)}
                 {!overview.customers.length && <p className="text-sm text-stone-500">No matching customers.</p>}
               </div>
-              {currentCustomer && <div className="mt-5 border-t pt-4">
+            </section>
+              {currentCustomer ? <section className="rounded-2xl border bg-white p-5 shadow-sm">
                 <h3 className="font-semibold">{currentCustomer.name || "Unnamed customer"}</h3>
                 <p className="text-sm">{currentCustomer.email || "—"} · {currentCustomer.phone || "—"}</p>
                 <p className="mt-1 text-xs text-stone-500">Last signup: {date(currentCustomer.last_signup_at)} · Signups: {currentCustomer.signup_count}</p>
-                <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-950">
-                  Klaviyo email confirmation is not connected to this screen yet. Local email status is not proof of subscription.
-                  <a className="ml-1 underline" href="https://www.klaviyo.com/list/UeJynm" target="_blank" rel="noopener noreferrer">Check the Nazar VIP list</a>.
-                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-lg bg-stone-50 p-3 text-sm"><span className="block text-xs text-stone-500">Local form status</span><strong>{currentCustomer.email_status}</strong><span className="block text-xs text-stone-500">This is not marketing consent.</span></div>
+                  <div className="rounded-lg bg-stone-50 p-3 text-sm"><span className="block text-xs text-stone-500">Klaviyo VIP email status</span><strong>{!currentCustomer.email ? "No email address" : klaviyo?.email === currentCustomer.email ? klaviyoLabel[klaviyo.status] : "Checking…"}</strong><span className="block text-xs text-stone-500">{klaviyo?.email === currentCustomer.email && klaviyo.checkedAt ? `Checked ${date(klaviyo.checkedAt)}` : "Do not assume consent without verification."}</span></div>
+                </div>
+                <div className="mt-3 rounded-lg bg-stone-50 p-3 text-sm"><span className="block text-xs text-stone-500">Order history</span><strong>Not linked yet</strong><span className="block text-xs text-stone-500">The Nazar-owned checkout is still in testing. No payment or order is inferred from a form signup.</span></div>
                 <h4 className="mt-4 font-semibold">Signup history</h4>
                 <div className="max-h-40 overflow-auto">{currentCustomer.recent_signups.map((s) => <p key={s.id} className="mt-2 rounded-lg bg-stone-50 p-2 text-sm">
                   {s.source === "website_vip_page" ? "VIP form" : s.source}{s.campaign ? ` · Campaign: ${s.campaign}` : ""}
                   <span className="block text-xs text-stone-500">{date(s.created_at)}</span>
                 </p>)}</div>
+                <h4 className="mt-4 font-semibold">Catering history</h4>
+                <div className="max-h-40 overflow-auto">{overview.requests.filter((r) => r.customer_id === currentCustomer.id).map((r) => <p key={r.id} className="mt-2 rounded-lg bg-stone-50 p-2 text-sm">
+                  {r.status} · Event {r.event_date || "date not set"} · Follow-up {date(r.follow_up_at)}
+                </p>)}{!overview.requests.some((r) => r.customer_id === currentCustomer.id) && <p className="text-sm text-stone-500">No catering request in the current results.</p>}</div>
                 <h4 className="mt-4 font-semibold">Internal notes</h4>
                 <div className="max-h-40 overflow-auto">{currentCustomer.notes.map((n) => <p key={n.id} className="mt-2 rounded-lg bg-stone-50 p-2 text-sm">{n.body}<span className="block text-xs text-stone-500">{date(n.created_at)}</span></p>)}</div>
                 <form onSubmit={addNote} className="mt-3"><textarea maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add an internal note" className="w-full rounded-lg border p-2" /><button disabled={busy || !note.trim()} className="rounded-lg bg-green-800 px-4 py-2 text-white disabled:opacity-50">Save note</button></form>
-              </div>}
-            </section>
-            <section className="rounded-2xl border bg-white p-5 shadow-sm">
+                <h4 className="mt-5 font-semibold">Customer follow-up</h4>
+                {tasks?.customerId === currentCustomer.id ? <div className="mt-2 space-y-2">{tasks.items.map((task) => <div key={task.id} className="rounded-lg border p-3 text-sm">
+                  <strong className="block">{task.title}</strong><span className="text-stone-600">{task.assigned_to} · Due {date(task.due_at)} · {task.completed_at ? "Completed" : "Open"}</span>
+                  {!task.completed_at && <button type="button" disabled={busy} onClick={() => void completeTask(task.id)} className="ml-2 underline disabled:opacity-50">Mark done</button>}
+                </div>)}{!tasks.items.length && <p className="text-sm text-stone-500">No follow-up task yet.</p>}</div> : <p className="text-sm text-stone-500">Loading follow-up tasks…</p>}
+                <form onSubmit={createTask} className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <label className="text-sm">Task<input required maxLength={300} value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
+                  <label className="text-sm">Assigned to<input required maxLength={100} value={taskOwner} onChange={(e) => setTaskOwner(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
+                  <label className="text-sm">Due time<input required type="datetime-local" value={taskDue} onChange={(e) => setTaskDue(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
+                  <div className="flex items-end"><button disabled={busy} className="rounded-lg bg-green-800 px-4 py-2 text-white disabled:opacity-50">Add follow-up</button></div>
+                </form>
+              </section> : <section className="rounded-2xl border bg-white p-5 text-sm text-stone-600 shadow-sm">Select a customer to view their profile, VIP status and follow-up history.</section>}
+            <section className="rounded-2xl border bg-white p-5 shadow-sm lg:col-span-2">
               <h2 className="mb-3 text-xl font-semibold">Catering requests <span className="text-sm font-normal text-stone-500">({overview.requests.length}, up to 100)</span></h2>
               <div className="max-h-96 space-y-2 overflow-auto">
                 {overview.requests.map((r) => <button key={r.id} onClick={() => chooseRequest(r)} className="block w-full rounded-lg border p-3 text-left hover:bg-green-50">

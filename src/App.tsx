@@ -11,11 +11,13 @@ import VipPage from "./pages/VipPage";
 import SpecialsPage from "./pages/SpecialsPage";
 import CateringPage from "./pages/CateringPage";
 import StaffPage from "./pages/StaffPage";
+import CrmPreviewPage from "./pages/CrmPreviewPage";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/staff" element={<StaffPage />} />
+      {import.meta.env.DEV && <Route path="/staff-preview" element={<CrmPreviewPage />} />}
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/menu" element={<MenuPage />} />
