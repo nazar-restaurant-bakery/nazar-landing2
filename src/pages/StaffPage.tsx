@@ -22,7 +22,7 @@ type KlaviyoResult = { email: string; status: KlaviyoStatus; checkedAt: string |
 type FollowUpTask = { id: string; title: string; assigned_to: string; due_at: string; completed_at: string | null };
 type CateringDecision = {
   id: string; request_id: string; question: string; requested_at: string;
-  decision: string | null; recorded_at: string | null;
+  decision: string | null; recorded_at: string | null; source_email?: string | null;
   request_status: string; customer_name: string | null;
 };
 type DecisionQueue = { items: CateringDecision[] };
@@ -317,7 +317,7 @@ export default function StaffPage() {
           </div>}
           {decisionQueue && <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-label="Price and menu decisions">
             <h2 className="font-semibold">Price and menu decisions awaiting Yücel</h2>
-            <p className="mt-1 text-sm text-stone-600">Prepare an email to Yücel at Nazar, with the Nazar website address copied for Talip. Opening a draft does not send it or record a decision in CRM.</p>
+            <p className="mt-1 text-sm text-stone-600">Prepare the request email from info@ to Yücel. The copied CRM address will link his reply to this request. Opening a draft does not send it.</p>
             <div className="mt-3 space-y-2">
               {decisionQueue.items.filter((item) => !item.recorded_at).map((item) => <div key={item.id}
                 className="rounded-lg border bg-white p-3 text-sm">
@@ -331,6 +331,13 @@ export default function StaffPage() {
               </div>)}
               {!decisionQueue.items.some((item) => !item.recorded_at) && <p className="text-sm text-stone-600">No price or menu decisions waiting.</p>}
             </div>
+            {decisionQueue.items.some((item) => item.recorded_at) && <div className="mt-4 border-t border-amber-200 pt-3">
+              <h3 className="font-semibold">Recent decisions</h3>
+              {decisionQueue.items.filter((item) => item.recorded_at).slice(0, 10).map((item) => <p key={item.id} className="mt-2 whitespace-pre-wrap rounded-lg border bg-white p-3 text-sm">
+                <strong>{item.customer_name || "Catering customer"}</strong> · {item.decision}
+                <span className="block text-xs text-stone-500">{item.source_email ? `Email from ${item.source_email}` : "CRM decision"} · Recorded {date(item.recorded_at)}</span>
+              </p>)}
+            </div>}
             {decisionEmailDraft && <div className="mt-4 rounded-lg border border-amber-300 bg-white p-4 text-sm">
               <h3 className="font-semibold">Review the email draft</h3>
               <p className="mt-2"><strong>To:</strong> {decisionEmailDraft.to}</p>
@@ -338,7 +345,7 @@ export default function StaffPage() {
               <p><strong>Subject:</strong> {decisionEmailDraft.subject}</p>
               <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-stone-50 p-2 font-sans">{decisionEmailDraft.body}</pre>
               <a href={decisionMailto(decisionEmailDraft)} className="mt-3 inline-block rounded-lg bg-green-800 px-4 py-2 font-semibold text-white">Open in email app</a>
-              <p className="mt-2 text-xs text-stone-600">Send the draft from your email account. Ask Yücel to reply all and sign his name. Both Nazar addresses forward to the shared inbox; replies are not imported into CRM yet.</p>
+              <p className="mt-2 text-xs text-stone-600">Before sending, choose info@nazarrestaurantandbakery.com as the From address. Yücel replies all from ctnazarbakery@gmail.com, placing “Decision:” and “Signed: Yücel” above the quoted message. His reply will appear here after the email connection is activated.</p>
             </div>}
           </section>}
           {overview && <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
@@ -413,7 +420,7 @@ export default function StaffPage() {
                     <button disabled={busy} className="rounded-lg bg-amber-700 px-4 py-2 text-white disabled:opacity-50">Mark for Yücel's review</button>
                   </form>}
                   {decisionQueue.items.filter((item) => item.request_id === currentRequest.id && item.recorded_at).slice(0,3).map((item) =>
-                    <p key={item.id} className="mt-3 rounded-lg bg-white p-2 text-sm"><strong>Decision recorded {date(item.recorded_at)}:</strong> {item.decision}</p>)}
+                    <p key={item.id} className="mt-3 whitespace-pre-wrap rounded-lg bg-white p-2 text-sm"><strong>Decision recorded {date(item.recorded_at)}{item.source_email ? ` from ${item.source_email}` : ""}:</strong> {item.decision}</p>)}
                 </div>}
                 <form onSubmit={saveRequest} className="mt-4 grid gap-3 sm:grid-cols-2">
                   <label className="text-sm">Status<select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-1 w-full rounded-lg border p-2">{statuses.map((s) => <option key={s}>{s}</option>)}</select></label>

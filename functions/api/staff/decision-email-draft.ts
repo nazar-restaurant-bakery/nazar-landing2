@@ -44,14 +44,22 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     const decision = data.items?.find((item) => item.id === decisionId && !item.recorded_at);
     if (!decision) return reply(404, "decision_not_found");
 
-    const subject = `Nazar catering price/menu decision — ${decision.request_id.slice(0, 8)}`;
+    const tokenResult = await fetch(`${SUPABASE_URL}/rest/v1/rpc/crm_decision_email_token_v1`, {
+      method: "POST", headers: rpcHeaders, body: JSON.stringify({ p_decision_id: decisionId }),
+    });
+    if (!tokenResult.ok) return reply(503, "decision_email_unavailable");
+    const token: unknown = await tokenResult.json();
+    if (typeof token !== "string" || !uuid.test(token)) return reply(503, "decision_email_unavailable");
+
+    const subject = `Nazar catering decision [NazarDecision:${decisionId}:${token}]`;
     const body = [
       "Yücel,", "", "Please review this catering request and decide the final menu and price:",
       decision.question.slice(0, 1000), "",
       `Request ID: ${decision.request_id}`, "Open the request in the private CRM: https://www.nazarrestaurantandbakery.com/staff", "",
-      "Please reply all with your decision and sign your name. The Nazar website address is copied for Talip's visibility.",
+      "Please reply all from ctnazarbakery@gmail.com. Above the quoted message, start one line with Decision: followed by the final menu and price. End with a line starting Signed: followed by your name.", "",
+      "Talip sends this request from info@nazarrestaurantandbakery.com. The copied address links your reply to the CRM request.",
     ].join("\n");
-    return reply(200, "ok", { to: "ctnazarbakery@gmail.com", cc: "info@nazarrestaurantandbakery.com", subject, body });
+    return reply(200, "ok", { to: "ctnazarbakery@gmail.com", cc: "crm-decisions@nazarrestaurantandbakery.com", subject, body });
   } catch { return reply(503, "connection_unavailable"); }
 }
 
