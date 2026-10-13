@@ -71,6 +71,10 @@ export default function StaffPage() {
   const [decisionQueue, setDecisionQueue] = useState<DecisionQueue | null>(null);
   const [decisionQuestion, setDecisionQuestion] = useState("");
   const [decisionEmailDraft, setDecisionEmailDraft] = useState<DecisionEmailDraft | null>(null);
+  const [decisionAccess, setDecisionAccess] = useState(false);
+  const [decisionAnswer, setDecisionAnswer] = useState("");
+  const [decisionSigner, setDecisionSigner] = useState("");
+  const [decisionAnswerId, setDecisionAnswerId] = useState<string | null>(null);
   const refreshSequence = useRef(0);
 
   useEffect(() => {
@@ -113,6 +117,17 @@ export default function StaffPage() {
     if (!session) return;
     queueMicrotask(() => { void refresh(""); });
   }, [session, refresh]);
+
+  const refreshDecisionAccess = useCallback(async () => {
+    if (!client || !session) return;
+    const { data, error } = await client.rpc("crm_decision_maker_authorized_v1");
+    setDecisionAccess(!error && data === true);
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    queueMicrotask(() => { void refreshDecisionAccess(); });
+  }, [session, refreshDecisionAccess]);
 
   useEffect(() => {
     if (!client || !session) return;
@@ -250,6 +265,21 @@ export default function StaffPage() {
     setBusy(false);
   }
 
+  async function recordDecision(event: FormEvent, decisionId: string) {
+    event.preventDefault();
+    const signer = decisionSigner.trim();
+    const answer = decisionAnswer.trim();
+    const signedAnswer = `${answer}\n\nSigned: ${signer}`;
+    if (!client || !decisionAccess || !answer || signer.length < 2 || signer.length > 80 || signedAnswer.length > 2000) return;
+    setBusy(true); setMessage("");
+    const { data, error } = await client.rpc("crm_record_catering_decision_v1", {
+      p_decision_id: decisionId, p_decision: signedAnswer,
+    });
+    if (error || !data) setMessage("Could not record the decision. Please try again.");
+    else { setDecisionAnswer(""); setDecisionSigner(""); setDecisionAnswerId(null); await refresh(search, segment); setMessage("The signed decision is now visible in CRM."); }
+    setBusy(false);
+  }
+
   function decisionMailto(draft: DecisionEmailDraft) {
     const query = new URLSearchParams({ cc: draft.cc, subject: draft.subject, body: draft.body });
     return `mailto:${encodeURIComponent(draft.to)}?${query.toString()}`;
@@ -318,6 +348,9 @@ export default function StaffPage() {
           {decisionQueue && <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-label="Price and menu decisions">
             <h2 className="font-semibold">Price and menu decisions awaiting Yücel</h2>
             <p className="mt-1 text-sm text-stone-600">Prepare an email to Yücel at Nazar, with the Nazar website address copied for Talip. Opening a draft does not send it or record a decision in CRM.</p>
+            {decisionAccess && <p className="mt-3 rounded-lg border border-amber-300 bg-white p-4 text-sm text-stone-700">
+              Yücel enters and signs his own price and menu decision here. This is a shared Nazar login; the signature records the name entered, but cannot independently verify who typed it.
+            </p>}
             <div className="mt-3 space-y-2">
               {decisionQueue.items.filter((item) => !item.recorded_at).map((item) => <div key={item.id}
                 className="rounded-lg border bg-white p-3 text-sm">
@@ -328,9 +361,25 @@ export default function StaffPage() {
                   className="mt-2 text-green-800 underline">Open request</button>}
                 <button type="button" disabled={busy} onClick={() => void prepareDecisionEmail(item.id)}
                   className="ml-3 mt-2 text-green-800 underline disabled:opacity-50">Prepare email to Yücel</button>
+                {decisionAccess && <button type="button" onClick={() => { setDecisionAnswerId(item.id); setDecisionAnswer(""); setDecisionSigner(""); }}
+                  className="ml-3 mt-2 text-green-800 underline">Record Yücel's decision</button>}
+                {decisionAccess && decisionAnswerId === item.id && <form onSubmit={(event) => void recordDecision(event, item.id)} className="mt-3 space-y-2">
+                  <label className="block font-medium">Final menu and price decision<textarea required maxLength={1900} value={decisionAnswer}
+                    onChange={(event) => setDecisionAnswer(event.target.value)} className="mt-1 block w-full rounded-lg border p-2" /></label>
+                  <label className="block font-medium">Decision maker's name<input required minLength={2} maxLength={80} value={decisionSigner}
+                    onChange={(event) => setDecisionSigner(event.target.value)} className="mt-1 block w-full rounded-lg border p-2" /></label>
+                  <button disabled={busy || !decisionAnswer.trim() || decisionSigner.trim().length < 2} className="rounded-lg bg-green-800 px-4 py-2 text-white disabled:opacity-50">Save signed decision in CRM</button>
+                </form>}
               </div>)}
               {!decisionQueue.items.some((item) => !item.recorded_at) && <p className="text-sm text-stone-600">No price or menu decisions waiting.</p>}
             </div>
+            {decisionQueue.items.some((item) => item.recorded_at) && <div className="mt-4 border-t border-amber-200 pt-3">
+              <h3 className="font-semibold">Recent decisions</h3>
+              {decisionQueue.items.filter((item) => item.recorded_at).slice(0, 10).map((item) => <p key={item.id} className="mt-2 rounded-lg border bg-white p-3 text-sm">
+                <strong>{item.customer_name || "Catering customer"}</strong> · {item.decision}
+                <span className="block text-xs text-stone-500">Recorded {date(item.recorded_at)}</span>
+              </p>)}
+            </div>}
             {decisionEmailDraft && <div className="mt-4 rounded-lg border border-amber-300 bg-white p-4 text-sm">
               <h3 className="font-semibold">Review the email draft</h3>
               <p className="mt-2"><strong>To:</strong> {decisionEmailDraft.to}</p>
