@@ -69,8 +69,6 @@ export default function StaffPage() {
   const [taskDue, setTaskDue] = useState("");
   const [decisionQueue, setDecisionQueue] = useState<DecisionQueue | null>(null);
   const [decisionQuestion, setDecisionQuestion] = useState("");
-  const [decisionAnswer, setDecisionAnswer] = useState("");
-  const [answeringDecisionId, setAnsweringDecisionId] = useState<string | null>(null);
   const refreshSequence = useRef(0);
 
   useEffect(() => {
@@ -220,8 +218,6 @@ export default function StaffPage() {
     setFollowUp(localInput(request.follow_up_at));
     setMessage("");
     setDecisionQuestion("");
-    setDecisionAnswer("");
-    setAnsweringDecisionId(null);
   }
 
   async function requestDecision(event: FormEvent) {
@@ -231,20 +227,8 @@ export default function StaffPage() {
     const { error } = await client.rpc("crm_request_catering_decision_v1", {
       p_request_id: currentRequest.id, p_question: decisionQuestion.trim(),
     });
-    if (error) setMessage("Could not send this request to Yücel's decision queue.");
-    else { setDecisionQuestion(""); await refresh(search, segment); setMessage("Price/menu decision requested. Talip can follow its status here."); }
-    setBusy(false);
-  }
-
-  async function recordDecision(event: FormEvent, decisionId: string) {
-    event.preventDefault();
-    if (!client || !decisionId || !decisionAnswer.trim()) return;
-    setBusy(true); setMessage("");
-    const { data, error } = await client.rpc("crm_record_catering_decision_v1", {
-      p_decision_id: decisionId, p_decision: decisionAnswer.trim(),
-    });
-    if (error || !data) setMessage("Could not save the decision.");
-    else { setDecisionAnswer(""); setAnsweringDecisionId(null); await refresh(search, segment); setMessage("Decision recorded for follow-up."); }
+    if (error) setMessage("Could not mark this request for Yücel's review.");
+    else { setDecisionQuestion(""); await refresh(search, segment); setMessage("Marked for Yücel's review in CRM. No email was sent."); }
     setBusy(false);
   }
 
@@ -309,8 +293,8 @@ export default function StaffPage() {
             <div className="rounded-xl border bg-white p-4"><span className="text-xs text-stone-500">Kevin records shown</span><strong className="block text-2xl">{overview.customers.filter((c) => c.kevin_signup_count > 0).length}</strong></div>
           </div>}
           {decisionQueue && <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-label="Price and menu decisions">
-            <h2 className="font-semibold">Price and menu decisions for Yücel</h2>
-            <p className="mt-1 text-sm text-stone-600">Talip can see the same queue and follow each decision in this CRM.</p>
+            <h2 className="font-semibold">Price and menu decisions awaiting Yücel</h2>
+            <p className="mt-1 text-sm text-stone-600">This is an internal tracking queue. It does not email Yücel. Only his separately authorized account can record a decision.</p>
             <div className="mt-3 space-y-2">
               {decisionQueue.items.filter((item) => !item.recorded_at).map((item) => <div key={item.id}
                 className="rounded-lg border bg-white p-3 text-sm">
@@ -319,13 +303,6 @@ export default function StaffPage() {
                 {overview?.requests.some((r) => r.id === item.request_id) && <button type="button"
                   onClick={() => { const request = overview.requests.find((r) => r.id === item.request_id); if (request) chooseRequest(request); }}
                   className="mt-2 text-green-800 underline">Open request</button>}
-                {answeringDecisionId === item.id ? <form
-                  onSubmit={(event) => void recordDecision(event, item.id)} className="mt-3 space-y-2">
-                  <label className="block">Decision confirmed with Yücel<textarea required maxLength={2000} value={decisionAnswer}
-                    onChange={(event) => setDecisionAnswer(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
-                  <button disabled={busy} className="rounded-lg bg-green-800 px-4 py-2 text-white disabled:opacity-50">Save decision</button>
-                </form> : <button type="button" onClick={() => { setAnsweringDecisionId(item.id); setDecisionAnswer(""); }}
-                  className="mt-2 ml-3 text-green-800 underline">Record Yücel's answer</button>}
               </div>)}
               {!decisionQueue.items.some((item) => !item.recorded_at) && <p className="text-sm text-stone-600">No price or menu decisions waiting.</p>}
             </div>
@@ -394,17 +371,12 @@ export default function StaffPage() {
                   <h4 className="font-semibold">Yücel's price/menu decision</h4>
                   {pendingDecision ? <>
                     <p className="mt-2 text-sm"><strong>Question:</strong> {pendingDecision.question}</p>
-                    <p className="text-sm text-amber-800">Waiting for Yücel. Talip can track this request here.</p>
-                    <form onSubmit={(event) => void recordDecision(event, pendingDecision.id)} className="mt-3 space-y-2">
-                      <label className="block text-sm">Decision confirmed with Yücel<textarea required maxLength={2000} value={decisionAnswer}
-                        onChange={(e) => setDecisionAnswer(e.target.value)} className="mt-1 w-full rounded-lg border bg-white p-2" /></label>
-                      <button disabled={busy} className="rounded-lg bg-green-800 px-4 py-2 text-white disabled:opacity-50">Save decision</button>
-                    </form>
+                    <p className="text-sm text-amber-800">Waiting for Yücel's own response. No email was sent by this CRM.</p>
                   </> : <form onSubmit={requestDecision} className="mt-2 space-y-2">
                     <label className="block text-sm">What price or menu decision is needed?<textarea required maxLength={1000}
                       value={decisionQuestion} onChange={(e) => setDecisionQuestion(e.target.value)}
                       className="mt-1 w-full rounded-lg border bg-white p-2" /></label>
-                    <button disabled={busy} className="rounded-lg bg-amber-700 px-4 py-2 text-white disabled:opacity-50">Send to Yücel's decision queue</button>
+                    <button disabled={busy} className="rounded-lg bg-amber-700 px-4 py-2 text-white disabled:opacity-50">Mark for Yücel's review</button>
                   </form>}
                   {decisionQueue.items.filter((item) => item.request_id === currentRequest.id && item.recorded_at).slice(0,3).map((item) =>
                     <p key={item.id} className="mt-3 rounded-lg bg-white p-2 text-sm"><strong>Decision recorded {date(item.recorded_at)}:</strong> {item.decision}</p>)}
