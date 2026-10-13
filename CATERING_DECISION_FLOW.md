@@ -29,9 +29,13 @@ shared, it cannot prove which person entered it.
    The anonymous role cannot read the decision table or execute the listing
    function; the authenticated role can execute it, subject to the active staff
    check inside the function. No new login or role was granted.
-2. Publish the matching site build and test request/answer using an existing
-   synthetic catering request. This is the remaining activation check.
-3. Future work: send new CRM decision alerts to the shared staff inbox,
+2. PR #17 was merged into `main` and Cloudflare Pages production deployment
+   `fe6f1b85` succeeded on 13 October 2026. The live `/staff` screen loaded
+   the decision queue for the existing staff session.
+3. An existing synthetic catering request was sent to the queue, answered
+   with an explicitly labeled test answer, and verified again after reloading
+   the live page. The test neither quoted nor contacted a customer.
+4. Future work: send new CRM decision alerts to the shared staff inbox,
    `ctnazarbakery@gmail.com`, so Talip and Yücel can both see them. The current
    system has no outbound transactional email service for CRM alerts; this
    address is a routing target, not an active notification. Apply the separate
