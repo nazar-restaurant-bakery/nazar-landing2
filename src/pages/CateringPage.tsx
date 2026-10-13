@@ -7,6 +7,34 @@ import { CATERING_CUSTOM_ITEM_IDS, CATERING_SIZES, CATERING_TRAYS, cateringItemN
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
 import { useSeo } from "../hooks/useSeo";
 import type { CateringChoice } from "../lib/signup";
+import { clearSignupDraft, currentSignupStorage, readSignupDraft, saveSignupDraft } from "../lib/signupRecovery";
+
+const MENU_DRAFT_KEY = "nazar-catering-menu-draft-v1";
+const allowedCustomIds = new Set<string>(CATERING_CUSTOM_ITEM_IDS);
+const allowedTrayIds = new Set<string>(CATERING_TRAYS.map((tray) => tray.id));
+
+function restoredMenuChoice(value: unknown): CateringChoice | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const choice = value as Record<string, unknown>;
+  const ids = choice.itemIds;
+  if (!Array.isArray(ids) || ids.length > allowedCustomIds.size ||
+      new Set(ids).size !== ids.length ||
+      !ids.every((id) => typeof id === "string" && allowedCustomIds.has(id))) return null;
+  if (choice.type === "custom") return ids.length ? { type: "custom", itemIds: ids } : null;
+  if (choice.type !== "trays" || !Array.isArray(choice.selections) ||
+      choice.selections.length < 1 || choice.selections.length > allowedTrayIds.size) return null;
+  const seen = new Set<string>();
+  const selections: { id: string; size: 10 | 20 | 30 | 50 }[] = [];
+  for (const item of choice.selections) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+    const tray = item as Record<string, unknown>;
+    if (typeof tray.id !== "string" || !allowedTrayIds.has(tray.id) || seen.has(tray.id) ||
+        (tray.size !== 10 && tray.size !== 20 && tray.size !== 30 && tray.size !== 50)) return null;
+    seen.add(tray.id);
+    selections.push({ id: tray.id, size: tray.size });
+  }
+  return { type: "trays", selections, itemIds: ids };
+}
 
 const HIGHLIGHTS = [
   {
@@ -54,7 +82,13 @@ export default function CateringPage() {
   useSeo("Turkish Catering & Parties in West Haven", "Turkish catering for engagements, weddings, birthdays, family celebrations and office lunches. Standard catering for 10 to 60 guests; ask us about larger events.", "/catering");
 
   const { lang } = useLang();
-  const [choice, setChoice] = React.useState<CateringChoice | null>(null);
+  const storage = React.useMemo(() => currentSignupStorage(), []);
+  const [choice, setChoice] = React.useState<CateringChoice | null>(() =>
+    restoredMenuChoice(readSignupDraft<unknown>(storage, MENU_DRAFT_KEY)?.fields));
+  React.useEffect(() => {
+    if (choice) saveSignupDraft(storage, MENU_DRAFT_KEY, choice);
+    else clearSignupDraft(storage, MENU_DRAFT_KEY);
+  }, [choice, storage]);
   const selectedTrays = choice?.type === "trays" ? choice.selections.map(({ id, size }) => {
     const tray = CATERING_TRAYS.find((item) => item.id === id);
     return { id, size, title: tray?.title[lang] ?? id, price: tray?.prices[CATERING_SIZES.indexOf(size)] ?? 0 };

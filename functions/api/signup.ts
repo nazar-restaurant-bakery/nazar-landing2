@@ -9,6 +9,7 @@ type Context = { request: Request; env: Env };
 const SUPABASE_URL = "https://khgczybubufouraqyrcj.supabase.co";
 const BUSINESS_ID = "a358eba4-b197-4309-805b-46f43a718454";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // Keep these server-side allowlists aligned with src/data/cateringMenus.ts.
 const PACKAGE_LABELS: Record<string, string> = {
   "grill-favorites": "Grill Favorites", "doner-gyro": "Doner & Gyro Table",
@@ -114,9 +115,11 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
   const rawPhone = text(data.phone, 30);
   const normalizedPhone = rawPhone === null ? null : phone(rawPhone);
   const token = text(data.turnstileToken, 2048);
+  const requestId = text(data.requestId, 36);
   if (
     (kind !== "vip" && kind !== "catering") || name === null || email === null ||
-    normalizedPhone === null || !token || (!email && !normalizedPhone) ||
+    normalizedPhone === null || !token || !requestId || !REQUEST_ID_RE.test(requestId) ||
+    (!email && !normalizedPhone) ||
     (email && !EMAIL_RE.test(email))
   ) return response(400, "invalid_input");
   if (kind === "vip" && (!email || data.consentEmail !== true)) return response(400, "invalid_input");
@@ -225,13 +228,14 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       return response(403, "verification_failed");
     }
 
-    const db = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_signup`, {
+    const db = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_signup_once`, {
       method: "POST",
       headers: {
         apikey: env.SUPABASE_SECRET_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        p_request_id: requestId,
         p_business_id: BUSINESS_ID,
         p_name: name || null,
         p_email: email || null,

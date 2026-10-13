@@ -105,9 +105,9 @@ export const translations = {
       ar: "يرجى إكمال التحقق البشري.",
     },
     errorGeneric: {
-      tr: "Kaydınızı alamadık. Lütfen tekrar deneyin veya bizi arayın.",
-      en: "We couldn’t save that. Please try again, or give us a call.",
-      ar: "تعذّر حفظ البيانات. حاول مرة أخرى أو اتصل بنا.",
+      tr: "Kaydın ulaştığını doğrulayamadık. Bilgileriniz bu cihazda duruyor; yeniden doğrulayıp tekrar deneyin veya bizi arayın.",
+      en: "We couldn't confirm your signup. Your details remain on this device; verify again and retry, or call us.",
+      ar: "لم نتمكن من تأكيد التسجيل. بياناتك ما زالت على هذا الجهاز؛ أعد التحقق وحاول مرة أخرى أو اتصل بنا.",
     },
     errorOffline: {
       tr: "VIP formu şu anda kullanılamıyor. Lütfen bizi arayın.",
@@ -115,9 +115,9 @@ export const translations = {
       ar: "نموذج VIP غير متاح حاليًا. يرجى الاتصال بنا.",
     },
     privacy: {
-      tr: "Bilgileriniz Nazar'a kaydedilir; VIP e-postaları Klaviyo üzerinden yönetilir. İstediğiniz zaman çıkabilirsiniz.",
-      en: "Nazar stores your details; Klaviyo manages VIP emails. Unsubscribe any time.",
-      ar: "تحتفظ نازار ببياناتك، وتُدار رسائل VIP عبر Klaviyo. يمكنك إلغاء الاشتراك في أي وقت.",
+      tr: "Bitmemiş form bu cihazda saklanır; 24 saat içinde geri yüklenebilir ve başarılı gönderimden sonra silinir. Bilgileriniz Nazar'a kaydedilir; VIP e-postaları Klaviyo üzerinden yönetilir. İstediğiniz zaman çıkabilirsiniz.",
+      en: "An unfinished form is saved on this device, can be restored for 24 hours, and is deleted after successful submission. Nazar stores submitted details; Klaviyo manages VIP emails. Unsubscribe any time.",
+      ar: "يُحفظ النموذج غير المكتمل على هذا الجهاز ويمكن استعادته خلال 24 ساعة، ويُحذف بعد الإرسال بنجاح. تحتفظ نازار بالبيانات المرسلة، وتُدار رسائل VIP عبر Klaviyo. يمكنك إلغاء الاشتراك في أي وقت.",
     },
   },
   specials: {
@@ -221,9 +221,9 @@ export const translations = {
       ar: "يرجى إكمال التحقق البشري.",
     },
     errorGeneric: {
-      tr: "Talebinizi alamadık. Lütfen tekrar deneyin veya bizi arayın.",
-      en: "We couldn’t send that. Please try again, or give us a call.",
-      ar: "تعذّر إرسال الطلب. حاول مرة أخرى أو اتصل بنا.",
+      tr: "Talebin ulaştığını doğrulayamadık. Bilgileriniz bu cihazda duruyor; yeniden doğrulayıp tekrar deneyin veya bizi arayın.",
+      en: "We couldn't confirm your request. Your details remain on this device; verify again and retry, or call us.",
+      ar: "لم نتمكن من تأكيد طلبك. بياناتك ما زالت على هذا الجهاز؛ أعد التحقق وحاول مرة أخرى أو اتصل بنا.",
     },
     errorOffline: {
       tr: "Form şu anda kullanılamıyor. Lütfen bizi arayın.",
@@ -231,9 +231,9 @@ export const translations = {
       ar: "النموذج غير متاح حاليًا. يرجى الاتصال بنا.",
     },
     privacy: {
-      tr: "Bilgilerinizi yalnızca bu talep için kullanırız.",
-      en: "We only use your details to answer this request.",
-      ar: "نستخدم بياناتك للردّ على هذا الطلب فقط.",
+      tr: "Bitmemiş form bu cihazda saklanır; 24 saat içinde geri yüklenebilir ve başarılı gönderimden sonra silinir. Bilgilerinizi yalnızca bu talep için kullanırız.",
+      en: "An unfinished form is saved on this device, can be restored for 24 hours, and is deleted after successful submission. We only use your details to answer this request.",
+      ar: "يُحفظ النموذج غير المكتمل على هذا الجهاز ويمكن استعادته خلال 24 ساعة، ويُحذف بعد الإرسال بنجاح. نستخدم بياناتك للردّ على هذا الطلب فقط.",
     },
   },
   reviews: {

@@ -5,6 +5,7 @@ export type CateringChoice =
 
 export type SignupPayload = {
   kind: "vip" | "catering";
+  requestId: string;
   name: string;
   email: string;
   phone: string;

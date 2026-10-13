@@ -26,6 +26,7 @@ function vip(overrides = {}) {
   return {
     kind: "vip", name: "Test", email: "test@example.invalid", phone: "",
     consentEmail: true, turnstileToken: "test-token", extra: "", utm: null,
+    requestId: "f6d45fb6-0b8c-4e67-8a22-62ae287a8b13",
     ...overrides,
   };
 }
@@ -39,6 +40,7 @@ test("non-POST and cross-origin requests are rejected", async () => {
 test("missing server secrets or consent fail closed", async () => {
   assert.equal((await onRequestPost({ request: request(vip()), env: {} })).status, 503);
   assert.equal((await onRequestPost({ request: request(vip({ consentEmail: false })), env })).status, 400);
+  assert.equal((await onRequestPost({ request: request(vip({ requestId: "bad" })), env })).status, 400);
 });
 
 test("failed human verification never reaches Supabase", async () => {
@@ -67,6 +69,8 @@ test("VIP request forwards only validated server-owned fields", async () => {
   assert.equal(sent.p_email, "test@example.invalid");
   assert.equal(sent.p_business_id, "a358eba4-b197-4309-805b-46f43a718454");
   assert.equal(sent.p_source, "website_vip_page");
+  assert.equal(sent.p_request_id, vip().requestId);
+  assert.match(calls[1].address, /\/rpc\/submit_signup_once$/);
   assert.equal(calls[1].options.headers.apikey, env.SUPABASE_SECRET_KEY);
 });
 
@@ -156,4 +160,41 @@ test("database failure is not shown as a successful signup", async () => {
       : new Response("error", { status: 400 });
   };
   assert.equal((await onRequestPost({ request: request(vip()), env })).status, 503);
+});
+
+test("a transient database failure can be retried with the same request ID", async () => {
+  const databaseBodies = [];
+  let databaseAttempts = 0;
+  globalThis.fetch = async (address, options) => {
+    if (String(address).includes("/siteverify")) {
+      return Response.json({ success: true, hostname: "www.nazarrestaurantandbakery.com" });
+    }
+    databaseBodies.push(options.body);
+    databaseAttempts++;
+    return new Response(null, { status: databaseAttempts === 1 ? 503 : 204 });
+  };
+  const payload = { ...vip(), kind: "catering", consentEmail: false,
+    eventDate: "2027-01-20", message: "Synthetic retry check" };
+  assert.equal((await onRequestPost({ request: request(payload), env })).status, 503);
+  assert.equal((await onRequestPost({ request: request(payload), env })).status, 200);
+  assert.equal(databaseAttempts, 2);
+  assert.equal(databaseBodies[0], databaseBodies[1]);
+});
+
+test("a lost database response remains uncertain and can be retried", async () => {
+  const databaseBodies = [];
+  globalThis.fetch = async (address, options) => {
+    if (String(address).includes("/siteverify")) {
+      return Response.json({ success: true, hostname: "www.nazarrestaurantandbakery.com" });
+    }
+    databaseBodies.push(options.body);
+    if (databaseBodies.length === 1) throw new Error("Response lost after database request");
+    return new Response(null, { status: 204 });
+  };
+  const payload = { ...vip(), kind: "catering", consentEmail: false,
+    eventDate: "2027-01-20", message: "Synthetic lost-response check" };
+  assert.equal((await onRequestPost({ request: request(payload), env })).status, 503);
+  assert.equal((await onRequestPost({ request: request(payload), env })).status, 200);
+  assert.equal(databaseBodies.length, 2);
+  assert.equal(databaseBodies[0], databaseBodies[1]);
 });

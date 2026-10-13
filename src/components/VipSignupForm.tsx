@@ -10,8 +10,11 @@ import { cn, EMAIL_RE, normalizePhone } from "../lib/form";
 import { useLang } from "./Language";
 import { t } from "./i18n";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
+import { clearSignupDraft, currentSignupStorage, readSignupDraft, requestIdForSignup, saveSignupDraft } from "../lib/signupRecovery";
 
 type Status = "idle" | "submitting" | "success" | "error" | "sync_error";
+type VipDraft = { name: string; email: string; phone: string; consentEmail: boolean };
+const DRAFT_KEY = "nazar-vip-request-draft-v1";
 
 type Props = {
   className?: string;
@@ -21,11 +24,14 @@ export default function VipSignupForm({
   className,
 }: Props) {
   const { lang } = useLang();
+  const storage = React.useMemo(() => currentSignupStorage(), []);
+  const restored = React.useMemo(() => readSignupDraft<VipDraft>(storage, DRAFT_KEY)?.fields, [storage]);
+  const requestMemory = React.useRef<{ signature?: string; requestId?: string }>({});
 
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [phone, setPhone] = React.useState("");
-  const [consentEmail, setConsentEmail] = React.useState(false);
+  const [name, setName] = React.useState(typeof restored?.name === "string" ? restored.name : "");
+  const [email, setEmail] = React.useState(typeof restored?.email === "string" ? restored.email : "");
+  const [phone, setPhone] = React.useState(typeof restored?.phone === "string" ? restored.phone : "");
+  const [consentEmail, setConsentEmail] = React.useState(restored?.consentEmail === true);
 
   const [status, setStatus] = React.useState<Status>("idle");
   const [errorKey, setErrorKey] = React.useState<string | null>(null);
@@ -44,6 +50,10 @@ export default function VipSignupForm({
 
   const submitting = status === "submitting";
 
+  React.useEffect(() => {
+    if (status !== "success") saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, consentEmail });
+  }, [storage, name, email, phone, consentEmail, status]);
+
   async function finishEmailConfirmation(details: NonNullable<typeof pendingEmail>) {
     setStatus("submitting");
     if (!await subscribeVipEmail(details)) {
@@ -56,6 +66,8 @@ export default function VipSignupForm({
     setEmail("");
     setPhone("");
     setConsentEmail(false);
+    clearSignupDraft(storage, DRAFT_KEY);
+    requestMemory.current = {};
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -114,8 +126,14 @@ export default function VipSignupForm({
     setErrorKey(null);
 
     const utm = getUtmOrNull();
+    saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, consentEmail });
+    const requestId = requestIdForSignup(storage, DRAFT_KEY, {
+      kind: "vip", name: trimmedName, email: trimmedEmail.toLowerCase(),
+      phone: normalizedPhone || "", consentEmail, utm,
+    }, requestMemory.current);
     const ok = await submitSignup({
       kind: "vip",
+      requestId,
       name: trimmedName,
       email: trimmedEmail.toLowerCase(),
       phone: normalizedPhone || "",
