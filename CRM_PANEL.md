@@ -1,5 +1,19 @@
 # Nazar customer follow-up screen
 
+## Local CRM design preview (not published)
+
+The next CRM layout is available only from the local Vite development server at
+`http://127.0.0.1:5173/staff-preview`. Run `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173`
+from this checkout. It uses synthetic names, contact details, orders and Klaviyo
+states. Search, filters, profile selection, notes and follow-up editing can be
+tried in the browser; edits live only in the current browser session. The route
+is gated by `import.meta.env.DEV`, so it is omitted from a production build.
+
+The current live `/staff` page still uses the existing secured Supabase RPCs.
+The local preview does not read or change customer data, does not send email,
+and does not make the Klaviyo or order-history integrations active. Connect and
+verify those sources before replacing the live staff page.
+
 Status (12 October 2026): pull request #9 was merged and the live `/staff` route renders a sign-in form without exposing customer data to an unauthenticated visitor. The Cloudflare Pages branch preview passed a real owner sign-in and read/write test. The first live-domain sign-in email attempt received Supabase Auth `429: email rate limit exceeded`; live-domain sign-in awaits the email quota reset. The database migration succeeded on Nazar-production and the first owner remains allowlisted.
 
 The private `/staff` route offers customer search, the latest signup source and local consent state, internal notes, and catering requests with status, owner, and next follow-up. The screen displays a maximum of 100 matching customers and 100 matching requests; search runs on the server, not on a public data dump. Open catering requests require a follow-up time when edited.
