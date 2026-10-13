@@ -121,7 +121,7 @@ export default function CateringOpsLocalPage() {
                   <h3 className="mt-6 font-bold">Customer request and menu selection</h3>
                   <p className="mt-2 whitespace-pre-wrap rounded-xl bg-stone-50 p-4 text-sm">{selected.message || "No request text was recorded."}</p>
                   <p className="mt-3 text-xs text-stone-600">Older submissions store the selection in this text. Separate product rows and quantities will appear after the structured intake change is released and verified.</p>
-                  <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><strong>Next action:</strong> Yücel's final menu and price decision. Decision saving, quote sending and customer acceptance are not active on this local screen.</div>
+                  <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><strong>Next action:</strong> {active.has(selected.status) ? "Review the request for Yücel's final menu and price decision." : "This request is closed; no quote action is pending."} Decision saving, quote sending and customer acceptance are not active on this local screen.</div>
                 </> : <p className="text-sm text-stone-600">Select a request to review it.</p>}
               </section>
             </div>}
