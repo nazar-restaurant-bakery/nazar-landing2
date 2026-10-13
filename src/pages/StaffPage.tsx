@@ -20,6 +20,12 @@ type Segment = "all" | "vip" | "kevin";
 type KlaviyoStatus = "confirmed" | "pending" | "unsubscribed" | "suppressed" | "not_on_list" | "unavailable";
 type KlaviyoResult = { email: string; status: KlaviyoStatus; checkedAt: string | null };
 type FollowUpTask = { id: string; title: string; assigned_to: string; due_at: string; completed_at: string | null };
+type CateringDecision = {
+  id: string; request_id: string; question: string; requested_at: string;
+  decision: string | null; recorded_at: string | null;
+  request_status: string; customer_name: string | null;
+};
+type DecisionQueue = { items: CateringDecision[] };
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -61,6 +67,10 @@ export default function StaffPage() {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskOwner, setTaskOwner] = useState("");
   const [taskDue, setTaskDue] = useState("");
+  const [decisionQueue, setDecisionQueue] = useState<DecisionQueue | null>(null);
+  const [decisionQuestion, setDecisionQuestion] = useState("");
+  const [decisionAnswer, setDecisionAnswer] = useState("");
+  const [answeringDecisionId, setAnsweringDecisionId] = useState<string | null>(null);
   const refreshSequence = useRef(0);
 
   useEffect(() => {
@@ -82,7 +92,11 @@ export default function StaffPage() {
     if (!client || !session) return;
     const sequence = ++refreshSequence.current;
     setBusy(true); setMessage("");
-    const { data, error } = await client.rpc("crm_overview_v2", { p_search: query, p_segment: view });
+    const [overviewResult, decisionsResult] = await Promise.all([
+      client.rpc("crm_overview_v2", { p_search: query, p_segment: view }),
+      client.rpc("crm_catering_decisions_v1"),
+    ]);
+    const { data, error } = overviewResult;
     if (sequence !== refreshSequence.current) return;
     if (error) {
       setOverview(null);
@@ -91,6 +105,7 @@ export default function StaffPage() {
       setOverview(data as Overview);
       setMessage("");
     }
+    setDecisionQueue(!decisionsResult.error ? decisionsResult.data as DecisionQueue : null);
     setBusy(false);
   }, [session]);
 
@@ -98,6 +113,17 @@ export default function StaffPage() {
     if (!session) return;
     queueMicrotask(() => { void refresh(""); });
   }, [session, refresh]);
+
+  useEffect(() => {
+    if (!client || !session) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void client.rpc("crm_catering_decisions_v1").then(({ data, error }) => {
+        if (!error) setDecisionQueue(data as DecisionQueue);
+      });
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [session]);
 
   async function sendLink(event: FormEvent) {
     event.preventDefault();
@@ -116,6 +142,8 @@ export default function StaffPage() {
 
   const currentCustomer = overview?.customers.find((c) => c.id === selectedCustomer);
   const currentRequest = overview?.requests.find((r) => r.id === selectedRequest);
+  const pendingDecision = decisionQueue?.items.find((item) =>
+    item.request_id === selectedRequest && !item.recorded_at);
 
   useEffect(() => {
     const emailAddress = currentCustomer?.email;
@@ -191,6 +219,33 @@ export default function StaffPage() {
     setAssignee(request.assigned_to);
     setFollowUp(localInput(request.follow_up_at));
     setMessage("");
+    setDecisionQuestion("");
+    setDecisionAnswer("");
+    setAnsweringDecisionId(null);
+  }
+
+  async function requestDecision(event: FormEvent) {
+    event.preventDefault();
+    if (!client || !currentRequest || !decisionQuestion.trim()) return;
+    setBusy(true); setMessage("");
+    const { error } = await client.rpc("crm_request_catering_decision_v1", {
+      p_request_id: currentRequest.id, p_question: decisionQuestion.trim(),
+    });
+    if (error) setMessage("Could not send this request to Yücel's decision queue.");
+    else { setDecisionQuestion(""); await refresh(search, segment); setMessage("Price/menu decision requested. Talip can follow its status here."); }
+    setBusy(false);
+  }
+
+  async function recordDecision(event: FormEvent, decisionId: string) {
+    event.preventDefault();
+    if (!client || !decisionId || !decisionAnswer.trim()) return;
+    setBusy(true); setMessage("");
+    const { data, error } = await client.rpc("crm_record_catering_decision_v1", {
+      p_decision_id: decisionId, p_decision: decisionAnswer.trim(),
+    });
+    if (error || !data) setMessage("Could not save the decision.");
+    else { setDecisionAnswer(""); setAnsweringDecisionId(null); await refresh(search, segment); setMessage("Decision recorded for follow-up."); }
+    setBusy(false);
   }
 
   async function saveRequest(event: FormEvent) {
@@ -253,6 +308,28 @@ export default function StaffPage() {
             <div className="rounded-xl border bg-white p-4"><span className="text-xs text-stone-500">Open catering requests shown</span><strong className="block text-2xl">{overview.requests.filter((r) => activeStatuses.has(r.status)).length}</strong></div>
             <div className="rounded-xl border bg-white p-4"><span className="text-xs text-stone-500">Kevin records shown</span><strong className="block text-2xl">{overview.customers.filter((c) => c.kevin_signup_count > 0).length}</strong></div>
           </div>}
+          {decisionQueue && <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-label="Price and menu decisions">
+            <h2 className="font-semibold">Price and menu decisions for Yücel</h2>
+            <p className="mt-1 text-sm text-stone-600">Talip can see the same queue and follow each decision in this CRM.</p>
+            <div className="mt-3 space-y-2">
+              {decisionQueue.items.filter((item) => !item.recorded_at).map((item) => <div key={item.id}
+                className="rounded-lg border bg-white p-3 text-sm">
+                <strong>{item.customer_name || "Catering customer"}</strong> · {item.question}
+                <span className="block text-xs text-stone-500">Requested {date(item.requested_at)} · Awaiting Yücel</span>
+                {overview?.requests.some((r) => r.id === item.request_id) && <button type="button"
+                  onClick={() => { const request = overview.requests.find((r) => r.id === item.request_id); if (request) chooseRequest(request); }}
+                  className="mt-2 text-green-800 underline">Open request</button>}
+                {answeringDecisionId === item.id ? <form
+                  onSubmit={(event) => void recordDecision(event, item.id)} className="mt-3 space-y-2">
+                  <label className="block">Decision confirmed with Yücel<textarea required maxLength={2000} value={decisionAnswer}
+                    onChange={(event) => setDecisionAnswer(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
+                  <button disabled={busy} className="rounded-lg bg-green-800 px-4 py-2 text-white disabled:opacity-50">Save decision</button>
+                </form> : <button type="button" onClick={() => { setAnsweringDecisionId(item.id); setDecisionAnswer(""); }}
+                  className="mt-2 ml-3 text-green-800 underline">Record Yücel's answer</button>}
+              </div>)}
+              {!decisionQueue.items.some((item) => !item.recorded_at) && <p className="text-sm text-stone-600">No price or menu decisions waiting.</p>}
+            </div>
+          </section>}
           {overview && <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
             <section className="rounded-2xl border bg-white p-5 shadow-sm">
               <h2 className="mb-3 text-xl font-semibold">Customers <span className="text-sm font-normal text-stone-500">({overview.customers.length}, up to 100)</span></h2>
@@ -313,6 +390,25 @@ export default function StaffPage() {
                 <p className="text-sm">{currentRequest.email || "—"} · {currentRequest.phone || "—"}</p>
                 <p className="mt-1 text-sm">Event: {currentRequest.event_date || "—"} · Guests: {currentRequest.guests || "—"}</p>
                 <p className="mt-3 whitespace-pre-wrap rounded-lg bg-stone-50 p-3 text-sm">{currentRequest.message || "No message"}</p>
+                {decisionQueue && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <h4 className="font-semibold">Yücel's price/menu decision</h4>
+                  {pendingDecision ? <>
+                    <p className="mt-2 text-sm"><strong>Question:</strong> {pendingDecision.question}</p>
+                    <p className="text-sm text-amber-800">Waiting for Yücel. Talip can track this request here.</p>
+                    <form onSubmit={(event) => void recordDecision(event, pendingDecision.id)} className="mt-3 space-y-2">
+                      <label className="block text-sm">Decision confirmed with Yücel<textarea required maxLength={2000} value={decisionAnswer}
+                        onChange={(e) => setDecisionAnswer(e.target.value)} className="mt-1 w-full rounded-lg border bg-white p-2" /></label>
+                      <button disabled={busy} className="rounded-lg bg-green-800 px-4 py-2 text-white disabled:opacity-50">Save decision</button>
+                    </form>
+                  </> : <form onSubmit={requestDecision} className="mt-2 space-y-2">
+                    <label className="block text-sm">What price or menu decision is needed?<textarea required maxLength={1000}
+                      value={decisionQuestion} onChange={(e) => setDecisionQuestion(e.target.value)}
+                      className="mt-1 w-full rounded-lg border bg-white p-2" /></label>
+                    <button disabled={busy} className="rounded-lg bg-amber-700 px-4 py-2 text-white disabled:opacity-50">Send to Yücel's decision queue</button>
+                  </form>}
+                  {decisionQueue.items.filter((item) => item.request_id === currentRequest.id && item.recorded_at).slice(0,3).map((item) =>
+                    <p key={item.id} className="mt-3 rounded-lg bg-white p-2 text-sm"><strong>Decision recorded {date(item.recorded_at)}:</strong> {item.decision}</p>)}
+                </div>}
                 <form onSubmit={saveRequest} className="mt-4 grid gap-3 sm:grid-cols-2">
                   <label className="text-sm">Status<select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-1 w-full rounded-lg border p-2">{statuses.map((s) => <option key={s}>{s}</option>)}</select></label>
                   <label className="text-sm">Assigned to<input required maxLength={100} value={assignee} onChange={(e) => setAssignee(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
