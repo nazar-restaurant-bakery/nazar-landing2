@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
+import { safeCrmRequest, crmDisplayDate, crmLocalInput, crmTaskError, crmRequestError, validCrmOverview, validCrmTasks, validCrmDecisions } from "../lib/crmUi";
 
 type Customer = {
   id: string; name: string | null; email: string | null; phone: string | null;
@@ -12,7 +13,7 @@ type Customer = {
 type CateringRequest = {
   id: string; customer_id: string; name: string | null; email: string | null;
   phone: string | null; event_date: string | null; guests: number | null;
-  message: string | null; status: string; assigned_to: string;
+  message: string | null; status: string; assigned_to: string | null;
   follow_up_at: string | null; created_at: string;
 };
 type Overview = { customers: Customer[]; requests: CateringRequest[] };
@@ -32,6 +33,10 @@ type CateringNotification = { request_id: string; tracked: boolean; attempted_at
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const client = url && key ? createClient(url, key) : null;
+async function crmRpc(name: string, params?: Record<string, unknown>) {
+  return safeCrmRequest(() => client ? client.rpc(name, params)
+    : Promise.resolve({ data: null, error: { code: "MISSING_CONFIG" } }));
+}
 const statuses = ["new", "contacted", "quoted", "won", "lost", "closed"];
 const activeStatuses = new Set(["new", "contacted", "quoted"]);
 const segments: { value: Segment; label: string }[] = [
@@ -43,13 +48,10 @@ const segments: { value: Segment; label: string }[] = [
 ];
 
 function date(value: string | null) {
-  return value ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
+  return crmDisplayDate(value);
 }
 function localInput(value: string | null) {
-  if (!value) return "";
-  const d = new Date(value);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return crmLocalInput(value);
 }
 
 export default function StaffPage({ variant = "followup" }: { variant?: "followup" | "crm" }) {
@@ -67,7 +69,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [klaviyo, setKlaviyo] = useState<KlaviyoResult | null>(null);
-  const [tasks, setTasks] = useState<{ customerId: string; items: FollowUpTask[] } | null>(null);
+  const [tasks, setTasks] = useState<{ customerId: string; items: FollowUpTask[]; unavailable?: boolean } | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskOwner, setTaskOwner] = useState("");
   const [taskDue, setTaskDue] = useState("");
@@ -85,9 +87,15 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
     robots.content = "noindex,nofollow";
     document.head.appendChild(robots);
     if (!client) return () => robots.remove();
-    void client.auth.getSession().then(({ data }) => setSession(data.session));
+    void client.auth.getSession().then(({ data }) => setSession(data.session))
+      .catch(() => setMessage("Could not check staff sign-in. Please reload."));
     const { data: listener } = client.auth.onAuthStateChange((_event, next) => {
-      if (!next) refreshSequence.current += 1;
+      if (!next) {
+        refreshSequence.current += 1;
+        setOverview(null); setTasks(null); setKlaviyo(null); setDecisionQueue(null);
+        setNotifications([]); setDecisionEmailDraft(null); setSelectedCustomer(null);
+        setSelectedRequest(null); setBusy(false);
+      }
       setSession(next);
     });
     return () => { listener.subscription.unsubscribe(); robots.remove(); };
@@ -98,23 +106,28 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
     const sequence = ++refreshSequence.current;
     setBusy(true); setMessage("");
     const [overviewResult, decisionsResult, notificationsResult] = await Promise.all([
-      client.rpc("crm_overview_v2", { p_search: query, p_segment: view === "catering" ? "all" : view }),
-      client.rpc("crm_catering_decisions_v1"),
-      client.rpc("crm_catering_notification_status_v1"),
+      crmRpc("crm_overview_v2", { p_search: query, p_segment: view === "catering" ? "all" : view }),
+      crmRpc("crm_catering_decisions_v1"),
+      crmRpc("crm_catering_notification_status_v1"),
     ]);
     const { data, error } = overviewResult;
     if (sequence !== refreshSequence.current) return;
-    if (error) {
+    if (error || !validCrmOverview(data)) {
       setOverview(null);
-      setMessage(error.code === "42501" ? "This account does not have Nazar staff access." : "Could not load records. Try again.");
+      setMessage(error?.code === "42501" ? "This account does not have Nazar staff access." : "Could not load records. Try again.");
+      setDecisionQueue(null); setNotifications([]); setTasks(null); setKlaviyo(null);
+      setDecisionEmailDraft(null); setBusy(false);
+      return;
     } else {
       setOverview(data as Overview);
       setMessage("");
     }
-    setDecisionQueue(!decisionsResult.error ? decisionsResult.data as DecisionQueue : null);
-    setNotifications(!notificationsResult.error && Array.isArray(notificationsResult.data?.items)
-      ? notificationsResult.data.items as CateringNotification[] : []);
-    setNotificationStatusAvailable(!notificationsResult.error && Array.isArray(notificationsResult.data?.items));
+    setDecisionQueue(!decisionsResult.error && validCrmDecisions(decisionsResult.data) ? decisionsResult.data as DecisionQueue : null);
+    const validNotifications = Array.isArray(notificationsResult.data?.items)
+      && notificationsResult.data.items.every((item: unknown) => !!item && typeof item === "object"
+        && "request_id" in item && typeof item.request_id === "string");
+    setNotifications(!notificationsResult.error && validNotifications ? notificationsResult.data.items as CateringNotification[] : []);
+    setNotificationStatusAvailable(!notificationsResult.error && validNotifications);
     setBusy(false);
   }, [session]);
 
@@ -127,8 +140,8 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
     if (!client || !session) return;
     const timer = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
-      void client.rpc("crm_catering_decisions_v1").then(({ data, error }) => {
-        if (!error) setDecisionQueue(data as DecisionQueue);
+      void crmRpc("crm_catering_decisions_v1").then(({ data, error }) => {
+        if (!error && validCrmDecisions(data)) setDecisionQueue(data as DecisionQueue);
       });
     }, 60_000);
     return () => window.clearInterval(timer);
@@ -136,8 +149,9 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
 
   async function sendLink(event: FormEvent) {
     event.preventDefault();
-    if (!client) return;
+    if (!client || busy) return;
     setBusy(true); setMessage("");
+    try {
     const { error } = await client.auth.signInWithOtp({
       email: email.trim(), options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/staff` },
     });
@@ -146,7 +160,8 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
       : error
         ? "Could not send the sign-in link. Check that this address was invited, then try again."
         : "Check your email for the sign-in link.");
-    setBusy(false);
+    } catch { setMessage("Could not send the sign-in link. Please try again."); }
+    finally { setBusy(false); }
   }
 
   const currentCustomer = overview?.customers.find((c) => c.id === selectedCustomer);
@@ -167,7 +182,10 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
       body: JSON.stringify({ email: emailAddress }),
     }).then(async (response) => {
       if (!response.ok) throw new Error("Klaviyo lookup failed");
-      return response.json() as Promise<{ status: KlaviyoStatus; checkedAt: string }>;
+      const data = await response.json();
+      if (!data || !["confirmed", "pending", "unsubscribed", "suppressed", "not_on_list", "unavailable"].includes(data.status)
+          || typeof data.checkedAt !== "string") throw new Error("Invalid Klaviyo result");
+      return data as { status: KlaviyoStatus; checkedAt: string };
     }).then((data) => { if (!controller.signal.aborted) setKlaviyo({ email: emailAddress, status: data.status, checkedAt: data.checkedAt }); })
       .catch(() => { if (!controller.signal.aborted) setKlaviyo({ email: emailAddress, status: "unavailable", checkedAt: null }); });
     return () => controller.abort();
@@ -178,28 +196,32 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
     if (!client || !session || !customerId) return;
     let active = true;
     queueMicrotask(() => setTasks(null));
-    void client.rpc("crm_customer_tasks_v1", { p_customer_id: customerId })
+    void crmRpc("crm_customer_tasks_v1", { p_customer_id: customerId })
       .then(({ data, error }) => {
         if (!active) return;
-        setTasks({ customerId, items: !error && Array.isArray(data) ? data as FollowUpTask[] : [] });
-        if (error) setMessage("Could not load follow-up tasks.");
+        const unavailable = !!error || !validCrmTasks(data);
+        setTasks({ customerId, items: unavailable ? [] : data as FollowUpTask[], unavailable });
+        if (unavailable) setMessage("Could not load follow-up tasks. Try refreshing records.");
       });
     return () => { active = false; };
-  }, [currentCustomer?.id, session]);
+  }, [currentCustomer?.id, session, overview]);
 
   async function createTask(event: FormEvent) {
     event.preventDefault();
-    if (!client || !currentCustomer || !taskTitle.trim() || !taskOwner.trim() || !taskDue) return;
+    if (!client || !currentCustomer || busy) return;
+    const validation = crmTaskError(taskTitle, taskOwner, taskDue);
+    if (validation) { setMessage(validation); return; }
     setBusy(true); setMessage("");
-    const { error } = await client.rpc("crm_create_task_v1", {
+    const { data, error } = await crmRpc("crm_create_task_v1", {
       p_customer_id: currentCustomer.id, p_title: taskTitle.trim(),
       p_assigned_to: taskOwner.trim(), p_due_at: new Date(taskDue).toISOString(),
     });
-    if (error) setMessage("Could not save the follow-up task.");
+    if (error || typeof data !== "string" || !data) setMessage("Could not confirm the task save. Refresh records before retrying.");
     else {
-      const result = await client.rpc("crm_customer_tasks_v1", { p_customer_id: currentCustomer.id });
-      if (!result.error && Array.isArray(result.data)) setTasks({ customerId: currentCustomer.id, items: result.data as FollowUpTask[] });
-      setTaskTitle(""); setTaskDue(""); setMessage("Follow-up task saved.");
+      const result = await crmRpc("crm_customer_tasks_v1", { p_customer_id: currentCustomer.id });
+      const unavailable = !!result.error || !validCrmTasks(result.data);
+      setTasks({ customerId: currentCustomer.id, items: unavailable ? [] : result.data as FollowUpTask[], unavailable });
+      setTaskTitle(""); setTaskDue(""); setMessage(unavailable ? "Task saved, but the updated list could not be loaded. Refresh records before adding it again." : "Follow-up task saved.");
     }
     setBusy(false);
   }
@@ -207,7 +229,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
   async function completeTask(taskId: string) {
     if (!client || !currentCustomer) return;
     setBusy(true); setMessage("");
-    const { data, error } = await client.rpc("crm_complete_task_v1", { p_task_id: taskId });
+    const { data, error } = await crmRpc("crm_complete_task_v1", { p_task_id: taskId });
     if (error || !data) setMessage("Could not complete the task.");
     else {
       setTasks((previous) => previous?.customerId === currentCustomer.id
@@ -227,7 +249,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
   function chooseRequest(request: CateringRequest) {
     setSelectedRequest(request.id);
     setStatus(request.status);
-    setAssignee(request.assigned_to);
+    setAssignee(request.assigned_to ?? "");
     setFollowUp(localInput(request.follow_up_at));
     setMessage("");
     setDecisionQuestion("");
@@ -235,9 +257,12 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
 
   async function requestDecision(event: FormEvent) {
     event.preventDefault();
-    if (!client || !currentRequest || !decisionQuestion.trim()) return;
+    if (!client || !currentRequest || busy) return;
+    if (!decisionQuestion.trim() || decisionQuestion.trim().length > 1000) {
+      setMessage("Enter a decision question between 1 and 1000 characters."); return;
+    }
     setBusy(true); setMessage("");
-    const { error } = await client.rpc("crm_request_catering_decision_v1", {
+    const { error } = await crmRpc("crm_request_catering_decision_v1", {
       p_request_id: currentRequest.id, p_question: decisionQuestion.trim(),
     });
     if (error) setMessage("Could not mark this request for Yücel's review.");
@@ -256,6 +281,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
       });
       if (!response.ok) throw new Error("Draft unavailable");
       const draft = await response.json() as Omit<DecisionEmailDraft, "decisionId">;
+      if (!draft || ![draft.to, draft.cc, draft.subject, draft.body].every(value => typeof value === "string")) throw new Error("Invalid draft");
       setDecisionEmailDraft({ ...draft, decisionId });
     } catch { setMessage("Could not prepare the decision email. Please try again."); }
     setBusy(false);
@@ -268,12 +294,11 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
 
   async function saveRequest(event: FormEvent) {
     event.preventDefault();
-    if (!client || !currentRequest) return;
-    if (activeStatuses.has(status) && !followUp) {
-      setMessage("Set a follow-up time for an open request."); return;
-    }
+    if (!client || !currentRequest || busy) return;
+    const validation = crmRequestError(status, assignee, followUp);
+    if (validation) { setMessage(validation); return; }
     setBusy(true); setMessage("");
-    const { data, error } = await client.rpc("crm_update_catering", {
+    const { data, error } = await crmRpc("crm_update_catering", {
       p_request_id: currentRequest.id, p_status: status,
       p_assigned_to: assignee.trim(),
       p_follow_up_at: followUp ? new Date(followUp).toISOString() : null,
@@ -285,12 +310,15 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
 
   async function addNote(event: FormEvent) {
     event.preventDefault();
-    if (!client || !currentCustomer || !note.trim()) return;
+    if (!client || !currentCustomer || busy) return;
+    if (!note.trim() || note.trim().length > 2000) {
+      setMessage("Enter a note between 1 and 2000 characters."); return;
+    }
     setBusy(true); setMessage("");
-    const { data, error } = await client.rpc("crm_add_note", {
+    const { data, error } = await crmRpc("crm_add_note", {
       p_customer_id: currentCustomer.id, p_body: note.trim(),
     });
-    if (error || !data) setMessage("Could not save the note.");
+    if (error || !data) setMessage("Could not confirm the note save. Refresh records before retrying.");
     else { setNote(""); await refresh(search, segment); setMessage("Note saved."); }
     setBusy(false);
   }
@@ -300,7 +328,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
       ? (overview?.customers ?? []).filter((customer) => overview?.requests.some((request) => request.customer_id === customer.id))
       : overview?.customers ?? [];
     const visibleRequests = segment === "vip" || segment === "kevin" ? [] : overview?.requests ?? [];
-    const openTasks = tasks && currentCustomer && tasks.customerId === currentCustomer.id
+    const openTasks = tasks && !tasks.unavailable && currentCustomer && tasks.customerId === currentCustomer.id
       ? tasks.items.filter((task) => !task.completed_at).length : null;
 
     return <main className="min-h-screen bg-[#f6f7f4] text-[#17231b]">
@@ -329,10 +357,10 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
             </form>
             <div className="mb-3 flex flex-wrap gap-1" role="group" aria-label="Customer filters">{segments.map((item) => <button key={item.value} type="button" aria-pressed={segment === item.value} onClick={() => { setSegment(item.value); setSelectedCustomer(null); setSelectedRequest(null); void refresh(search, item.value); }} className={`rounded-lg border px-2.5 py-2 text-sm ${segment === item.value ? "border-[#176b3a] bg-[#176b3a] text-white" : "border-[#dfe7df] bg-white"}`}>{item.value === "all" ? "All" : item.value === "test" ? "Internal tests" : item.label.replace(" signups", "")}</button>)}</div>
             <button type="button" disabled={busy} onClick={() => void refresh(search, segment)} className="mb-3 text-xs font-medium text-[#176b3a] underline disabled:opacity-50">Refresh records</button>
-            <div className="max-h-[36rem] space-y-2 overflow-auto">{visibleCustomers.map((customer) => <button key={customer.id} type="button" onClick={() => { setSelectedCustomer(customer.id); setSelectedRequest(null); setNote(""); setMessage(""); }} className={`w-full rounded-lg border p-3 text-left ${currentCustomer?.id === customer.id ? "border-[#176b3a] bg-[#eaf6ee]" : "border-[#dfe7df] bg-white hover:bg-[#f6f7f4]"}`}><strong className="block">{customer.name || "Unnamed customer"}</strong><span className="block text-xs text-[#64736a]">{[customer.vip_signup_count > 0 && "VIP", overview?.requests.some((request) => request.customer_id === customer.id) && "Catering", customer.kevin_signup_count > 0 && "Kevin"].filter(Boolean).join(" · ") || "Website contact"}</span><span className="block break-all text-xs text-[#64736a]">{customer.email || customer.phone || "No contact shown"}</span></button>)}{overview && visibleCustomers.length === 0 && <p className="text-sm text-[#64736a]">No matching customers.</p>}{!overview && <p className="text-sm text-[#64736a]">Loading customers…</p>}</div>
+            <div className="max-h-[36rem] space-y-2 overflow-auto">{visibleCustomers.map((customer) => <button key={customer.id} type="button" onClick={() => { setSelectedCustomer(customer.id); setSelectedRequest(null); setNote(""); setMessage(""); }} className={`w-full rounded-lg border p-3 text-left ${currentCustomer?.id === customer.id ? "border-[#176b3a] bg-[#eaf6ee]" : "border-[#dfe7df] bg-white hover:bg-[#f6f7f4]"}`}><strong className="block">{customer.name || "Unnamed customer"}</strong><span className="block text-xs text-[#64736a]">{[customer.vip_signup_count > 0 && "VIP", overview?.requests.some((request) => request.customer_id === customer.id) && "Catering", customer.kevin_signup_count > 0 && "Kevin"].filter(Boolean).join(" · ") || "Website contact"}</span><span className="block break-all text-xs text-[#64736a]">{customer.email || customer.phone || "No contact shown"}</span></button>)}{overview && visibleCustomers.length === 0 && <p className="text-sm text-[#64736a]">No matching customers.</p>}{!overview && <p className="text-sm text-[#64736a]">{busy ? "Loading customers…" : "Customer records unavailable. Refresh records to retry."}</p>}</div>
           </section>
           {currentCustomer ? <section className="rounded-xl border border-[#dfe7df] bg-white p-4 sm:p-5" aria-label="Customer profile">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#dfe7df] pb-4"><div><h2 className="text-xl font-bold">{currentCustomer.name || "Unnamed customer"}</h2><p className="break-all text-sm text-[#64736a]">{currentCustomer.email || "No email"} · {currentCustomer.phone || "No phone"}</p></div><span className="rounded-lg bg-[#eaf6ee] px-3 py-2 text-sm font-semibold text-[#176b3a]">{openTasks === null ? "Loading tasks" : `${openTasks} open follow-up${openTasks === 1 ? "" : "s"}`}</span></div>
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#dfe7df] pb-4"><div><h2 className="text-xl font-bold">{currentCustomer.name || "Unnamed customer"}</h2><p className="break-all text-sm text-[#64736a]">{currentCustomer.email || "No email"} · {currentCustomer.phone || "No phone"}</p></div><span className="rounded-lg bg-[#eaf6ee] px-3 py-2 text-sm font-semibold text-[#176b3a]">{tasks?.customerId === currentCustomer.id && tasks.unavailable ? "Tasks unavailable" : openTasks === null ? "Loading tasks" : `${openTasks} open follow-up${openTasks === 1 ? "" : "s"}`}</span></div>
             <div className="my-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Relationship</span><strong className="mt-1 block">{[currentCustomer.vip_signup_count > 0 && "VIP", overview?.requests.some((request) => request.customer_id === currentCustomer.id) && "Catering"].filter(Boolean).join(" · ") || "Website contact"}</strong></div>
               <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Email consent · Klaviyo</span><strong className="mt-1 block">{!currentCustomer.email ? "No email address" : klaviyo?.email === currentCustomer.email ? klaviyoLabel[klaviyo.status] : "Checking…"}</strong><span className="text-xs text-[#64736a]">{klaviyo?.email === currentCustomer.email && klaviyo.checkedAt ? `Checked ${date(klaviyo.checkedAt)}` : "Do not assume consent without verification."}</span></div>
@@ -340,7 +368,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
               <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Order history</span><strong className="mt-1 block">Not linked yet</strong><span className="text-xs text-[#64736a]">A form submission is not a paid order.</span></div>
             </div>
             <div className="grid gap-5 md:grid-cols-[1.1fr_.9fr]"><div><h3 className="mb-2 font-semibold">Customer history</h3>{currentCustomer.recent_signups.map((signup) => <div key={signup.id} className="border-t border-[#dfe7df] py-2"><strong className="block text-sm">{date(signup.created_at)} · {signup.source === "website_vip_page" ? "VIP form" : signup.source}</strong><span className="text-xs text-[#64736a]">{signup.campaign ? `Campaign: ${signup.campaign}` : "Website signup"}</span></div>)}{overview?.requests.filter((request) => request.customer_id === currentCustomer.id).map((request) => <button key={request.id} type="button" onClick={() => chooseRequest(request)} className="block w-full border-t border-[#dfe7df] py-2 text-left"><strong className="block text-sm">{date(request.created_at)} · Catering request</strong><span className="text-xs text-[#64736a]">{request.status} · Event {request.event_date || "date not set"}</span></button>)}{currentCustomer.recent_signups.length === 0 && !overview?.requests.some((request) => request.customer_id === currentCustomer.id) && <p className="text-sm text-[#64736a]">No history in the current results.</p>}</div>
-              <div><h3 className="mb-2 font-semibold">Staff follow-up</h3>{tasks?.customerId === currentCustomer.id ? <div className="space-y-2">{tasks.items.map((task) => <div key={task.id} className="rounded-lg bg-amber-50 p-3 text-sm"><strong className="block">{task.title}</strong><span className="text-xs text-[#64736a]">{task.assigned_to} · Due {date(task.due_at)} · {task.completed_at ? "Completed" : "Open"}</span>{!task.completed_at && <button type="button" disabled={busy} onClick={() => void completeTask(task.id)} className="ml-2 text-xs text-[#176b3a] underline">Mark done</button>}</div>)}{tasks.items.length === 0 && <p className="text-sm text-[#64736a]">No follow-up task yet.</p>}</div> : <p className="text-sm text-[#64736a]">Loading tasks…</p>}
+              <div><h3 className="mb-2 font-semibold">Staff follow-up</h3>{tasks?.customerId === currentCustomer.id && !tasks.unavailable ? <div className="space-y-2">{tasks.items.map((task) => <div key={task.id} className="rounded-lg bg-amber-50 p-3 text-sm"><strong className="block">{task.title}</strong><span className="text-xs text-[#64736a]">{task.assigned_to} · Due {date(task.due_at)} · {task.completed_at ? "Completed" : "Open"}</span>{!task.completed_at && <button type="button" disabled={busy} onClick={() => void completeTask(task.id)} className="ml-2 text-xs text-[#176b3a] underline">Mark done</button>}</div>)}{tasks.items.length === 0 && <p className="text-sm text-[#64736a]">No follow-up task yet.</p>}</div> : <p className="text-sm text-[#64736a]">{tasks?.unavailable ? "Tasks unavailable. Refresh records to retry." : "Loading tasks…"}</p>}
                 <form onSubmit={createTask} className="mt-3 space-y-2 rounded-lg border border-[#dfe7df] p-3"><input aria-label="Follow-up task" required maxLength={300} value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Follow-up task" className="w-full rounded-lg border p-2 text-sm" /><input aria-label="Assigned to" required maxLength={100} value={taskOwner} onChange={(event) => setTaskOwner(event.target.value)} placeholder="Assigned to" className="w-full rounded-lg border p-2 text-sm" /><input aria-label="Due time" required type="datetime-local" value={taskDue} onChange={(event) => setTaskDue(event.target.value)} className="w-full rounded-lg border p-2 text-sm" /><button disabled={busy} className="rounded-lg bg-[#176b3a] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Add follow-up</button></form>
                 <h3 className="mb-2 mt-5 font-semibold">Internal notes</h3>{currentCustomer.notes.map((item) => <p key={item.id} className="border-t border-[#dfe7df] py-2 text-sm">{item.body}<span className="block text-xs text-[#64736a]">{date(item.created_at)}</span></p>)}<form onSubmit={addNote} className="mt-2 flex gap-2"><input aria-label="New internal note" maxLength={2000} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add a note" className="min-w-0 flex-1 rounded-lg border border-[#dfe7df] p-2 text-sm" /><button disabled={busy || !note.trim()} className="rounded-lg bg-[#176b3a] px-3 py-2 text-sm text-white disabled:opacity-50">Add</button></form>
               </div></div>
@@ -459,10 +487,10 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
                 <div className="max-h-40 overflow-auto">{currentCustomer.notes.map((n) => <p key={n.id} className="mt-2 rounded-lg bg-stone-50 p-2 text-sm">{n.body}<span className="block text-xs text-stone-500">{date(n.created_at)}</span></p>)}</div>
                 <form onSubmit={addNote} className="mt-3"><textarea maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add an internal note" className="w-full rounded-lg border p-2" /><button disabled={busy || !note.trim()} className="rounded-lg bg-green-800 px-4 py-2 text-white disabled:opacity-50">Save note</button></form>
                 <h4 className="mt-5 font-semibold">Customer follow-up</h4>
-                {tasks?.customerId === currentCustomer.id ? <div className="mt-2 space-y-2">{tasks.items.map((task) => <div key={task.id} className="rounded-lg border p-3 text-sm">
+                {tasks?.customerId === currentCustomer.id && !tasks.unavailable ? <div className="mt-2 space-y-2">{tasks.items.map((task) => <div key={task.id} className="rounded-lg border p-3 text-sm">
                   <strong className="block">{task.title}</strong><span className="text-stone-600">{task.assigned_to} · Due {date(task.due_at)} · {task.completed_at ? "Completed" : "Open"}</span>
                   {!task.completed_at && <button type="button" disabled={busy} onClick={() => void completeTask(task.id)} className="ml-2 underline disabled:opacity-50">Mark done</button>}
-                </div>)}{!tasks.items.length && <p className="text-sm text-stone-500">No follow-up task yet.</p>}</div> : <p className="text-sm text-stone-500">Loading follow-up tasks…</p>}
+                </div>)}{!tasks.items.length && <p className="text-sm text-stone-500">No follow-up task yet.</p>}</div> : <p className="text-sm text-stone-500">{tasks?.unavailable ? "Tasks unavailable. Refresh records to retry." : "Loading follow-up tasks…"}</p>}
                 <form onSubmit={createTask} className="mt-3 grid gap-2 sm:grid-cols-2">
                   <label className="text-sm">Task<input required maxLength={300} value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
                   <label className="text-sm">Assigned to<input required maxLength={100} value={taskOwner} onChange={(e) => setTaskOwner(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
