@@ -38,7 +38,6 @@ function setup(deliveryOk) {
     }),
     env: {
       SUPABASE_SECRET_KEY: 'sb_secret_test', TURNSTILE_SECRET_KEY: 'test',
-      CLOUDFLARE_ACCOUNT_ID: 'a'.repeat(32),
       CLOUDFLARE_EMAIL_SEND_TOKEN: 'private-test-key',
     },
     waitUntil(promise) { background.push(promise); },

@@ -16,8 +16,8 @@ Production sequence:
    routing and existing mail delivery must keep working.
 3. Create a Cloudflare API token scoped to the Nazar account with only
    `Email Sending: Edit`. In Pages `nazar-restaurant-website` Production settings,
-   add `CLOUDFLARE_EMAIL_SEND_TOKEN` as a Secret and set `CLOUDFLARE_ACCOUNT_ID`
-   to the account ID. Never put the token in source or a `VITE_` variable.
+   add `CLOUDFLARE_EMAIL_SEND_TOKEN` as a Secret. The account ID is fixed in
+   the server function. Never put the token in source or a `VITE_` variable.
 4. Publish the site code. Submit a clearly marked synthetic catering request
    with a non-deliverable test customer address. Confirm form success, one CRM
    record, one staff email, and `Staff notified` in CRM.

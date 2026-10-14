@@ -2,7 +2,6 @@
 type Env = {
   SUPABASE_SECRET_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
-  CLOUDFLARE_ACCOUNT_ID?: string;
   CLOUDFLARE_EMAIL_SEND_TOKEN?: string;
 };
 
@@ -10,6 +9,7 @@ type Context = { request: Request; env: Env; waitUntil(promise: Promise<unknown>
 
 const SUPABASE_URL = "https://khgczybubufouraqyrcj.supabase.co";
 const BUSINESS_ID = "a358eba4-b197-4309-805b-46f43a718454";
+const CLOUDFLARE_ACCOUNT_ID = "50a358ead900374fd545df744bd28bef";
 const STAFF_EMAIL = "ctnazarbakery@gmail.com";
 const STAFF_EMAIL_FROM = "notifications@nazarrestaurantandbakery.com";
 const STAFF_CRM_URL = "https://www.nazarrestaurantandbakery.com/staff";
@@ -118,8 +118,7 @@ type NotificationClaim = {
 };
 
 async function notifyCateringStaff(env: Env, requestId: string): Promise<void> {
-  if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_EMAIL_SEND_TOKEN || !env.SUPABASE_SECRET_KEY) return;
-  if (!/^[a-f0-9]{32}$/i.test(env.CLOUDFLARE_ACCOUNT_ID)) return;
+  if (!env.CLOUDFLARE_EMAIL_SEND_TOKEN || !env.SUPABASE_SECRET_KEY) return;
 
   const rpcHeaders = { apikey: env.SUPABASE_SECRET_KEY, "Content-Type": "application/json" };
   const claimResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/claim_catering_staff_notification_v1`, {
@@ -132,7 +131,7 @@ async function notifyCateringStaff(env: Env, requestId: string): Promise<void> {
   let sent = false;
   try {
     const requestDate = new Date(claim.requestDate).toLocaleString("en-US", { timeZone: "America/New_York" });
-    const delivery = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
+    const delivery = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`,
