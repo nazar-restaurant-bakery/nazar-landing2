@@ -2,12 +2,17 @@
 type Env = {
   SUPABASE_SECRET_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
+  CLOUDFLARE_EMAIL_SEND_TOKEN?: string;
 };
 
-type Context = { request: Request; env: Env };
+type Context = { request: Request; env: Env; waitUntil(promise: Promise<unknown>): void };
 
 const SUPABASE_URL = "https://khgczybubufouraqyrcj.supabase.co";
 const BUSINESS_ID = "a358eba4-b197-4309-805b-46f43a718454";
+const CLOUDFLARE_ACCOUNT_ID = "50a358ead900374fd545df744bd28bef";
+const STAFF_EMAIL = "ctnazarbakery@gmail.com";
+const STAFF_EMAIL_FROM = "notifications@alerts.nazarrestaurantandbakery.com";
+const STAFF_CRM_URL = "https://www.nazarrestaurantandbakery.com/staff";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // Keep these server-side allowlists aligned with src/data/cateringMenus.ts.
@@ -105,7 +110,65 @@ function customQuantities(value: unknown, ids: string[]): Record<string, number>
   return quantities;
 }
 
-export async function onRequestPost({ request, env }: Context): Promise<Response> {
+type NotificationClaim = {
+  requestId: string;
+  requestDate: string;
+  eventDate: string;
+  guests: number;
+};
+
+async function notifyCateringStaff(env: Env, requestId: string): Promise<void> {
+  if (!env.CLOUDFLARE_EMAIL_SEND_TOKEN || !env.SUPABASE_SECRET_KEY) return;
+
+  const rpcHeaders = { apikey: env.SUPABASE_SECRET_KEY, "Content-Type": "application/json" };
+  const claimResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/claim_catering_staff_notification_v1`, {
+    method: "POST", headers: rpcHeaders, body: JSON.stringify({ p_request_id: requestId }),
+  });
+  if (!claimResponse.ok) return;
+  const claim = await claimResponse.json() as NotificationClaim | null;
+  if (!claim) return; // A retry or a deduplicated signup must not send twice.
+
+  let sent = false;
+  try {
+    const requestDate = new Date(claim.requestDate).toLocaleString("en-US", { timeZone: "America/New_York" });
+    const delivery = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: STAFF_EMAIL,
+        from: STAFF_EMAIL_FROM,
+        subject: "New Nazar catering request",
+        text: [
+          `Request date: ${requestDate}`,
+          `Event date: ${claim.eventDate}`,
+          `Guest count: ${claim.guests}`,
+          `CRM: ${STAFF_CRM_URL}`,
+        ].join("\n"),
+      }),
+    });
+    if (delivery.ok) {
+      const result = await delivery.json() as {
+        success?: boolean;
+        result?: { delivered?: string[]; queued?: string[] };
+      };
+      sent = result.success === true &&
+        (result.result?.delivered?.includes(STAFF_EMAIL) === true ||
+         result.result?.queued?.includes(STAFF_EMAIL) === true);
+    }
+  } catch {
+    // Delivery failures never change the customer's successful form response.
+  }
+  await fetch(`${SUPABASE_URL}/rest/v1/rpc/finish_catering_staff_notification_v1`, {
+    method: "POST", headers: rpcHeaders,
+    body: JSON.stringify({ p_request_id: requestId, p_sent: sent }),
+  });
+}
+
+export async function onRequestPost(context: Context): Promise<Response> {
+  const { request, env } = context;
   const url = new URL(request.url);
   if (request.headers.get("Origin") !== url.origin) return response(403, "forbidden");
   if (!request.headers.get("Content-Type")?.toLowerCase().startsWith("application/json")) {
@@ -271,6 +334,9 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       }),
     });
     if (!db.ok) return response(503, "unavailable");
+    if (kind === "catering") {
+      context.waitUntil(notifyCateringStaff(env, requestId).catch(() => undefined));
+    }
     return response(200, "accepted");
   } catch {
     return response(503, "unavailable");
