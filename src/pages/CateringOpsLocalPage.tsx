@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 import { customerQuoteMailto, customerQuoteMessage, formatDollars, loadQuoteOverview, type ApprovedQuote } from "../lib/cateringQuote";
+import { describeCateringSelection } from "../lib/cateringRequestDisplay";
 
 type Request = {
   id: string;
@@ -14,6 +15,8 @@ type Request = {
   assigned_to: string | null;
   follow_up_at: string | null;
   created_at: string;
+  menu_selection?: unknown;
+  customer_message?: string | null;
 };
 
 type Overview = { requests: Request[] };
@@ -23,6 +26,7 @@ const client = url && key ? createClient(url, key) : null;
 const localQuoteTestMode = import.meta.env.VITE_CATERING_QUOTE_TEST_MODE === "true"
   && url !== "https://khgczybubufouraqyrcj.supabase.co";
 const quoteActionEnabled = import.meta.env.VITE_CATERING_QUOTE_ENABLED === "true" || localQuoteTestMode;
+const structuredQueueEnabled = import.meta.env.VITE_CATERING_OPS_STRUCTURED_ENABLED === "true" || localQuoteTestMode;
 const active = new Set(["new", "contacted", "quoted"]);
 
 function formatDate(value: string | null, includeTime = false) {
@@ -40,6 +44,7 @@ export default function CateringOpsLocalPage() {
   const [showClosed, setShowClosed] = useState(false);
   const [quotes, setQuotes] = useState<ApprovedQuote[]>([]);
   const [quoteAvailable, setQuoteAvailable] = useState(false);
+  const [structuredLoadError, setStructuredLoadError] = useState(false);
   const [deliveryConfirmed, setDeliveryConfirmed] = useState(false);
   const [reviewLink, setReviewLink] = useState<{ requestId: string; href: string } | null>(null);
 
@@ -62,17 +67,28 @@ export default function CateringOpsLocalPage() {
     if (!client || !session) return;
     setBusy(true);
     setError("");
-    const [overviewResult, quoteResult] = await Promise.all([
+    const [overviewResult, quoteResult, structuredResult] = await Promise.all([
       client.rpc("crm_overview_v2", { p_search: "", p_segment: "all" }),
       loadQuoteOverview(quoteActionEnabled, () => client.rpc("catering_quote_overview_v1")),
+      structuredQueueEnabled ? client.rpc("catering_ops_requests_v1") : Promise.resolve(null),
     ]);
     const { data, error: readError } = overviewResult;
+    setStructuredLoadError(Boolean(structuredResult?.error));
     if (readError) {
       setRequests(null);
       setError(readError.code === "42501" ? "This account does not have Nazar staff access." : "Requests could not be loaded. Please try again.");
     } else {
       const rows = (data as Overview)?.requests;
-      setRequests(Array.isArray(rows) ? rows : []);
+      const details = new Map<string, { menu_selection: unknown; customer_message: string | null }>();
+      if (structuredResult && !structuredResult.error && Array.isArray(structuredResult.data?.items)) {
+        for (const raw of structuredResult.data.items) {
+          if (raw && typeof raw.id === "string") details.set(raw.id, {
+            menu_selection: raw.menu_selection,
+            customer_message: typeof raw.customer_message === "string" ? raw.customer_message : null,
+          });
+        }
+      }
+      setRequests(Array.isArray(rows) ? rows.map((row) => ({ ...row, ...details.get(row.id) })) : []);
     }
     setQuoteAvailable(quoteResult !== null && !quoteResult.error);
     setQuotes(quoteResult !== null && !quoteResult.error && Array.isArray((quoteResult.data as { items?: ApprovedQuote[] })?.items)
@@ -119,6 +135,7 @@ export default function CateringOpsLocalPage() {
   const selected = visible.find((request) => request.id === selectedId) || visible[0];
   const selectedQuote = quotes.filter((quote) => quote.request_id === selected?.id)
     .sort((a, b) => b.version - a.version)[0];
+  const requestedSelection = describeCateringSelection(selected?.menu_selection);
 
   return <main className="min-h-screen bg-[#f6f7f4] px-4 py-7 text-stone-900">
     <div className="mx-auto max-w-6xl">
@@ -167,8 +184,20 @@ export default function CateringOpsLocalPage() {
                     <div><dt className="text-stone-500">Next follow-up</dt><dd>{formatDate(selected.follow_up_at, true)}</dd></div>
                   </dl>
                   <h3 className="mt-6 font-bold">Customer request and menu selection</h3>
-                  <p className="mt-2 whitespace-pre-wrap rounded-xl bg-stone-50 p-4 text-sm">{selected.message || "No request text was recorded."}</p>
-                  <p className="mt-3 text-xs text-stone-600">Older submissions store the selection in this text. Separate product rows and quantities will appear after the structured intake change is released and verified.</p>
+                  {requestedSelection ? <>
+                    <div className="mt-2 space-y-2">{requestedSelection.items.map((item) => <div key={item.key} className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-stone-200 p-3 text-sm">
+                      <div><strong className="block">{item.label}</strong><span className="text-stone-600">{item.detail}</span></div>
+                      <span className={item.needsQuote ? "font-semibold text-amber-800" : "font-semibold text-stone-900"}>{item.needsQuote ? "Price to confirm" : item.shownPrice === null ? "Shown price unavailable" : formatDollars(Math.round(item.shownPrice * 100))}</span>
+                    </div>)}</div>
+                    {requestedSelection.shownSubtotal !== null && <p className="mt-3 text-right text-sm font-semibold">Website tray subtotal: {formatDollars(Math.round(requestedSelection.shownSubtotal * 100))}</p>}
+                    <p className="mt-1 text-xs text-stone-600">Website prices are the amounts shown when the request was submitted. Yücel confirms the final menu, tax and total before a quote is sent.</p>
+                    <div className="mt-4 rounded-xl bg-stone-50 p-4 text-sm"><strong>Customer message</strong><p className="mt-1 whitespace-pre-wrap">{selected.customer_message || "No additional message."}</p></div>
+                  </> : <>
+                    <p className="mt-2 whitespace-pre-wrap rounded-xl bg-stone-50 p-4 text-sm">{selected.message || "No request text was recorded."}</p>
+                    <p className="mt-3 text-xs text-stone-600">{structuredLoadError
+                      ? "Structured product details could not be loaded. The original request text is shown; refresh or check staff access before pricing."
+                      : "Older submissions keep the selection in this text. No product quantity or price is inferred from it."}</p>
+                  </>}
                   <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><strong>Next action:</strong> {active.has(selected.status) ? "Get the final menu and price decision, then deliver the approved quote." : "This request is closed; no quote action is pending."} The email draft never sends automatically; record delivery only after sending it.</div>
                   {quoteAvailable && quoteActionEnabled && active.has(selected.status) && <section className="mt-5 rounded-xl border border-stone-200 p-4">
                     <h3 className="font-bold">Yücel's menu and price review</h3>
