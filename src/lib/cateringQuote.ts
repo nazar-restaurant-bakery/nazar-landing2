@@ -11,6 +11,14 @@ export type ApprovedQuote = {
   sent_at: string | null;
 };
 
+// A staged quote screen must not call an RPC that has not been deployed yet.
+export async function loadQuoteOverview(
+  enabled: boolean,
+  fetchOverview: () => PromiseLike<{ data: unknown; error: unknown }>,
+): Promise<{ data: unknown; error: unknown } | null> {
+  return enabled ? await fetchOverview() : null;
+}
+
 export function dollarsToCents(value: string): number | null {
   const trimmed = value.trim();
   if (!/^\d{1,7}(?:\.\d{1,2})?$/.test(trimmed)) return null;

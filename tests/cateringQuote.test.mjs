@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { dollarsToCents, customerQuoteMailto, customerQuoteMessage } from "../src/lib/cateringQuote.ts";
+import { dollarsToCents, customerQuoteMailto, customerQuoteMessage, loadQuoteOverview } from "../src/lib/cateringQuote.ts";
+
+test("disabled quote workflow never contacts its undeployed RPC, including refreshes", async () => {
+  let calls = 0;
+  const fetch = () => { calls++; throw new Error("undeployed RPC"); };
+  for (let i = 0; i < 3; i++) assert.equal(await loadQuoteOverview(false, fetch), null);
+  assert.equal(calls, 0);
+});
+
+test("enabled quote workflow preserves real data and access-denial results", async () => {
+  const success = { data: { items: [{ id: "synthetic-quote" }] }, error: null };
+  assert.equal(await loadQuoteOverview(true, () => Promise.resolve(success)), success);
+  const denied = { data: null, error: { code: "42501" } };
+  assert.equal(await loadQuoteOverview(true, () => Promise.resolve(denied)), denied);
+});
 
 test("final quote amount accepts cents exactly and rejects ambiguous prices", () => {
   assert.equal(dollarsToCents("475"), 47500);

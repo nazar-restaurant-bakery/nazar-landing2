@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
-import { customerQuoteMailto, customerQuoteMessage, formatDollars, type ApprovedQuote } from "../lib/cateringQuote";
+import { customerQuoteMailto, customerQuoteMessage, formatDollars, loadQuoteOverview, type ApprovedQuote } from "../lib/cateringQuote";
 
 type Request = {
   id: string;
@@ -64,7 +64,7 @@ export default function CateringOpsLocalPage() {
     setError("");
     const [overviewResult, quoteResult] = await Promise.all([
       client.rpc("crm_overview_v2", { p_search: "", p_segment: "all" }),
-      client.rpc("catering_quote_overview_v1"),
+      loadQuoteOverview(quoteActionEnabled, () => client.rpc("catering_quote_overview_v1")),
     ]);
     const { data, error: readError } = overviewResult;
     if (readError) {
@@ -74,8 +74,8 @@ export default function CateringOpsLocalPage() {
       const rows = (data as Overview)?.requests;
       setRequests(Array.isArray(rows) ? rows : []);
     }
-    setQuoteAvailable(!quoteResult.error);
-    setQuotes(!quoteResult.error && Array.isArray((quoteResult.data as { items?: ApprovedQuote[] })?.items)
+    setQuoteAvailable(quoteResult !== null && !quoteResult.error);
+    setQuotes(quoteResult !== null && !quoteResult.error && Array.isArray((quoteResult.data as { items?: ApprovedQuote[] })?.items)
       ? (quoteResult.data as { items: ApprovedQuote[] }).items : []);
     setBusy(false);
   }, [session]);
