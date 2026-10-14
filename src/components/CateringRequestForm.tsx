@@ -9,6 +9,7 @@ import { cn, EMAIL_RE, normalizePhone } from "../lib/form";
 import { captureUtm, getUtmOrNull } from "../lib/utm";
 import { submitSignup } from "../lib/signup";
 import { trackCateringRequestSubmitted } from "../lib/analytics";
+import { isTestLead } from "../lib/testLead";
 import TurnstileWidget from "./TurnstileWidget";
 import { turnstileSiteKey } from "../lib/formConfig";
 import { useLang } from "./Language";
@@ -146,7 +147,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       return;
     }
 
-    trackCateringRequestSubmitted(requestId);
+    if (!isTestLead({ name: trimmedName, email: trimmedEmail })) trackCateringRequestSubmitted(requestId);
     setStatus("success");
     setName("");
     setEmail("");

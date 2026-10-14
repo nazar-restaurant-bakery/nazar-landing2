@@ -3,6 +3,7 @@ import React from "react";
 import { captureUtm, getUtmOrNull } from "../lib/utm";
 import { submitSignup } from "../lib/signup";
 import { subscribeVipEmail } from "../lib/klaviyo";
+import { isTestLead } from "../lib/testLead";
 import { trackVipSignupSubmitted, trackVipConfirmationStarted } from "../lib/analytics";
 import TurnstileWidget from "./TurnstileWidget";
 import { turnstileSiteKey } from "../lib/formConfig";
@@ -13,7 +14,7 @@ import { t } from "./i18n";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
 import { clearSignupDraft, currentSignupStorage, readSignupDraft, requestIdForSignup, saveSignupDraft } from "../lib/signupRecovery";
 
-type Status = "idle" | "submitting" | "success" | "error" | "sync_error";
+type Status = "idle" | "submitting" | "success" | "error" | "sync_error" | "test_saved";
 type VipDraft = { name: string; email: string; phone: string; consentEmail: boolean };
 const DRAFT_KEY = "nazar-vip-request-draft-v1";
 
@@ -52,7 +53,7 @@ export default function VipSignupForm({
   const submitting = status === "submitting";
 
   React.useEffect(() => {
-    if (status !== "success") saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, consentEmail });
+    if (status !== "success" && status !== "test_saved") saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, consentEmail });
   }, [storage, name, email, phone, consentEmail, status]);
 
   async function finishEmailConfirmation(details: NonNullable<typeof pendingEmail>) {
@@ -152,6 +153,13 @@ export default function VipSignupForm({
       return;
     }
 
+    if (isTestLead({ name: trimmedName, email: trimmedEmail })) {
+      setStatus("test_saved");
+      setPendingEmail(null);
+      clearSignupDraft(storage, DRAFT_KEY);
+      requestMemory.current = {};
+      return;
+    }
     trackVipSignupSubmitted(requestId);
     const details = {
       requestId,
@@ -161,6 +169,13 @@ export default function VipSignupForm({
     };
     setPendingEmail(details);
     await finishEmailConfirmation(details);
+  }
+
+  if (status === "test_saved") {
+    return <div role="status" className={cn("rounded-2xl border border-amber-200 bg-amber-50 p-6", className)}>
+      <strong>Internal test saved.</strong>
+      <p>No marketing subscription or confirmation email was requested.</p>
+    </div>;
   }
 
   if ((status === "sync_error" || status === "submitting") && pendingEmail) {

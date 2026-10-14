@@ -1,5 +1,6 @@
 // Public Klaviyo client endpoint: this is called only from the visitor's browser.
 // Both IDs are public. Never put a private Klaviyo API key in this file.
+import { isTestLead } from "./testLead.ts";
 const SITE_ID = "W6Kr7z";
 const VIP_LIST_ID = "UeJynm";
 const REVISION = "2026-07-15";
@@ -11,6 +12,7 @@ type VipEmail = {
 };
 
 export async function subscribeVipEmail({ email, name, campaign }: VipEmail): Promise<boolean> {
+  if (isTestLead({ email, name })) return false;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
