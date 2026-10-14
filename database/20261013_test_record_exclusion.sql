@@ -41,6 +41,19 @@ BEGIN
  RETURN NEW;
 END $fn$;
 REVOKE ALL ON FUNCTION core.classify_test_signup_v1(),core.classify_test_catering_v1() FROM PUBLIC,anon,authenticated;
+CREATE OR REPLACE FUNCTION core.propagate_test_signup_v1()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+BEGIN
+ IF NEW.is_test THEN
+  UPDATE core.catering_requests SET is_test=true,test_reason=NEW.test_reason
+  WHERE signup_id=NEW.id AND (NOT is_test OR test_reason IS DISTINCT FROM NEW.test_reason);
+ END IF;
+ RETURN NEW;
+END $fn$;
+REVOKE ALL ON FUNCTION core.propagate_test_signup_v1() FROM PUBLIC,anon,authenticated;
+DROP TRIGGER IF EXISTS propagate_test_signup ON core.signups;
+CREATE TRIGGER propagate_test_signup AFTER UPDATE OF is_test,test_reason ON core.signups
+ FOR EACH ROW EXECUTE FUNCTION core.propagate_test_signup_v1();
 DROP TRIGGER IF EXISTS classify_test_signup ON core.signups;
 CREATE TRIGGER classify_test_signup BEFORE INSERT OR UPDATE OF name,email,is_test ON core.signups
  FOR EACH ROW EXECUTE FUNCTION core.classify_test_signup_v1();
@@ -94,7 +107,8 @@ BEGIN
                   WHERE customer_id = c.id ORDER BY created_at DESC LIMIT 10) n) AS notes
     FROM core.customers c
     WHERE c.business_id = 'a358eba4-b197-4309-805b-46f43a718454'::uuid
-      AND EXISTS (SELECT 1 FROM core.signups matching WHERE matching.customer_id = c.id AND matching.is_test = (v_segment = 'test'))
+      AND (EXISTS (SELECT 1 FROM core.signups matching WHERE matching.customer_id = c.id AND matching.is_test = (v_segment = 'test'))
+           OR (v_segment <> 'test' AND NOT EXISTS (SELECT 1 FROM core.signups any_signup WHERE any_signup.customer_id = c.id)))
       AND (v_search = '' OR coalesce(c.name, '') ILIKE '%' || v_search || '%'
            OR coalesce(c.email, '') ILIKE '%' || v_search || '%'
            OR coalesce(c.phone, '') ILIKE '%' || v_search || '%')
