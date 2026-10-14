@@ -12,14 +12,14 @@ test("VIP signup requests email double opt-in on the dedicated list", async () =
     return new Response(null, { status: 202 });
   };
   assert.equal(await subscribeVipEmail({
-    email: "customer@example.invalid",
+    email: "customer@customer-mail.com",
     name: "Test Guest",
     campaign: "onscene_20261013",
   }), true);
   assert.equal(sent.url, "https://a.klaviyo.com/client/subscriptions/?company_id=W6Kr7z");
   assert.equal(sent.options.headers.revision, "2026-07-15");
   const data = JSON.parse(sent.options.body).data;
-  assert.equal(data.attributes.profile.data.attributes.email, "customer@example.invalid");
+  assert.equal(data.attributes.profile.data.attributes.email, "customer@customer-mail.com");
   assert.deepEqual(data.attributes.profile.data.attributes.subscriptions, {
     email: { marketing: { consent: "SUBSCRIBED" } },
   });
@@ -32,6 +32,15 @@ test("VIP signup requests email double opt-in on the dedicated list", async () =
 test("Klaviyo rejection is reported so the visitor can retry", async () => {
   globalThis.fetch = async () => new Response(null, { status: 429 });
   assert.equal(await subscribeVipEmail({
-    email: "customer@example.invalid", name: "", campaign: null,
+    email: "customer@customer-mail.com", name: "", campaign: null,
   }), false);
+});
+
+test("explicit tests never contact Klaviyo, even when consent was checked", async () => {
+ let calls=0; globalThis.fetch=async()=>{calls++;return new Response(null,{status:202})};
+ for(const value of [
+  {email:'a@example.com',name:'Guest'}, {email:'a@sub.invalid',name:'Guest'},
+  {email:'a@customer-mail.com',name:'INTERNAL TEST live check'}
+ ]) assert.equal(await subscribeVipEmail({...value,campaign:null}),false);
+ assert.equal(calls,0);
 });

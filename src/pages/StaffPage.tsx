@@ -16,7 +16,7 @@ type CateringRequest = {
   follow_up_at: string | null; created_at: string;
 };
 type Overview = { customers: Customer[]; requests: CateringRequest[] };
-type Segment = "all" | "vip" | "kevin";
+type Segment = "all" | "vip" | "kevin" | "test";
 type KlaviyoStatus = "confirmed" | "pending" | "unsubscribed" | "suppressed" | "not_on_list" | "unavailable";
 type KlaviyoResult = { email: string; status: KlaviyoStatus; checkedAt: string | null };
 type FollowUpTask = { id: string; title: string; assigned_to: string; due_at: string; completed_at: string | null };
@@ -37,6 +37,7 @@ const segments: { value: Segment; label: string }[] = [
   { value: "all", label: "All customers" },
   { value: "vip", label: "VIP signups" },
   { value: "kevin", label: "Kevin campaign" },
+  { value: "test", label: "Internal tests" },
 ];
 
 function date(value: string | null) {
