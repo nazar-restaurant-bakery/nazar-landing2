@@ -94,6 +94,11 @@ export const translations = {
       en: "Please enter a valid 10-digit phone number.",
       ar: "يرجى إدخال رقم هاتف صالح مكوّن من 10 أرقام.",
     },
+    errorDateGuests: {
+      tr: "Lütfen etkinlik tarihini ve kişi sayısını girin.",
+      en: "Please enter the event date and guest count.",
+      ar: "يرجى إدخال تاريخ المناسبة وعدد الضيوف.",
+    },
     errorConsent: {
       tr: "Devam etmek için e-posta iznini işaretleyin.",
       en: "Please tick the email consent box to continue.",

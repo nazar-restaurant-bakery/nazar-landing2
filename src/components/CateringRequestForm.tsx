@@ -88,6 +88,13 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       return;
     }
 
+    if (!eventDate || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate) ||
+        !/^[1-9]\d{0,4}$/.test(guests) || Number(guests) > 10000) {
+      setStatus("error");
+      setErrorKey("catering.errorDateGuests");
+      return;
+    }
+
     if (menuChoice?.type === "custom" && menuChoice.itemIds.length === 0) {
       setStatus("error");
       setErrorKey("catering.errorCustomItems");
@@ -257,12 +264,13 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="cat-date" className={labelClass}>
-            {t("catering.eventDate", lang)} {optional}
+            {t("catering.eventDate", lang)}
           </label>
           <input
             id="cat-date"
             name="event_date"
             type="date"
+            required
             value={eventDate}
             onChange={(e) => setEventDate(e.target.value)}
             className={cn(fieldClass, "mt-1.5")}
@@ -271,12 +279,13 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
         <div>
           <label htmlFor="cat-guests" className={labelClass}>
-            {t("catering.guests", lang)} {optional}
+            {t("catering.guests", lang)}
           </label>
           <input
             id="cat-guests"
             name="guests"
             type="number"
+            required
             inputMode="numeric"
             min={1}
             step={1}
