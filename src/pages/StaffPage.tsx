@@ -95,6 +95,9 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
         setOverview(null); setTasks(null); setKlaviyo(null); setDecisionQueue(null);
         setNotifications([]); setDecisionEmailDraft(null); setSelectedCustomer(null);
         setSelectedRequest(null); setBusy(false);
+        setNote(""); setTaskTitle(""); setTaskOwner(""); setTaskDue("");
+        setDecisionQuestion(""); setAssignee(""); setFollowUp(""); setStatus("new");
+        setNotificationStatusAvailable(null); setMessage("");
       }
       setSession(next);
     });
