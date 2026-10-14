@@ -27,6 +27,7 @@ type CateringDecision = {
 };
 type DecisionQueue = { items: CateringDecision[] };
 type DecisionEmailDraft = { decisionId: string; to: string; cc: string; subject: string; body: string };
+type CateringNotification = { request_id: string; tracked: boolean; attempted_at: string | null; sent_at: string | null; error: string | null };
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -71,6 +72,8 @@ export default function StaffPage() {
   const [decisionQueue, setDecisionQueue] = useState<DecisionQueue | null>(null);
   const [decisionQuestion, setDecisionQuestion] = useState("");
   const [decisionEmailDraft, setDecisionEmailDraft] = useState<DecisionEmailDraft | null>(null);
+  const [notifications, setNotifications] = useState<CateringNotification[]>([]);
+  const [notificationStatusAvailable, setNotificationStatusAvailable] = useState<boolean | null>(null);
   const refreshSequence = useRef(0);
 
   useEffect(() => {
@@ -92,9 +95,10 @@ export default function StaffPage() {
     if (!client || !session) return;
     const sequence = ++refreshSequence.current;
     setBusy(true); setMessage("");
-    const [overviewResult, decisionsResult] = await Promise.all([
+    const [overviewResult, decisionsResult, notificationsResult] = await Promise.all([
       client.rpc("crm_overview_v2", { p_search: query, p_segment: view }),
       client.rpc("crm_catering_decisions_v1"),
+      client.rpc("crm_catering_notification_status_v1"),
     ]);
     const { data, error } = overviewResult;
     if (sequence !== refreshSequence.current) return;
@@ -106,6 +110,9 @@ export default function StaffPage() {
       setMessage("");
     }
     setDecisionQueue(!decisionsResult.error ? decisionsResult.data as DecisionQueue : null);
+    setNotifications(!notificationsResult.error && Array.isArray(notificationsResult.data?.items)
+      ? notificationsResult.data.items as CateringNotification[] : []);
+    setNotificationStatusAvailable(!notificationsResult.error && Array.isArray(notificationsResult.data?.items));
     setBusy(false);
   }, [session]);
 
@@ -144,6 +151,8 @@ export default function StaffPage() {
   const currentRequest = overview?.requests.find((r) => r.id === selectedRequest);
   const pendingDecision = decisionQueue?.items.find((item) =>
     item.request_id === selectedRequest && !item.recorded_at);
+  const notificationByRequest = new Map(notifications.map((item) => [item.request_id, item]));
+  const unsentNotificationCount = notifications.filter((item) => item.tracked && !item.sent_at).length;
 
   useEffect(() => {
     const emailAddress = currentCustomer?.email;
@@ -315,6 +324,12 @@ export default function StaffPage() {
             <div className="rounded-xl border bg-white p-4"><span className="text-xs text-stone-500">Open catering requests shown</span><strong className="block text-2xl">{overview.requests.filter((r) => activeStatuses.has(r.status)).length}</strong></div>
             <div className="rounded-xl border bg-white p-4"><span className="text-xs text-stone-500">Kevin records shown</span><strong className="block text-2xl">{overview.customers.filter((c) => c.kevin_signup_count > 0).length}</strong></div>
           </div>}
+          {unsentNotificationCount > 0 && <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm" role="status">
+            {unsentNotificationCount} catering staff notification{unsentNotificationCount === 1 ? "" : "s"} not confirmed. Review new catering requests here during the daily check.
+          </div>}
+          {notificationStatusAvailable === false && <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm" role="alert">
+            Staff notification status is unavailable. Review all new catering requests in CRM today.
+          </div>}
           {decisionQueue && <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-label="Price and menu decisions">
             <h2 className="font-semibold">Price and menu decisions awaiting Yücel</h2>
             <p className="mt-1 text-sm text-stone-600">Prepare an email to Yücel at Nazar, with the Nazar website address copied for Talip. Opening a draft does not send it or record a decision in CRM.</p>
@@ -392,6 +407,9 @@ export default function StaffPage() {
               <div className="max-h-96 space-y-2 overflow-auto">
                 {overview.requests.map((r) => <button key={r.id} onClick={() => chooseRequest(r)} className="block w-full rounded-lg border p-3 text-left hover:bg-green-50">
                   <strong>{r.name || "Unnamed customer"}</strong><span className="ml-2 rounded-full bg-stone-100 px-2 py-1 text-xs">{r.status}</span>
+                  {notificationByRequest.get(r.id)?.tracked && <span className={`ml-2 rounded-full px-2 py-1 text-xs ${notificationByRequest.get(r.id)?.sent_at ? "bg-green-50 text-green-800" : "bg-amber-100 text-amber-900"}`}>
+                    {notificationByRequest.get(r.id)?.sent_at ? "Staff notified" : "Notification pending"}
+                  </span>}
                   <span className="block text-sm text-stone-600">Follow up: {date(r.follow_up_at)} · {r.assigned_to}</span>
                 </button>)}
                 {!overview.requests.length && <p className="text-sm text-stone-500">No matching requests.</p>}
@@ -400,6 +418,11 @@ export default function StaffPage() {
                 <h3 className="font-semibold">{currentRequest.name || "Unnamed customer"}</h3>
                 <p className="text-sm">{currentRequest.email || "—"} · {currentRequest.phone || "—"}</p>
                 <p className="mt-1 text-sm">Event: {currentRequest.event_date || "—"} · Guests: {currentRequest.guests || "—"}</p>
+                {notificationByRequest.get(currentRequest.id)?.tracked && <p className="mt-1 text-sm">
+                  Staff notification: {notificationByRequest.get(currentRequest.id)?.sent_at
+                    ? `sent ${date(notificationByRequest.get(currentRequest.id)?.sent_at || null)}`
+                    : notificationByRequest.get(currentRequest.id)?.error ? "not sent — review during daily check" : "pending"}
+                </p>}
                 <p className="mt-3 whitespace-pre-wrap rounded-lg bg-stone-50 p-3 text-sm">{currentRequest.message || "No message"}</p>
                 {decisionQueue && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <h4 className="font-semibold">Yücel's price/menu decision</h4>
