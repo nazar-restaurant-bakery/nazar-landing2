@@ -118,8 +118,8 @@ test("catering menu choices reach the existing request message field", async () 
   const base = { ...vip(), kind: "catering", consentEmail: false, eventDate: "2027-01-20", guests: "25", message: "" };
   assert.equal((await onRequestPost({ request: request({ ...base, menuChoice: { type: "package", id: "doner-gyro" } }), env })).status, 200);
   assert.equal(JSON.parse(sent[1].body).p_meta.message, "Requested catering menu: Doner & Gyro Table (doner-gyro)");
-  assert.equal((await onRequestPost({ request: request({ ...base, message: "No onions", menuChoice: { type: "custom", itemIds: ["falafel-6pcs", "baklava-4pcs"] } }), env })).status, 200);
-  assert.equal(JSON.parse(sent[3].body).p_meta.message, "Create your own: Falafel, Baklava\n\nNo onions");
+  assert.equal((await onRequestPost({ request: request({ ...base, message: "No onions", menuChoice: { type: "custom", itemIds: ["falafel-6pcs", "baklava-4pcs"], quantities: { "falafel-6pcs": 40, "baklava-4pcs": 20 } } }), env })).status, 200);
+  assert.equal(JSON.parse(sent[3].body).p_meta.message, "Create your own: 40 × Falafel, 20 × Baklava\n\nNo onions");
   assert.equal(JSON.parse(sent[3].body).p_consent_email, false);
 });
 
@@ -139,11 +139,11 @@ test("selected catering trays and quantities reach the quote request", async () 
       { id: "jajik", size: 10 },
       { id: "chicken-wings", size: 30 },
       { id: "falafel", size: 10 },
-    ], itemIds: ["baklava-4pcs"] },
+    ], itemIds: ["baklava-4pcs"], quantities: { "baklava-4pcs": 15 } },
   };
   assert.equal((await onRequestPost({ request: request(payload), env })).status, 200);
   assert.equal(JSON.parse(sent[1].body).p_meta.message,
-    "Catering trays: Cold Appetizers Platter (30 servings, 30-guest option) $160.00, Jajik (Cacık) (10 servings, 10-guest option) $50.00, Grilled Chicken Wings (210 wings, 30-guest option) $450.00, Falafel (10 pieces, 10-guest option, with rice pilav) $22.00; shown tray subtotal: $682.00; additional dishes: Baklava\n\nMixed cold appetizers, please");
+    "Catering trays: Cold Appetizers Platter (30 servings, 30-guest option) $160.00, Jajik (Cacık) (10 servings, 10-guest option) $50.00, Grilled Chicken Wings (210 wings, 30-guest option) $450.00, Falafel (10 pieces, 10-guest option, with rice pilav) $22.00; shown tray subtotal: $682.00; additional dishes: 15 × Baklava\n\nMixed cold appetizers, please");
 });
 
 test("unknown or empty catering menu choices are rejected before verification", async () => {
@@ -155,6 +155,10 @@ test("unknown or empty catering menu choices are rejected before verification", 
     { type: "custom", itemIds: [] },
     { type: "custom", itemIds: ["shawarma"] },
     { type: "custom", itemIds: ["rice-pilav", "rice-pilav"] },
+    { type: "custom", itemIds: ["rice-pilav"], quantities: { "rice-pilav": 51 } },
+    { type: "custom", itemIds: ["rice-pilav"], quantities: { "rice-pilav": 0 } },
+    { type: "custom", itemIds: ["rice-pilav"], quantities: { "rice-pilav": 1.5 } },
+    { type: "custom", itemIds: ["rice-pilav"], quantities: { "rice-pilav": 1, "baklava-4pcs": 3 } },
     { type: "trays", selections: [], itemIds: [] },
     { type: "trays", selections: [{ id: "chicken-wings", size: 40 }], itemIds: [] },
     { type: "trays", selections: [{ id: "unknown", size: 10 }], itemIds: [] },

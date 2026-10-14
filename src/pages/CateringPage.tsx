@@ -20,7 +20,15 @@ function restoredMenuChoice(value: unknown): CateringChoice | null {
   if (!Array.isArray(ids) || ids.length > allowedCustomIds.size ||
       new Set(ids).size !== ids.length ||
       !ids.every((id) => typeof id === "string" && allowedCustomIds.has(id))) return null;
-  if (choice.type === "custom") return ids.length ? { type: "custom", itemIds: ids } : null;
+  const rawQuantities = choice.quantities;
+  if (rawQuantities !== undefined && (!rawQuantities || typeof rawQuantities !== "object" || Array.isArray(rawQuantities))) return null;
+  const quantities: Record<string, number> = {};
+  for (const id of ids as string[]) {
+    const quantity = (rawQuantities as Record<string, unknown> | undefined)?.[id] ?? 1;
+    if (!Number.isInteger(quantity) || Number(quantity) < 1 || Number(quantity) > 50) return null;
+    quantities[id] = Number(quantity);
+  }
+  if (choice.type === "custom") return ids.length ? { type: "custom", itemIds: ids, quantities } : null;
   if (choice.type !== "trays" || !Array.isArray(choice.selections) ||
       choice.selections.length < 1 || choice.selections.length > allowedTrayIds.size) return null;
   const seen = new Set<string>();
@@ -33,7 +41,7 @@ function restoredMenuChoice(value: unknown): CateringChoice | null {
     seen.add(tray.id);
     selections.push({ id: tray.id, size: tray.size });
   }
-  return { type: "trays", selections, itemIds: ids };
+  return { type: "trays", selections, itemIds: ids, quantities };
 }
 
 const HIGHLIGHTS = [
@@ -99,21 +107,31 @@ export default function CateringPage() {
     setChoice((current) => {
       const ids = current?.type === "custom" || current?.type === "trays" ? current.itemIds : [];
       const next = ids.includes(id) ? ids.filter((itemId) => itemId !== id) : [...ids, id];
-      if (current?.type === "trays") return { ...current, itemIds: next };
-      return next.length ? { type: "custom", itemIds: next } : null;
+      const quantities = { ...(current?.type === "custom" || current?.type === "trays" ? current.quantities : {}) };
+      if (ids.includes(id)) delete quantities[id];
+      else quantities[id] = 1;
+      if (current?.type === "trays") return { ...current, itemIds: next, quantities };
+      return next.length ? { type: "custom", itemIds: next, quantities } : null;
     });
+  }
+
+  function setCustomQuantity(id: string, value: number) {
+    setChoice((current) => current && (current.type === "custom" || current.type === "trays") && current.itemIds.includes(id)
+      ? { ...current, quantities: { ...current.quantities, [id]: Math.max(1, Math.min(50, value)) } }
+      : current);
   }
 
   function selectTray(id: string, size: 10 | 20 | 30 | 50) {
     setChoice((current) => {
       const selections = current?.type === "trays" ? current.selections : [];
       const itemIds = current?.type === "trays" || current?.type === "custom" ? current.itemIds : [];
+      const quantities = current?.type === "trays" || current?.type === "custom" ? current.quantities : {};
       const selected = selections.some((item) => item.id === id && item.size === size);
       const next = selected ? selections.filter((item) => item.id !== id) : [
         ...selections.filter((item) => item.id !== id), { id, size },
       ];
-      return next.length ? { type: "trays", selections: next, itemIds } :
-        itemIds.length ? { type: "custom", itemIds } : null;
+      return next.length ? { type: "trays", selections: next, itemIds, quantities } :
+        itemIds.length ? { type: "custom", itemIds, quantities } : null;
     });
   }
 
@@ -168,12 +186,25 @@ export default function CateringPage() {
           <h2 className="text-xl font-extrabold text-zinc-900">{t("catering.customTitle", lang)}</h2>
           <p className="mt-2 text-sm text-zinc-600">{t("catering.customIntro", lang)}</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {CATERING_CUSTOM_ITEM_IDS.map((id) => (
-              <label key={id} className="flex cursor-pointer items-start gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm font-semibold text-zinc-800">
-                <input type="checkbox" checked={(choice?.type === "custom" || choice?.type === "trays") && choice.itemIds.includes(id)} onChange={() => toggleCustomItem(id)} className="mt-0.5 accent-[#1E7A3A]" />
-                {cateringItemName(id, lang)}
-              </label>
-            ))}
+            {CATERING_CUSTOM_ITEM_IDS.map((id) => {
+              const selected = (choice?.type === "custom" || choice?.type === "trays") && choice.itemIds.includes(id);
+              return <div key={id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm font-semibold text-zinc-800">
+                <label className="flex cursor-pointer items-start gap-2">
+                  <input type="checkbox" checked={selected} onChange={() => toggleCustomItem(id)} className="mt-0.5 accent-[#1E7A3A]" />
+                  {cateringItemName(id, lang)}
+                </label>
+                {selected && <label className="flex items-center gap-1 text-xs" htmlFor={`custom-qty-${id}`}>
+                  {lang === "tr" ? "Adet" : lang === "ar" ? "الكمية" : "Quantity"}
+                  <input id={`custom-qty-${id}`} type="number" min={1} max={50} step={1} required
+                    value={choice.quantities[id] ?? 1}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      if (Number.isInteger(value) && value >= 1 && value <= 50) setCustomQuantity(id, value);
+                    }}
+                    className="w-14 rounded-md border border-zinc-300 px-1 py-1 text-right text-sm" />
+                </label>}
+              </div>;
+            })}
           </div>
           <p className="mt-4 text-sm text-zinc-600">{t("catering.menuNote", lang)}</p>
           <button type="button" onClick={() => document.getElementById("catering-request")?.scrollIntoView({ behavior: "smooth" })} className="mt-4 rounded-full bg-[#1E7A3A] px-6 py-3 text-sm font-extrabold text-white hover:opacity-95">
