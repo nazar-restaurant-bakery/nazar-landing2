@@ -84,6 +84,13 @@ function phone(value: string): string | null {
   return null;
 }
 
+function validCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+}
+
 export async function onRequestPost({ request, env }: Context): Promise<Response> {
   const url = new URL(request.url);
   if (request.headers.get("Origin") !== url.origin) return response(403, "forbidden");
@@ -129,14 +136,12 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     const date = text(data.eventDate, 10);
     const guests = data.guests;
     const message = text(data.message, 2000);
-    if (date === null || message === null) return response(400, "invalid_input");
-    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return response(400, "invalid_input");
-    if (guests !== "" && guests !== null && guests !== undefined &&
-        (!Number.isInteger(Number(guests)) || Number(guests) < 1 || Number(guests) > 10000)) {
+    if (!date || !validCalendarDate(date) || message === null ||
+        typeof guests !== "string" || !/^[1-9]\d{0,4}$/.test(guests) || Number(guests) > 10000) {
       return response(400, "invalid_input");
     }
-    if (date) meta.event_date = date;
-    if (guests !== "" && guests !== null && guests !== undefined) meta.guests = Number(guests);
+    meta.event_date = date;
+    meta.guests = Number(guests);
     let menuSummary = "";
     if (data.menuChoice !== undefined && data.menuChoice !== null) {
       const choice = data.menuChoice;

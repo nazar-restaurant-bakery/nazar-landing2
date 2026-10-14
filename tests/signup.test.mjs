@@ -93,6 +93,20 @@ test("catering data stays separate from marketing consent", async () => {
   assert.deepEqual(sent.p_meta, { event_date: "2027-01-20", guests: 25, message: "Test order" });
 });
 
+test("catering quote requests need an event date and guest count before verification", async () => {
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; throw new Error("Unexpected network call"); };
+  const base = { ...vip(), kind: "catering", consentEmail: false,
+    eventDate: "2027-01-20", guests: "25", message: "Test order" };
+  for (const fields of [
+    { eventDate: "" }, { eventDate: "2027-02-30" },
+    { guests: "" }, { guests: "0" }, { guests: "1e2" },
+  ]) {
+    assert.equal((await onRequestPost({ request: request({ ...base, ...fields }), env })).status, 400);
+  }
+  assert.equal(calls, 0);
+});
+
 test("catering menu choices reach the existing request message field", async () => {
   const sent = [];
   globalThis.fetch = async (_address, options) => {
@@ -101,7 +115,7 @@ test("catering menu choices reach the existing request message field", async () 
       ? Response.json({ success: true, hostname: "www.nazarrestaurantandbakery.com" })
       : new Response(null, { status: 204 });
   };
-  const base = { ...vip(), kind: "catering", consentEmail: false, eventDate: "", guests: "", message: "" };
+  const base = { ...vip(), kind: "catering", consentEmail: false, eventDate: "2027-01-20", guests: "25", message: "" };
   assert.equal((await onRequestPost({ request: request({ ...base, menuChoice: { type: "package", id: "doner-gyro" } }), env })).status, 200);
   assert.equal(JSON.parse(sent[1].body).p_meta.message, "Requested catering menu: Doner & Gyro Table (doner-gyro)");
   assert.equal((await onRequestPost({ request: request({ ...base, message: "No onions", menuChoice: { type: "custom", itemIds: ["falafel-6pcs", "baklava-4pcs"] } }), env })).status, 200);
@@ -118,7 +132,7 @@ test("selected catering trays and quantities reach the quote request", async () 
       : new Response(null, { status: 204 });
   };
   const payload = {
-    ...vip(), kind: "catering", consentEmail: false, eventDate: "", guests: "30",
+    ...vip(), kind: "catering", consentEmail: false, eventDate: "2027-01-20", guests: "30",
     message: "Mixed cold appetizers, please",
     menuChoice: { type: "trays", selections: [
       { id: "cold-appetizers-platter", size: 30 },
@@ -135,7 +149,7 @@ test("selected catering trays and quantities reach the quote request", async () 
 test("unknown or empty catering menu choices are rejected before verification", async () => {
   let calls = 0;
   globalThis.fetch = async () => { calls++; throw new Error("Unexpected network call"); };
-  const base = { ...vip(), kind: "catering", consentEmail: false, eventDate: "", guests: "", message: "" };
+  const base = { ...vip(), kind: "catering", consentEmail: false, eventDate: "2027-01-20", guests: "25", message: "" };
   for (const menuChoice of [
     { type: "package", id: "unknown" },
     { type: "custom", itemIds: [] },
@@ -174,7 +188,7 @@ test("a transient database failure can be retried with the same request ID", asy
     return new Response(null, { status: databaseAttempts === 1 ? 503 : 204 });
   };
   const payload = { ...vip(), kind: "catering", consentEmail: false,
-    eventDate: "2027-01-20", message: "Synthetic retry check" };
+    eventDate: "2027-01-20", guests: "25", message: "Synthetic retry check" };
   assert.equal((await onRequestPost({ request: request(payload), env })).status, 503);
   assert.equal((await onRequestPost({ request: request(payload), env })).status, 200);
   assert.equal(databaseAttempts, 2);
@@ -192,7 +206,7 @@ test("a lost database response remains uncertain and can be retried", async () =
     return new Response(null, { status: 204 });
   };
   const payload = { ...vip(), kind: "catering", consentEmail: false,
-    eventDate: "2027-01-20", message: "Synthetic lost-response check" };
+    eventDate: "2027-01-20", guests: "25", message: "Synthetic lost-response check" };
   assert.equal((await onRequestPost({ request: request(payload), env })).status, 503);
   assert.equal((await onRequestPost({ request: request(payload), env })).status, 200);
   assert.equal(databaseBodies.length, 2);
