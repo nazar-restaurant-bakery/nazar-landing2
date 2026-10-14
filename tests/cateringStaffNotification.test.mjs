@@ -58,7 +58,7 @@ for (const deliveryOk of [true, false]) {
       ['to', 'from', 'subject', 'text'].sort());
     assert.equal(notification.headers.Authorization, 'Bearer private-test-key');
     assert.equal(notification.body.to, 'ctnazarbakery@gmail.com');
-    assert.equal(notification.body.from, 'notifications@nazarrestaurantandbakery.com');
+    assert.equal(notification.body.from, 'notifications@alerts.nazarrestaurantandbakery.com');
     assert.deepEqual(notification.body.text.split('\n').map((line) => line.split(':')[0]),
       ['Request date', 'Event date', 'Guest count', 'CRM']);
     assert.ok(!notification.body.text.includes('Nazar Notification Test'));
