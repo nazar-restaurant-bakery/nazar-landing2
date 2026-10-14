@@ -16,7 +16,7 @@ type CateringRequest = {
   follow_up_at: string | null; created_at: string;
 };
 type Overview = { customers: Customer[]; requests: CateringRequest[] };
-type Segment = "all" | "vip" | "kevin" | "test";
+type Segment = "all" | "vip" | "catering" | "kevin" | "test";
 type KlaviyoStatus = "confirmed" | "pending" | "unsubscribed" | "suppressed" | "not_on_list" | "unavailable";
 type KlaviyoResult = { email: string; status: KlaviyoStatus; checkedAt: string | null };
 type FollowUpTask = { id: string; title: string; assigned_to: string; due_at: string; completed_at: string | null };
@@ -37,6 +37,7 @@ const activeStatuses = new Set(["new", "contacted", "quoted"]);
 const segments: { value: Segment; label: string }[] = [
   { value: "all", label: "All customers" },
   { value: "vip", label: "VIP signups" },
+  { value: "catering", label: "Catering" },
   { value: "kevin", label: "Kevin campaign" },
   { value: "test", label: "Internal tests" },
 ];
@@ -51,7 +52,7 @@ function localInput(value: string | null) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function StaffPage() {
+export default function StaffPage({ variant = "followup" }: { variant?: "followup" | "crm" }) {
   const [session, setSession] = useState<Session | null>(null);
   const [email, setEmail] = useState("");
   const [search, setSearch] = useState("");
@@ -78,7 +79,7 @@ export default function StaffPage() {
   const refreshSequence = useRef(0);
 
   useEffect(() => {
-    document.title = "Nazar staff | Customer follow-up";
+    document.title = variant === "crm" ? "Nazar staff | CRM" : "Nazar staff | Customer follow-up";
     const robots = document.createElement("meta");
     robots.name = "robots";
     robots.content = "noindex,nofollow";
@@ -90,14 +91,14 @@ export default function StaffPage() {
       setSession(next);
     });
     return () => { listener.subscription.unsubscribe(); robots.remove(); };
-  }, []);
+  }, [variant]);
 
   const refresh = useCallback(async (query = "", view: Segment = "all") => {
     if (!client || !session) return;
     const sequence = ++refreshSequence.current;
     setBusy(true); setMessage("");
     const [overviewResult, decisionsResult, notificationsResult] = await Promise.all([
-      client.rpc("crm_overview_v2", { p_search: query, p_segment: view }),
+      client.rpc("crm_overview_v2", { p_search: query, p_segment: view === "catering" ? "all" : view }),
       client.rpc("crm_catering_decisions_v1"),
       client.rpc("crm_catering_notification_status_v1"),
     ]);
@@ -294,10 +295,76 @@ export default function StaffPage() {
     setBusy(false);
   }
 
+  if (variant === "crm" && session) {
+    const visibleCustomers = segment === "catering"
+      ? (overview?.customers ?? []).filter((customer) => overview?.requests.some((request) => request.customer_id === customer.id))
+      : overview?.customers ?? [];
+    const visibleRequests = segment === "vip" || segment === "kevin" ? [] : overview?.requests ?? [];
+    const openTasks = tasks && currentCustomer && tasks.customerId === currentCustomer.id
+      ? tasks.items.filter((task) => !task.completed_at).length : null;
+
+    return <main className="min-h-screen bg-[#f6f7f4] text-[#17231b]">
+      <header className="border-b border-[#dfe7df] bg-white px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#176b3a] text-xl font-black text-white">N</span><strong>NAZAR STAFF</strong><span className="text-[#64736a]">/ CRM</span></div>
+          <div className="flex items-center gap-3"><a href="/staff" className="text-sm font-medium text-[#176b3a] underline">Customer follow-up</a><button type="button" onClick={() => { void client?.auth.signOut(); setOverview(null); }} className="rounded-lg border border-[#dfe7df] px-3 py-2 text-sm">Sign out</button></div>
+        </div>
+      </header>
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <div className="mb-5"><h1 className="text-2xl font-bold sm:text-3xl">Customer relationships</h1><p className="text-sm text-[#64736a]">VIP, catering and staff follow-up in one private view</p></div>
+        <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            ["Customers shown", overview?.customers.length ?? "—"],
+            ["VIP signups shown", overview?.customers.filter((customer) => customer.vip_signup_count > 0).length ?? "—"],
+            ["Open catering shown", overview?.requests.filter((request) => activeStatuses.has(request.status)).length ?? "—"],
+            ["Kevin records shown", overview?.customers.filter((customer) => customer.kevin_signup_count > 0).length ?? "—"],
+          ].map(([label, value]) => <div key={label} className="rounded-xl border border-[#dfe7df] bg-white p-4"><span className="text-xs text-[#64736a]">{label}</span><strong className="mt-1 block text-2xl">{value}</strong></div>)}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <section className="rounded-xl border border-[#dfe7df] bg-white p-4" aria-label="Customer list">
+            <h2 className="mb-3 text-lg font-semibold">Customers</h2>
+            <form onSubmit={(event) => { event.preventDefault(); void refresh(search, segment); }} className="mb-3 flex gap-2">
+              <input aria-label="Search customers" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, email or phone" className="min-w-0 flex-1 rounded-lg border border-[#dfe7df] bg-[#f6f7f4] p-3 text-sm" />
+              <button disabled={busy} className="rounded-lg bg-[#176b3a] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Search</button>
+            </form>
+            <div className="mb-3 flex flex-wrap gap-1" role="group" aria-label="Customer filters">{segments.map((item) => <button key={item.value} type="button" aria-pressed={segment === item.value} onClick={() => { setSegment(item.value); setSelectedCustomer(null); setSelectedRequest(null); void refresh(search, item.value); }} className={`rounded-lg border px-2.5 py-2 text-sm ${segment === item.value ? "border-[#176b3a] bg-[#176b3a] text-white" : "border-[#dfe7df] bg-white"}`}>{item.value === "all" ? "All" : item.value === "test" ? "Internal tests" : item.label.replace(" signups", "")}</button>)}</div>
+            <button type="button" disabled={busy} onClick={() => void refresh(search, segment)} className="mb-3 text-xs font-medium text-[#176b3a] underline disabled:opacity-50">Refresh records</button>
+            <div className="max-h-[36rem] space-y-2 overflow-auto">{visibleCustomers.map((customer) => <button key={customer.id} type="button" onClick={() => { setSelectedCustomer(customer.id); setSelectedRequest(null); setNote(""); setMessage(""); }} className={`w-full rounded-lg border p-3 text-left ${currentCustomer?.id === customer.id ? "border-[#176b3a] bg-[#eaf6ee]" : "border-[#dfe7df] bg-white hover:bg-[#f6f7f4]"}`}><strong className="block">{customer.name || "Unnamed customer"}</strong><span className="block text-xs text-[#64736a]">{[customer.vip_signup_count > 0 && "VIP", overview?.requests.some((request) => request.customer_id === customer.id) && "Catering", customer.kevin_signup_count > 0 && "Kevin"].filter(Boolean).join(" · ") || "Website contact"}</span><span className="block break-all text-xs text-[#64736a]">{customer.email || customer.phone || "No contact shown"}</span></button>)}{overview && visibleCustomers.length === 0 && <p className="text-sm text-[#64736a]">No matching customers.</p>}{!overview && <p className="text-sm text-[#64736a]">Loading customers…</p>}</div>
+          </section>
+          {currentCustomer ? <section className="rounded-xl border border-[#dfe7df] bg-white p-4 sm:p-5" aria-label="Customer profile">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#dfe7df] pb-4"><div><h2 className="text-xl font-bold">{currentCustomer.name || "Unnamed customer"}</h2><p className="break-all text-sm text-[#64736a]">{currentCustomer.email || "No email"} · {currentCustomer.phone || "No phone"}</p></div><span className="rounded-lg bg-[#eaf6ee] px-3 py-2 text-sm font-semibold text-[#176b3a]">{openTasks === null ? "Loading tasks" : `${openTasks} open follow-up${openTasks === 1 ? "" : "s"}`}</span></div>
+            <div className="my-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Relationship</span><strong className="mt-1 block">{[currentCustomer.vip_signup_count > 0 && "VIP", overview?.requests.some((request) => request.customer_id === currentCustomer.id) && "Catering"].filter(Boolean).join(" · ") || "Website contact"}</strong></div>
+              <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Email consent · Klaviyo</span><strong className="mt-1 block">{!currentCustomer.email ? "No email address" : klaviyo?.email === currentCustomer.email ? klaviyoLabel[klaviyo.status] : "Checking…"}</strong><span className="text-xs text-[#64736a]">{klaviyo?.email === currentCustomer.email && klaviyo.checkedAt ? `Checked ${date(klaviyo.checkedAt)}` : "Do not assume consent without verification."}</span></div>
+              <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Source</span><strong className="mt-1 block">{currentCustomer.last_source || "Not recorded"}</strong>{currentCustomer.kevin_signup_count > 0 && <span className="block text-xs text-[#64736a]">Kevin campaign: {currentCustomer.kevin_signup_count} signup(s)</span>}</div>
+              <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Order history</span><strong className="mt-1 block">Not linked yet</strong><span className="text-xs text-[#64736a]">A form submission is not a paid order.</span></div>
+            </div>
+            <div className="grid gap-5 md:grid-cols-[1.1fr_.9fr]"><div><h3 className="mb-2 font-semibold">Customer history</h3>{currentCustomer.recent_signups.map((signup) => <div key={signup.id} className="border-t border-[#dfe7df] py-2"><strong className="block text-sm">{date(signup.created_at)} · {signup.source === "website_vip_page" ? "VIP form" : signup.source}</strong><span className="text-xs text-[#64736a]">{signup.campaign ? `Campaign: ${signup.campaign}` : "Website signup"}</span></div>)}{overview?.requests.filter((request) => request.customer_id === currentCustomer.id).map((request) => <button key={request.id} type="button" onClick={() => chooseRequest(request)} className="block w-full border-t border-[#dfe7df] py-2 text-left"><strong className="block text-sm">{date(request.created_at)} · Catering request</strong><span className="text-xs text-[#64736a]">{request.status} · Event {request.event_date || "date not set"}</span></button>)}{currentCustomer.recent_signups.length === 0 && !overview?.requests.some((request) => request.customer_id === currentCustomer.id) && <p className="text-sm text-[#64736a]">No history in the current results.</p>}</div>
+              <div><h3 className="mb-2 font-semibold">Staff follow-up</h3>{tasks?.customerId === currentCustomer.id ? <div className="space-y-2">{tasks.items.map((task) => <div key={task.id} className="rounded-lg bg-amber-50 p-3 text-sm"><strong className="block">{task.title}</strong><span className="text-xs text-[#64736a]">{task.assigned_to} · Due {date(task.due_at)} · {task.completed_at ? "Completed" : "Open"}</span>{!task.completed_at && <button type="button" disabled={busy} onClick={() => void completeTask(task.id)} className="ml-2 text-xs text-[#176b3a] underline">Mark done</button>}</div>)}{tasks.items.length === 0 && <p className="text-sm text-[#64736a]">No follow-up task yet.</p>}</div> : <p className="text-sm text-[#64736a]">Loading tasks…</p>}
+                <form onSubmit={createTask} className="mt-3 space-y-2 rounded-lg border border-[#dfe7df] p-3"><input aria-label="Follow-up task" required maxLength={300} value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Follow-up task" className="w-full rounded-lg border p-2 text-sm" /><input aria-label="Assigned to" required maxLength={100} value={taskOwner} onChange={(event) => setTaskOwner(event.target.value)} placeholder="Assigned to" className="w-full rounded-lg border p-2 text-sm" /><input aria-label="Due time" required type="datetime-local" value={taskDue} onChange={(event) => setTaskDue(event.target.value)} className="w-full rounded-lg border p-2 text-sm" /><button disabled={busy} className="rounded-lg bg-[#176b3a] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Add follow-up</button></form>
+                <h3 className="mb-2 mt-5 font-semibold">Internal notes</h3>{currentCustomer.notes.map((item) => <p key={item.id} className="border-t border-[#dfe7df] py-2 text-sm">{item.body}<span className="block text-xs text-[#64736a]">{date(item.created_at)}</span></p>)}<form onSubmit={addNote} className="mt-2 flex gap-2"><input aria-label="New internal note" maxLength={2000} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add a note" className="min-w-0 flex-1 rounded-lg border border-[#dfe7df] p-2 text-sm" /><button disabled={busy || !note.trim()} className="rounded-lg bg-[#176b3a] px-3 py-2 text-sm text-white disabled:opacity-50">Add</button></form>
+              </div></div>
+          </section> : <section className="rounded-xl border border-[#dfe7df] bg-white p-5" aria-label="Customer profile">Select a customer to see their profile, VIP status and follow-up history.</section>}
+        </div>
+        <section className="mt-5 rounded-xl border border-[#dfe7df] bg-white p-4 sm:p-5" aria-label="Catering requests"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-semibold">Catering requests <span className="text-sm font-normal text-[#64736a]">({visibleRequests.length} shown)</span></h2>{notificationStatusAvailable && unsentNotificationCount > 0 && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-950">{unsentNotificationCount} staff alert(s) not sent</span>}</div>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">{visibleRequests.map((request) => <button key={request.id} type="button" onClick={() => chooseRequest(request)} className={`rounded-lg border p-3 text-left text-sm ${currentRequest?.id === request.id ? "border-[#176b3a] bg-[#eaf6ee]" : "border-[#dfe7df]"}`}><strong className="block">{request.name || "Unnamed customer"} <span className="font-normal text-[#64736a]">· {request.status}</span></strong><span className="block text-xs text-[#64736a]">Event {request.event_date || "not set"} · Follow-up {date(request.follow_up_at)}</span><span className="block text-xs text-[#64736a]">Staff alert: {notificationByRequest.get(request.id)?.sent_at ? "sent" : notificationByRequest.get(request.id)?.tracked ? "not sent" : "not tracked"}</span></button>)}{overview && visibleRequests.length === 0 && <p className="text-sm text-[#64736a]">No matching catering requests.</p>}</div>
+          {currentRequest && <div className="mt-4 border-t border-[#dfe7df] pt-4"><h3 className="font-semibold">{currentRequest.name || "Unnamed customer"}</h3><p className="text-sm text-[#64736a]">{currentRequest.email || "No email"} · {currentRequest.phone || "No phone"} · Event {currentRequest.event_date || "—"} · Guests {currentRequest.guests || "—"}</p><p className="mt-3 whitespace-pre-wrap rounded-lg bg-[#f6f7f4] p-3 text-sm">{currentRequest.message || "No message"}</p><p className="mt-2 text-xs text-[#64736a]">Staff notification: {notificationByRequest.get(currentRequest.id)?.sent_at ? `sent ${date(notificationByRequest.get(currentRequest.id)?.sent_at ?? null)}` : notificationByRequest.get(currentRequest.id)?.tracked ? "not sent" : "not tracked"}</p>
+            <form onSubmit={saveRequest} className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-sm">Status<select value={status} onChange={(event) => setStatus(event.target.value)} className="mt-1 w-full rounded-lg border p-2">{statuses.map((value) => <option key={value}>{value}</option>)}</select></label><label className="text-sm">Assigned to<input required maxLength={100} value={assignee} onChange={(event) => setAssignee(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label><label className="text-sm">Next follow-up<input type="datetime-local" value={followUp} onChange={(event) => setFollowUp(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label><div className="flex items-end"><button disabled={busy} className="rounded-lg bg-[#176b3a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Save request</button></div></form>
+            {decisionQueue && <div className="mt-4 rounded-lg bg-amber-50 p-3"><h4 className="font-semibold">Price and menu decision</h4>{pendingDecision ? <p className="mt-1 text-sm">Awaiting Yücel: {pendingDecision.question}</p> : <form onSubmit={requestDecision} className="mt-2 flex flex-wrap gap-2"><input aria-label="Decision needed" required maxLength={1000} value={decisionQuestion} onChange={(event) => setDecisionQuestion(event.target.value)} placeholder="What decision is needed?" className="min-w-48 flex-1 rounded-lg border p-2 text-sm" /><button disabled={busy} className="rounded-lg bg-amber-700 px-3 py-2 text-sm text-white">Mark for Yücel</button></form>}{decisionQueue.items.filter((item) => item.request_id === currentRequest.id && item.recorded_at).slice(0, 3).map((item) => <p key={item.id} className="mt-2 text-sm">Decision recorded {date(item.recorded_at)}: {item.decision}</p>)}</div>}
+          </div>}
+        </section>
+        {decisionQueue && decisionQueue.items.some((item) => !item.recorded_at) && <section className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4" aria-label="Price and menu decisions"><h2 className="font-semibold">Price and menu decisions awaiting Yücel</h2><p className="mt-1 text-xs text-[#64736a]">Preparing an email does not send it or record a decision.</p>{decisionQueue.items.filter((item) => !item.recorded_at).map((item) => <div key={item.id} className="mt-2 rounded-lg border bg-white p-3 text-sm"><strong>{item.customer_name || "Catering customer"}</strong> · {item.question}<button type="button" disabled={busy} onClick={() => void prepareDecisionEmail(item.id)} className="ml-3 text-[#176b3a] underline">Prepare email</button></div>)}{decisionEmailDraft && <div className="mt-3 rounded-lg border bg-white p-3 text-sm"><p><strong>To:</strong> {decisionEmailDraft.to} · <strong>Cc:</strong> {decisionEmailDraft.cc}</p><p><strong>Subject:</strong> {decisionEmailDraft.subject}</p><pre className="mt-2 whitespace-pre-wrap font-sans">{decisionEmailDraft.body}</pre><a href={decisionMailto(decisionEmailDraft)} className="mt-2 inline-block rounded-lg bg-[#176b3a] px-3 py-2 text-white">Open in email app</a></div>}</section>}
+        {message && <p role="status" className="mt-5 rounded-lg bg-amber-50 p-3 text-sm">{message}</p>}
+        <p className="mt-5 text-xs text-[#64736a]">Private staff workspace. Customer information must not be shared outside Nazar. Counts cover records returned by the current search.</p>
+      </div>
+    </main>;
+  }
+
   return <main className="min-h-screen bg-[#f6f7f4] px-4 py-8 text-stone-900">
     <div className="mx-auto max-w-7xl">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div><p className="text-xs font-bold uppercase tracking-widest text-green-800">Nazar staff</p><h1 className="text-3xl font-bold">Customer follow-up</h1></div>
+        <div><p className="text-xs font-bold uppercase tracking-widest text-green-800">Nazar staff</p><h1 className="text-3xl font-bold">{variant === "crm" ? "CRM sign-in" : "Customer follow-up"}</h1></div>
+        {session && <a href="/staff/crm" className="rounded-lg border border-green-800 px-4 py-2 font-semibold text-green-800">Open CRM</a>}
         {session && <button className="rounded-lg border px-4 py-2" onClick={() => { void client?.auth.signOut(); setOverview(null); }}>Sign out</button>}
       </header>
       {!client ? <p>Staff access is not configured.</p> : !session ?
@@ -313,7 +380,7 @@ export default function StaffPage() {
             <button type="button" disabled={busy} onClick={() => void refresh(search, segment)} className="rounded-lg border bg-white px-5 py-3">Refresh</button>
           </form>
           <nav aria-label="Customer groups" className="mb-5 flex flex-wrap gap-2">
-            {segments.map((item) => <button key={item.value} type="button" aria-pressed={segment === item.value}
+            {segments.filter((item) => item.value !== "catering").map((item) => <button key={item.value} type="button" aria-pressed={segment === item.value}
               onClick={() => { setSegment(item.value); setSelectedCustomer(null); setSelectedRequest(null); void refresh(search, item.value); }}
               className={`rounded-full border px-4 py-2 text-sm font-medium ${segment === item.value ? "border-green-800 bg-green-800 text-white" : "bg-white hover:bg-green-50"}`}>
               {item.label}
