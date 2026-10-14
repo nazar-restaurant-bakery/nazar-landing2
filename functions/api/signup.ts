@@ -91,6 +91,20 @@ function validCalendarDate(value: string): boolean {
   return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
 }
 
+function customQuantities(value: unknown, ids: string[]): Record<string, number> | null {
+  if (value === undefined) return Object.fromEntries(ids.map((id) => [id, 1]));
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  if (Object.keys(raw).length !== ids.length || Object.keys(raw).some((id) => !ids.includes(id))) return null;
+  const quantities: Record<string, number> = {};
+  for (const id of ids) {
+    const quantity = raw[id];
+    if (typeof quantity !== "number" || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) return null;
+    quantities[id] = quantity;
+  }
+  return quantities;
+}
+
 export async function onRequestPost({ request, env }: Context): Promise<Response> {
   const url = new URL(request.url);
   if (request.headers.get("Origin") !== url.origin) return response(403, "forbidden");
@@ -159,7 +173,9 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
             !ids.every((id) => typeof id === "string" && Object.hasOwn(CUSTOM_ITEM_LABELS, id))) {
           return response(400, "invalid_input");
         }
-        menuSummary = `Create your own: ${ids.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
+        const quantities = customQuantities(selected.quantities, ids);
+        if (!quantities) return response(400, "invalid_input");
+        menuSummary = `Create your own: ${ids.map((id: string) => `${quantities[id]} × ${CUSTOM_ITEM_LABELS[id]}`).join(", ")}`;
       } else if (selected.type === "trays") {
         const selections = selected.selections;
         const itemIds = selected.itemIds;
@@ -171,6 +187,8 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
             !itemIds.every((id) => typeof id === "string" && Object.hasOwn(CUSTOM_ITEM_LABELS, id))) {
           return response(400, "invalid_input");
         }
+        const quantities = customQuantities(selected.quantities, itemIds);
+        if (!quantities) return response(400, "invalid_input");
         const seen = new Set<string>();
         const labels: string[] = [];
         let subtotal = 0;
@@ -189,7 +207,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
           labels.push(`${TRAY_LABELS[tray.id]} (${quantity} ${TRAY_UNITS[tray.id]}, ${tray.size}-guest option${RICE_TRAY_IDS.has(tray.id) ? ", with rice pilav" : ""}) $${price.toFixed(2)}`);
         }
         menuSummary = `Catering trays: ${labels.join(", ")}; shown tray subtotal: $${subtotal.toFixed(2)}`;
-        if (itemIds.length) menuSummary += `; additional dishes: ${itemIds.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
+        if (itemIds.length) menuSummary += `; additional dishes: ${itemIds.map((id: string) => `${quantities[id]} × ${CUSTOM_ITEM_LABELS[id]}`).join(", ")}`;
       } else {
         return response(400, "invalid_input");
       }
