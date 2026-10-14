@@ -17,6 +17,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/staff" element={<StaffPage />} />
+      <Route path="/staff/crm" element={<StaffPage variant="crm" />} />
       {import.meta.env.DEV && <Route path="/staff-preview" element={<CrmPreviewPage />} />}
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
