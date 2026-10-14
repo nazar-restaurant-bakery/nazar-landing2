@@ -2,14 +2,17 @@
 type Env = {
   SUPABASE_SECRET_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
-  CATERING_NOTIFY_URL?: string;
-  CATERING_NOTIFY_SECRET?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_EMAIL_SEND_TOKEN?: string;
 };
 
 type Context = { request: Request; env: Env; waitUntil(promise: Promise<unknown>): void };
 
 const SUPABASE_URL = "https://khgczybubufouraqyrcj.supabase.co";
 const BUSINESS_ID = "a358eba4-b197-4309-805b-46f43a718454";
+const STAFF_EMAIL = "ctnazarbakery@gmail.com";
+const STAFF_EMAIL_FROM = "notifications@nazarrestaurantandbakery.com";
+const STAFF_CRM_URL = "https://www.nazarrestaurantandbakery.com/staff";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // Keep these server-side allowlists aligned with src/data/cateringMenus.ts.
@@ -115,10 +118,8 @@ type NotificationClaim = {
 };
 
 async function notifyCateringStaff(env: Env, requestId: string): Promise<void> {
-  if (!env.CATERING_NOTIFY_URL || !env.CATERING_NOTIFY_SECRET || !env.SUPABASE_SECRET_KEY) return;
-  const endpoint = new URL(env.CATERING_NOTIFY_URL);
-  if (endpoint.protocol !== "https:" || endpoint.hostname !== "script.google.com" ||
-      !/^\/macros\/s\/[^/]+\/exec$/.test(endpoint.pathname)) return;
+  if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_EMAIL_SEND_TOKEN || !env.SUPABASE_SECRET_KEY) return;
+  if (!/^[a-f0-9]{32}$/i.test(env.CLOUDFLARE_ACCOUNT_ID)) return;
 
   const rpcHeaders = { apikey: env.SUPABASE_SECRET_KEY, "Content-Type": "application/json" };
   const claimResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/claim_catering_staff_notification_v1`, {
@@ -130,20 +131,33 @@ async function notifyCateringStaff(env: Env, requestId: string): Promise<void> {
 
   let sent = false;
   try {
-    const delivery = await fetch(endpoint, {
+    const requestDate = new Date(claim.requestDate).toLocaleString("en-US", { timeZone: "America/New_York" });
+    const delivery = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        key: env.CATERING_NOTIFY_SECRET,
-        requestId: claim.requestId,
-        requestDate: claim.requestDate,
-        eventDate: claim.eventDate,
-        guests: claim.guests,
+        to: STAFF_EMAIL,
+        from: STAFF_EMAIL_FROM,
+        subject: "New Nazar catering request",
+        text: [
+          `Request date: ${requestDate}`,
+          `Event date: ${claim.eventDate}`,
+          `Guest count: ${claim.guests}`,
+          `CRM: ${STAFF_CRM_URL}`,
+        ].join("\n"),
       }),
     });
     if (delivery.ok) {
-      const result = await delivery.json() as { ok?: boolean };
-      sent = result.ok === true;
+      const result = await delivery.json() as {
+        success?: boolean;
+        result?: { delivered?: string[]; queued?: string[] };
+      };
+      sent = result.success === true &&
+        (result.result?.delivered?.includes(STAFF_EMAIL) === true ||
+         result.result?.queued?.includes(STAFF_EMAIL) === true);
     }
   } catch {
     // Delivery failures never change the customer's successful form response.

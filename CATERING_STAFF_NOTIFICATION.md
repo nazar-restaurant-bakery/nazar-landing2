@@ -1,34 +1,34 @@
 # Catering staff notification activation
 
-Cloudflare's verified-destination email pricing is free in principle, but the
-Nazar account's Email Sending screen currently requires Workers Paid and this
-Pages project's binding picker does not offer an email send binding. The fallback
-is the Apps Script project **Nazar Catering Staff Notifications** owned by
+Nazar selected Cloudflare Workers Paid for staff email. The site's Pages
+Function uses Cloudflare Email Sending's REST API, which works without an email
+binding. Cloudflare must first make Email Sending available on the account and
+onboard `nazarrestaurantandbakery.com` as a sender domain. The sender address is
+`notifications@nazarrestaurantandbakery.com`; the only recipient is
 `ctnazarbakery@gmail.com`.
 
-The production sequence matters:
+Production sequence:
 
 1. Apply `database/20261013_catering_staff_notification.sql` to Nazar-production.
    Verify the three RPCs exist and only `service_role` can execute claim/finish.
-2. In Apps Script, add a strong random `WEBHOOK_SECRET` Script Property. Deploy
-   `Code.gs` as a web app executing as `ctnazarbakery@gmail.com`, accessible to
-   anyone. Authorize only the mail and script-properties scopes.
-3. In Cloudflare Pages `nazar-restaurant-website`, set `CATERING_NOTIFY_URL`
-   (the `/exec` deployment URL) and `CATERING_NOTIFY_SECRET` as **Secrets** for
-   Production. The value of `CATERING_NOTIFY_SECRET` must match the Script
-   Property. Do not put it in the repository or a `VITE_` variable.
-4. Publish the matching site code. Submit a clearly named synthetic catering
-   request with a non-deliverable test customer address. Confirm the form reports
-   success, one catering request appears in CRM, a staff-only email reaches
-   `ctnazarbakery@gmail.com`, and the CRM row shows `Staff notified` with time.
-5. Repeat the same form request ID and verify that no second email appears.
-   Test the Script with a wrong key; it must return `{ "ok": false,
-   "error": "forbidden" }` and send nothing. On a simulated delivery failure,
-   the form must still succeed and CRM must show `Notification pending`.
+2. Activate Workers Paid on the Nazar Cloudflare account. Onboard the sending
+   domain in Email Service. Review any DNS records before applying them; email
+   routing and existing mail delivery must keep working.
+3. Create a Cloudflare API token scoped to the Nazar account with only
+   `Email Sending: Edit`. In Pages `nazar-restaurant-website` Production settings,
+   add `CLOUDFLARE_EMAIL_SEND_TOKEN` as a Secret and set `CLOUDFLARE_ACCOUNT_ID`
+   to the account ID. Never put the token in source or a `VITE_` variable.
+4. Publish the site code. Submit a clearly marked synthetic catering request
+   with a non-deliverable test customer address. Confirm form success, one CRM
+   record, one staff email, and `Staff notified` in CRM.
+5. Repeat the same form request ID and check for no second email. Simulate API
+   failure and confirm the form still succeeds and CRM shows the notification
+   pending for the daily staff check.
 
-The email subject is generic. Its body contains only request date, event date,
-guest count and the `/staff` link. Customer name, contact details, requested
-dishes and message stay in the protected CRM. The daily CRM check must review
-the pending notification count; failed or cancelled background tasks may remain
-pending. This is a notification channel, not a delivery guarantee or a customer
-reply channel.
+The email contains only request date, event date, guest count and the `/staff`
+link. The subject is generic. Customer name, contact details, requested dishes
+and message remain in protected CRM. `staff_notification_sent_at` means
+Cloudflare accepted the message for immediate delivery or its queue; it does
+not prove the recipient opened it. Review pending CRM notifications daily.
+
+Cloudflare REST API: https://developers.cloudflare.com/email-service/api/send-emails/rest-api/

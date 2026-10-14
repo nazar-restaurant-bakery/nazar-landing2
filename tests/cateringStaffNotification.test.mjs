@@ -18,13 +18,16 @@ function setup(deliveryOk) {
   const calls = [];
   const background = [];
   globalThis.fetch = async (url, init) => {
-    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    calls.push({ url: String(url), body: JSON.parse(init.body), headers: init.headers });
     if (String(url).includes('turnstile')) return Response.json({ success: true, hostname: 'www.nazarrestaurantandbakery.com' });
     if (String(url).includes('submit_signup_once')) return Response.json(null);
     if (String(url).includes('claim_catering_staff_notification_v1')) return Response.json({
       requestId, requestDate: '2026-10-14T03:00:00Z', eventDate: '2026-10-20', guests: 25,
     });
-    if (String(url).includes('script.google.com')) return Response.json({ ok: deliveryOk });
+    if (String(url).includes('api.cloudflare.com')) return Response.json({
+      success: deliveryOk,
+      result: deliveryOk ? { delivered: ['ctnazarbakery@gmail.com'], queued: [] } : null,
+    });
     if (String(url).includes('finish_catering_staff_notification_v1')) return Response.json(null);
     throw new Error(`Unexpected request: ${url}`);
   };
@@ -35,8 +38,8 @@ function setup(deliveryOk) {
     }),
     env: {
       SUPABASE_SECRET_KEY: 'sb_secret_test', TURNSTILE_SECRET_KEY: 'test',
-      CATERING_NOTIFY_URL: 'https://script.google.com/macros/s/test/exec',
-      CATERING_NOTIFY_SECRET: 'private-test-key',
+      CLOUDFLARE_ACCOUNT_ID: 'a'.repeat(32),
+      CLOUDFLARE_EMAIL_SEND_TOKEN: 'private-test-key',
     },
     waitUntil(promise) { background.push(promise); },
   };
@@ -51,10 +54,16 @@ for (const deliveryOk of [true, false]) {
     assert.deepEqual(await response.json(), { code: 'accepted' });
     assert.equal(background.length, 1);
     await Promise.all(background);
-    const notification = calls.find((call) => call.url.includes('script.google.com'));
+    const notification = calls.find((call) => call.url.includes('api.cloudflare.com'));
     assert.deepEqual(Object.keys(notification.body).sort(),
-      ['eventDate', 'guests', 'key', 'requestDate', 'requestId'].sort());
-    assert.equal(notification.body.key, 'private-test-key');
+      ['to', 'from', 'subject', 'text'].sort());
+    assert.equal(notification.headers.Authorization, 'Bearer private-test-key');
+    assert.equal(notification.body.to, 'ctnazarbakery@gmail.com');
+    assert.equal(notification.body.from, 'notifications@nazarrestaurantandbakery.com');
+    assert.deepEqual(notification.body.text.split('\n').map((line) => line.split(':')[0]),
+      ['Request date', 'Event date', 'Guest count', 'CRM']);
+    assert.ok(!notification.body.text.includes('Nazar Notification Test'));
+    assert.ok(!notification.body.text.includes('test@example.com'));
     const finish = calls.find((call) => call.url.includes('finish_catering_staff_notification_v1'));
     assert.equal(finish.body.p_sent, deliveryOk);
   });
