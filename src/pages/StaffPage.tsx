@@ -54,9 +54,42 @@ function localInput(value: string | null) {
   return crmLocalInput(value);
 }
 
+function StaffPassword() {
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    if (!client || busy) return;
+    if (password.length < 12) { setMessage("Use at least 12 characters."); return; }
+    if (password !== confirmation) { setMessage("The passwords do not match."); return; }
+    setBusy(true); setMessage("");
+    try {
+      const { error } = await client.auth.updateUser({ password });
+      setMessage(error ? "Could not save your password. Sign in again and retry."
+        : "Staff password saved. You can now sign in with your email and this password.");
+    } catch { setMessage("Could not confirm the password change. Try signing in with the new password before retrying."); }
+    finally { setPassword(""); setConfirmation(""); setBusy(false); }
+  }
+  return <details className="mb-5 rounded-lg border border-[#dfe7df] bg-white p-4">
+    <summary className="cursor-pointer font-semibold text-green-800">Set or change your staff password</summary>
+    <form onSubmit={save} className="mt-4 max-w-md space-y-3">
+      <p className="text-sm text-stone-600">Choose a separate password for Nazar staff access. Do not use your email account password.</p>
+      <label className="block text-sm font-medium">New staff password<input type="password" autoComplete="new-password" required minLength={12} value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1 w-full rounded-lg border p-3" /></label>
+      <label className="block text-sm font-medium">Confirm staff password<input type="password" autoComplete="new-password" required minLength={12} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className="mt-1 w-full rounded-lg border p-3" /></label>
+      <button disabled={busy} className="rounded-lg bg-green-800 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? "Saving…" : "Save staff password"}</button>
+      {message && <p role="status" className="text-sm">{message}</p>}
+    </form>
+  </details>;
+}
+
 export default function StaffPage({ variant = "followup" }: { variant?: "followup" | "crm" }) {
   const [session, setSession] = useState<Session | null>(null);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [signInMethod, setSignInMethod] = useState<"password" | "link">("password");
+  const [linkWait, setLinkWait] = useState(0);
   const [search, setSearch] = useState("");
   const [segment, setSegment] = useState<Segment>("all");
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -150,16 +183,37 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
     return () => window.clearInterval(timer);
   }, [session]);
 
-  async function sendLink(event: FormEvent) {
+  useEffect(() => {
+    if (linkWait <= 0) return;
+    const timer = window.setTimeout(() => setLinkWait((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [linkWait]);
+
+  async function signIn(event: FormEvent) {
+    if (signInMethod === "link") { await sendLink(event); return; }
     event.preventDefault();
     if (!client || busy) return;
     setBusy(true); setMessage("");
     try {
+      const { error } = await client.auth.signInWithPassword({ email: email.trim(), password });
+      setMessage(error?.status === 429
+        ? "Too many sign-in attempts. Please try again later."
+        : error ? "Could not sign in. Check your email and password." : "");
+    } catch { setMessage("Could not sign in. Please try again."); }
+    finally { setPassword(""); setBusy(false); }
+  }
+
+  async function sendLink(event: FormEvent) {
+    event.preventDefault();
+    if (!client || busy || linkWait > 0) return;
+    setBusy(true); setMessage("");
+    setLinkWait(60);
+    try {
     const { error } = await client.auth.signInWithOtp({
-      email: email.trim(), options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/staff` },
+      email: email.trim(), options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}${variant === "crm" ? "/staff/crm" : "/staff"}` },
     });
     setMessage(error?.status === 429
-      ? "Sign-in email limit reached. Please try again later."
+      ? "Sign-in email limit reached. Use your password if already set up, or try again later. The email service may require a longer wait."
       : error
         ? "Could not send the sign-in link. Check that this address was invited, then try again."
         : "Check your email for the sign-in link.");
@@ -343,6 +397,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
       </header>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="mb-5"><h1 className="text-2xl font-bold sm:text-3xl">Customer relationships</h1><p className="text-sm text-[#64736a]">VIP, catering and staff follow-up in one private view</p></div>
+        {overview && <StaffPassword />}
         <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
             ["Customers shown", overview?.customers.length ?? "—"],
@@ -399,12 +454,18 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
         {session && <button className="rounded-lg border px-4 py-2" onClick={() => { void client?.auth.signOut(); setOverview(null); }}>Sign out</button>}
       </header>
       {!client ? <p>Staff access is not configured.</p> : !session ?
-        <form onSubmit={sendLink} className="max-w-md space-y-4 rounded-2xl border bg-white p-6 shadow-sm">
+        <form onSubmit={signIn} className="max-w-md space-y-4 rounded-2xl border bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold">Staff sign-in</h2>
           <p className="text-sm text-stone-600">Use the email address invited by Nazar’s owner.</p>
-          <label className="block text-sm font-medium">Email<input className="mt-1 w-full rounded-lg border p-3" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-          <button disabled={busy} className="rounded-lg bg-green-800 px-5 py-3 font-semibold text-white disabled:opacity-50">Send sign-in link</button>
+          <div className="flex gap-4" aria-label="Sign-in method">
+            <button type="button" disabled={busy} aria-pressed={signInMethod === "password"} onClick={() => { setSignInMethod("password"); setMessage(""); }} className="text-sm font-semibold underline">Email and password</button>
+            <button type="button" disabled={busy} aria-pressed={signInMethod === "link"} onClick={() => { setSignInMethod("link"); setPassword(""); setMessage(""); }} className="text-sm font-semibold underline">Email link</button>
+          </div>
+          <label className="block text-sm font-medium">Email<input className="mt-1 w-full rounded-lg border p-3" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+          {signInMethod === "password" && <><label className="block text-sm font-medium">Password<input className="mt-1 w-full rounded-lg border p-3" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label><p className="text-sm text-stone-600">Use your Nazar staff password. Your Google or email account password does not apply. If you have not set a staff password, use an email link.</p></>}
+          <button disabled={busy || (signInMethod === "link" && linkWait > 0)} className="rounded-lg bg-green-800 px-5 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Please wait…" : signInMethod === "password" ? "Sign in" : linkWait > 0 ? `Wait ${linkWait}s before requesting again` : "Send sign-in link"}</button>
         </form> : <>
+          {overview && <StaffPassword />}
           <form onSubmit={(e) => { e.preventDefault(); void refresh(search, segment); }} className="mb-3 flex flex-wrap gap-2">
             <input aria-label="Search customers" placeholder="Search name, email or phone" value={search} onChange={(e) => setSearch(e.target.value)} className="min-w-64 flex-1 rounded-lg border bg-white p-3" />
             <button disabled={busy} className="rounded-lg bg-green-800 px-5 py-3 font-semibold text-white disabled:opacity-50">Search</button>
