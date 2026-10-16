@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 import StaffFormErrors from "../components/StaffFormErrors";
+import StaffFollowUpQueue from "../components/StaffFollowUpQueue";
 import StaffEmailStatus from "../components/StaffEmailStatus";
 import { safeCrmRequest, crmDisplayDate, crmNoteAuthor, crmLocalInput, crmTaskError, crmRequestError, validCrmOverview, validCrmTasks, validCrmDecisions } from "../lib/crmUi";
 
@@ -372,6 +373,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
         <div className="mb-5"><h1 className="text-2xl font-bold sm:text-3xl">Customer relationships</h1><p className="text-sm text-[#64736a]">VIP, catering and staff follow-up in one private view</p></div>
         {overview && <StaffPassword />}
         {overview && client && <StaffFormErrors key={session.user.id} client={client} />}
+        {overview && client && <StaffFollowUpQueue key={session.user.id} client={client} refreshKey={overview} onChanged={() => { void refresh(search, segment); }} />}
         <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
             ["Customers shown", overview?.customers.length ?? "—"],
@@ -415,7 +417,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
         </section>
         {decisionQueue && decisionQueue.items.some((item) => !item.recorded_at) && <section className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4" aria-label="Price and menu decisions"><h2 className="font-semibold">Price and menu decisions awaiting Yücel</h2><p className="mt-1 text-xs text-[#64736a]">Preparing an email does not send it or record a decision.</p>{decisionQueue.items.filter((item) => !item.recorded_at).map((item) => <div key={item.id} className="mt-2 rounded-lg border bg-white p-3 text-sm"><strong>{item.customer_name || "Catering customer"}</strong> · {item.question}<button type="button" disabled={busy} onClick={() => void prepareDecisionEmail(item.id)} className="ml-3 text-[#176b3a] underline">Prepare email</button></div>)}{decisionEmailDraft && <div className="mt-3 rounded-lg border bg-white p-3 text-sm"><p><strong>To:</strong> {decisionEmailDraft.to} · <strong>Cc:</strong> {decisionEmailDraft.cc}</p><p><strong>Subject:</strong> {decisionEmailDraft.subject}</p><pre className="mt-2 whitespace-pre-wrap font-sans">{decisionEmailDraft.body}</pre><a href={decisionMailto(decisionEmailDraft)} className="mt-2 inline-block rounded-lg bg-[#176b3a] px-3 py-2 text-white">Open in email app</a></div>}</section>}
         {message && <p role="status" className="mt-5 rounded-lg bg-amber-50 p-3 text-sm">{message}</p>}
-        <p className="mt-5 text-xs text-[#64736a]">Private staff workspace. Customer information must not be shared outside Nazar. Counts cover records returned by the current search.</p>
+        <p className="mt-5 text-xs text-[#64736a]">Private staff workspace. Customer information must not be shared outside Nazar. Customer lists reflect the current search; the general follow-up queue covers all matching open work.</p>
       </div>
     </main>;
   }
@@ -441,6 +443,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
         </form> : <>
           {overview && <StaffPassword />}
           {overview && client && <StaffFormErrors key={session.user.id} client={client} />}
+          {overview && client && <StaffFollowUpQueue key={session.user.id} client={client} refreshKey={overview} onChanged={() => { void refresh(search, segment); }} />}
           <form onSubmit={(e) => { e.preventDefault(); void refresh(search, segment); }} className="mb-3 flex flex-wrap gap-2">
             <input aria-label="Search customers" placeholder="Search name, email or phone" value={search} onChange={(e) => setSearch(e.target.value)} className="min-w-64 flex-1 rounded-lg border bg-white p-3" />
             <button disabled={busy} className="rounded-lg bg-green-800 px-5 py-3 font-semibold text-white disabled:opacity-50">Search</button>
