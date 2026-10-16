@@ -68,8 +68,6 @@ export async function onRequestGet({ request, env }: Context): Promise<Response>
           createdAt: new Date(order.createdTime).toISOString(),
           orderType: typeof kind.name === "string" ? kind.name : typeof kind.label === "string" ? kind.label : "Online order",
           totalCents: typeof order.total === "number" && Number.isSafeInteger(order.total) ? order.total : null,
-          state: typeof order.state === "string" ? order.state : null,
-          paymentState: typeof order.paymentState === "string" ? order.paymentState : null,
         };
       });
     }));

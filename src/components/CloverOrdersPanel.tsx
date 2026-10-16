@@ -2,7 +2,7 @@ import { useState } from "react";
 
 type Order = {
   id: string; createdAt: string; orderType: string;
-  totalCents: number | null; state: string | null; paymentState: string | null;
+  totalCents: number | null;
 };
 type Result = { code: string; orders?: Order[]; checkedAt?: string; truncated?: boolean };
 
@@ -44,10 +44,10 @@ export default function CloverOrdersPanel({ accessToken }: { accessToken: string
     </div>
     {message && <p role="status" className="mt-3 rounded-lg bg-amber-50 p-3 text-sm">{message}</p>}
     {orders && <div className="mt-4 space-y-2">
-      <p className="text-xs text-[#64736a]">{orders.length} orders shown{checkedAt ? ` · Checked ${new Date(checkedAt).toLocaleString()}` : ""}{truncated ? " · More orders may exist in Clover" : ""}. Payment state is shown as reported by Clover.</p>
+      <p className="text-xs text-[#64736a]">{orders.length} orders shown{checkedAt ? ` · Checked ${new Date(checkedAt).toLocaleString()}` : ""}{truncated ? " · More orders may exist in Clover" : ""}. Confirm payment and fulfillment in Clover.</p>
       {orders.map(order => <div key={order.id} className="flex flex-wrap justify-between gap-2 rounded-lg border border-[#dfe7df] p-3 text-sm">
         <div><strong>{order.orderType}</strong><p className="text-xs text-[#64736a]">Order {order.id} · {new Date(order.createdAt).toLocaleString()}</p></div>
-        <div className="text-right"><strong>{order.totalCents === null ? "Total unavailable" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(order.totalCents / 100)}</strong><p className="text-xs text-[#64736a]">Payment: {order.paymentState || "unavailable"} · Order: {order.state || "unavailable"}</p></div>
+        <div className="text-right"><strong>{order.totalCents === null ? "Total unavailable" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(order.totalCents / 100)}</strong></div>
       </div>)}
       {orders.length === 0 && <p className="text-sm text-[#64736a]">No matching Clover online orders in the last 7 days.</p>}
     </div>}
