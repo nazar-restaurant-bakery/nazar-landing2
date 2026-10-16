@@ -3,6 +3,7 @@ type Env = {
   SUPABASE_SECRET_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
   CLOUDFLARE_EMAIL_SEND_TOKEN?: string;
+  FORM_ERROR_ALERTS_ENABLED?: string;
 };
 
 type Context = { request: Request; env: Env; waitUntil(promise: Promise<unknown>): void };
@@ -73,6 +74,79 @@ function response(status: number, code: string): Response {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });
+}
+
+type FormFailure = {
+  id: string; occurred_at: string; request_id: string | null;
+  form_kind: "vip" | "catering" | "unknown";
+  stage: "configuration" | "challenge" | "database";
+  error_code: string; http_status: number;
+};
+
+async function errorRpc(env: Env, name: string, body: Record<string, unknown>): Promise<Response> {
+  return fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    method: "POST", signal: AbortSignal.timeout(4000),
+    headers: { apikey: env.SUPABASE_SECRET_KEY!, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+async function recordFormFailure(env: Env, failure: FormFailure): Promise<void> {
+  if (!env.SUPABASE_SECRET_KEY?.startsWith("sb_secret_")) return;
+  try {
+    const saved = await errorRpc(env, "record_form_error_v1", {
+      p_id: failure.id, p_request_id: failure.request_id, p_kind: failure.form_kind,
+      p_stage: failure.stage, p_code: failure.error_code, p_status: failure.http_status,
+      p_claim_alert: env.FORM_ERROR_ALERTS_ENABLED === "true" && !!env.CLOUDFLARE_EMAIL_SEND_TOKEN,
+    });
+    if (!saved.ok) throw new Error("form error log unavailable");
+    const claimed = await saved.json();
+    if (claimed !== true && claimed !== false) throw new Error("invalid form error log result");
+    if (!claimed) return;
+    let accepted = false;
+    try {
+      const delivery = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
+        method: "POST", signal: AbortSignal.timeout(5000),
+        headers: { Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ to: STAFF_EMAIL, from: STAFF_EMAIL_FROM,
+          subject: "Nazar form needs attention",
+          text: [`Time (UTC): ${failure.occurred_at}`, `Reference: ${failure.id}`,
+            `Form: ${failure.form_kind}`, `Stage: ${failure.stage}`, `Code: ${failure.error_code}`,
+            "Check Form errors in the staff CRM. This is not a new customer request.",
+            "Alerts are limited to one attempt per 15 minutes; check the CRM for other errors.",
+            "https://www.nazarrestaurantandbakery.com/staff/crm"].join("\n"),
+        }),
+      });
+      if (delivery.ok) {
+        const result = await delivery.json() as { success?: boolean; result?: { delivered?: string[]; queued?: string[] } };
+        accepted = result.success === true && (result.result?.delivered?.includes(STAFF_EMAIL) === true || result.result?.queued?.includes(STAFF_EMAIL) === true);
+      }
+    } catch { /* Alert delivery must never change the form response. */ }
+    const finished = await errorRpc(env, "finish_form_error_alert_v1", { p_id: failure.id, p_accepted: accepted });
+    if (!finished.ok) throw new Error("form error alert result unavailable");
+  } catch {
+    console.error(JSON.stringify({ event: "nazar_form_error_log_unavailable", id: failure.id }));
+  }
+}
+
+function unavailable(context: Context, stage: FormFailure["stage"], code: string,
+  requestId: string | null = null, kind: FormFailure["form_kind"] = "unknown"): Response {
+  const failure: FormFailure = { id: crypto.randomUUID(), occurred_at: new Date().toISOString(),
+    request_id: requestId, form_kind: kind, stage, error_code: code, http_status: 503 };
+  // Only allowlisted metadata: never log the request, exception text, headers or form body.
+  console.error(JSON.stringify({ event: "nazar_form_error", ...failure }));
+  context.waitUntil?.(recordFormFailure(context.env, failure));
+  return new Response(JSON.stringify({ code: "unavailable", error_id: failure.id, occurred_at: failure.occurred_at }), {
+    status: 503, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Nazar-Error-ID": failure.id },
+  });
+}
+
+async function resolveFormFailures(env: Env, requestId: string): Promise<void> {
+  try {
+    const resolved = await errorRpc(env, "resolve_form_errors_v1", { p_request_id: requestId });
+    if (!resolved.ok) throw new Error("form error resolution unavailable");
+  }
+  catch { console.error(JSON.stringify({ event: "nazar_form_error_resolution_unavailable", request_id: requestId })); }
 }
 
 function text(value: unknown, max: number): string | null {
@@ -176,7 +250,7 @@ export async function onRequestPost(context: Context): Promise<Response> {
   }
   if (Number(request.headers.get("Content-Length") || 0) > 8192) return response(413, "too_large");
   if (!env.TURNSTILE_SECRET_KEY || !env.SUPABASE_SECRET_KEY?.startsWith("sb_secret_")) {
-    return response(503, "unavailable");
+    return unavailable(context, "configuration", "missing_server_configuration");
   }
 
   let data: Record<string, unknown>;
@@ -298,9 +372,11 @@ export async function onRequestPost(context: Context): Promise<Response> {
     if (!Object.keys(utm).length) utm = null;
   }
 
+  let stage: FormFailure["stage"] = "challenge";
   try {
     const challenge = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
+      signal: AbortSignal.timeout(5000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         secret: env.TURNSTILE_SECRET_KEY,
@@ -308,14 +384,16 @@ export async function onRequestPost(context: Context): Promise<Response> {
         remoteip: request.headers.get("CF-Connecting-IP") || undefined,
       }),
     });
-    if (!challenge.ok) return response(503, "unavailable");
+    if (!challenge.ok) return unavailable(context, stage, "challenge_unavailable", requestId, kind);
     const verification = await challenge.json() as { success?: boolean; hostname?: string };
     if (!verification.success || verification.hostname !== url.hostname) {
       return response(403, "verification_failed");
     }
 
+    stage = "database";
     const db = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_signup_once`, {
       method: "POST",
+      signal: AbortSignal.timeout(7000),
       headers: {
         apikey: env.SUPABASE_SECRET_KEY,
         "Content-Type": "application/json",
@@ -333,13 +411,15 @@ export async function onRequestPost(context: Context): Promise<Response> {
         p_meta: kind === "catering" && Object.keys(meta).length ? meta : null,
       }),
     });
-    if (!db.ok) return response(503, "unavailable");
-    if (kind === "catering") {
-      context.waitUntil(notifyCateringStaff(env, requestId).catch(() => undefined));
-    }
+    if (!db.ok) return unavailable(context, stage, "database_unavailable", requestId, kind);
+    context.waitUntil?.(Promise.allSettled([
+      resolveFormFailures(env, requestId),
+      ...(kind === "catering" ? [notifyCateringStaff(env, requestId)] : []),
+    ]));
     return response(200, "accepted");
-  } catch {
-    return response(503, "unavailable");
+  } catch (error) {
+    const timeout = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    return unavailable(context, stage, timeout ? "upstream_timeout" : "upstream_network_error", requestId, kind);
   }
 }
 

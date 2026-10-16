@@ -42,6 +42,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
   const [status, setStatus] = React.useState<Status>("idle");
   const [errorKey, setErrorKey] = React.useState<string | null>(null);
+  const [errorReference, setErrorReference] = React.useState("");
 
   // Bots fill every field they can see; humans never touch a hidden one.
   const [honeypot, setHoneypot] = React.useState("");
@@ -117,6 +118,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
     setStatus("submitting");
     setErrorKey(null);
+    setErrorReference("");
 
     const utm = getUtmOrNull();
     saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, eventDate, guests, message });
@@ -138,7 +140,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       guests,
       message: trimmedMessage,
       menuChoice,
-    });
+    }, setErrorReference);
     setTurnstileToken("");
     setResetSignal((value) => value + 1);
     if (!ok) {
@@ -345,6 +347,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       {errorKey && (
         <p role="alert" className="text-sm font-bold text-red-700">
           {t(errorKey, lang)}
+          {errorReference && <span className="block break-all" dir="ltr">Ref: {errorReference}</span>}
           {errorKey === "catering.errorOffline" || errorKey === "catering.errorGeneric" ? (
             <>
               {" "}

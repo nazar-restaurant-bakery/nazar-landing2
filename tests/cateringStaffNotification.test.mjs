@@ -21,6 +21,7 @@ function setup(deliveryOk) {
     calls.push({ url: String(url), body: JSON.parse(init.body), headers: init.headers });
     if (String(url).includes('turnstile')) return Response.json({ success: true, hostname: 'www.nazarrestaurantandbakery.com' });
     if (String(url).includes('submit_signup_once')) return Response.json(null);
+    if (String(url).includes('resolve_form_errors_v1')) return Response.json(null);
     if (String(url).includes('claim_catering_staff_notification_v1')) return Response.json({
       requestId, requestDate: '2026-10-14T03:00:00Z', eventDate: '2026-10-20', guests: 25,
     });
