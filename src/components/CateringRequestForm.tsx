@@ -18,16 +18,22 @@ import { CATERING_PACKAGES, CATERING_TRAYS, cateringItemName } from "../data/cat
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
 import type { CateringChoice } from "../lib/signup";
 import { clearSignupDraft, currentSignupStorage, readSignupDraft, requestIdForSignup, saveSignupDraft } from "../lib/signupRecovery";
+import { clearSignupAttempts, signupAttemptsExhausted, takeSignupAttempt, type AttemptMemory } from "../lib/signupAttempts";
 
 type Status = "idle" | "submitting" | "success" | "error";
 type CateringDraft = { name: string; email: string; phone: string; eventDate: string; guests: string; message: string };
 const DRAFT_KEY = "nazar-catering-request-draft-v1";
+const ATTEMPT_KEY = "nazar-catering-attempts-v1";
 
 export default function CateringRequestForm({ className, menuChoice, onSuccess }: { className?: string; menuChoice?: CateringChoice | null; onSuccess?: () => void }) {
   const { lang } = useLang();
   const storage = React.useMemo(() => currentSignupStorage(), []);
-  const restored = React.useMemo(() => readSignupDraft<CateringDraft>(storage, DRAFT_KEY)?.fields, [storage]);
+  const restoredDraft = React.useMemo(() => readSignupDraft<CateringDraft>(storage, DRAFT_KEY), [storage]);
+  const restored = restoredDraft?.fields;
   const requestMemory = React.useRef<{ signature?: string; requestId?: string }>({});
+  const attemptMemory = React.useRef<AttemptMemory>({});
+  const inFlight = React.useRef(false);
+  const [retryExhausted, setRetryExhausted] = React.useState(() => signupAttemptsExhausted(storage, ATTEMPT_KEY, restoredDraft?.requestId));
 
   React.useEffect(() => {
     captureUtm();
@@ -58,7 +64,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || inFlight.current || retryExhausted) return;
 
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
@@ -118,7 +124,6 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
     setStatus("submitting");
     setErrorKey(null);
-    setErrorReference("");
 
     const utm = getUtmOrNull();
     saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, eventDate, guests, message });
@@ -126,6 +131,10 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       kind: "catering", name: trimmedName, email: trimmedEmail.toLowerCase(),
       phone: normalizedPhone || "", eventDate, guests, message: trimmedMessage, menuChoice, utm,
     }, requestMemory.current);
+    if (!takeSignupAttempt(storage, ATTEMPT_KEY, requestId, attemptMemory.current)) {
+      setStatus("error"); setErrorKey(null); setRetryExhausted(true); return;
+    }
+    setErrorReference(""); inFlight.current = true;
     const ok = await submitSignup({
       kind: "catering",
       requestId,
@@ -141,11 +150,14 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       message: trimmedMessage,
       menuChoice,
     }, setErrorReference);
+    inFlight.current = false;
     setTurnstileToken("");
     setResetSignal((value) => value + 1);
     if (!ok) {
       setStatus("error");
-      setErrorKey("catering.errorGeneric");
+      const exhausted = signupAttemptsExhausted(storage, ATTEMPT_KEY, requestId, attemptMemory.current);
+      setRetryExhausted(exhausted);
+      setErrorKey(exhausted ? null : "catering.errorGeneric");
       return;
     }
 
@@ -158,6 +170,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
     setGuests("");
     setMessage("");
     clearSignupDraft(storage, DRAFT_KEY);
+    clearSignupAttempts(storage, ATTEMPT_KEY, attemptMemory.current);
     requestMemory.current = {};
     onSuccess?.();
   }
@@ -197,7 +210,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
   );
 
   return (
-    <form onSubmit={handleSubmit} noValidate className={cn("space-y-4", className)}>
+    <form onSubmit={handleSubmit} onChange={() => setRetryExhausted(false)} noValidate className={cn("space-y-4", className)}>
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950" aria-live="polite">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="font-extrabold">{t("catering.selectedMenu", lang)}</p>
@@ -344,6 +357,11 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
       <TurnstileWidget onToken={setTurnstileToken} resetSignal={resetSignal} />
 
+      {retryExhausted && <p role="alert" className="text-sm font-bold text-red-700">
+        {t("vip.retryLimit", lang)} <a href={`tel:${PHONE_NUMBER_TEL}`} className="underline">{PHONE_NUMBER_DISPLAY}</a>
+        {errorReference && <span className="block break-all" dir="ltr">Ref: {errorReference}</span>}
+      </p>}
+
       {errorKey && (
         <p role="alert" className="text-sm font-bold text-red-700">
           {t(errorKey, lang)}
@@ -361,7 +379,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || retryExhausted}
         className={cn(
           "inline-flex h-12 w-full items-center justify-center rounded-full px-8",
           "bg-[#1E7A3A] text-base font-extrabold text-white shadow-sm",
