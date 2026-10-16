@@ -74,8 +74,9 @@ export async function onRequestGet({ request, env }: Context): Promise<Response>
       });
     }));
     const unique = new Map(results.flat().map(order => [order.id, order]));
-    const orders = [...unique.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 50);
-    return reply(200, "ok", { orders, periodDays: 7, truncated: results.some(group => group.length === 100), checkedAt: new Date().toISOString() });
+    const allOrders = [...unique.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const orders = allOrders.slice(0, 50);
+    return reply(200, "ok", { orders, periodDays: 7, truncated: allOrders.length > 50 || results.some(group => group.length === 100), checkedAt: new Date().toISOString() });
   } catch { return reply(503, "provider_unavailable"); }
 }
 

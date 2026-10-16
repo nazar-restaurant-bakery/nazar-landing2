@@ -72,3 +72,24 @@ test('unexpected order type fails closed rather than showing POS orders as onlin
   assert.equal(response.status, 503);
   assert.equal((await response.json()).code, 'provider_unavailable');
 });
+
+test('marks the list partial when more than 50 orders match across online types', async () => {
+  const types = ['DELIVERY12345', 'PICKUP1234567'];
+  globalThis.fetch = async (url) => {
+    if (String(url).includes('supabase.co')) return Response.json(true);
+    const typeId = types.find(type => String(url).includes(`orderType%3D${type}`));
+    assert.ok(typeId);
+    return Response.json({ elements: Array.from({ length: 30 }, (_, index) => ({
+      id: `${typeId}${String(index).padStart(2, '0')}`,
+      createdTime: Date.now() - index * 1000,
+      orderType: { id: typeId, name: typeId },
+      total: 1000,
+      paymentState: 'PAID',
+    })) });
+  };
+  const response = await onRequestGet({ request: request(), env: { ...env, CLOVER_ONLINE_ORDER_TYPE_IDS: types.join(',') } });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.orders.length, 50);
+  assert.equal(body.truncated, true);
+});
