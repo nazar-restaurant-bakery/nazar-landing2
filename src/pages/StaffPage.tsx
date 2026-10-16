@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 import StaffFormErrors from "../components/StaffFormErrors";
+import StaffEmailStatus from "../components/StaffEmailStatus";
 import { safeCrmRequest, crmDisplayDate, crmLocalInput, crmTaskError, crmRequestError, validCrmOverview, validCrmTasks, validCrmDecisions } from "../lib/crmUi";
 
 type Customer = {
@@ -19,8 +20,6 @@ type CateringRequest = {
 };
 type Overview = { customers: Customer[]; requests: CateringRequest[] };
 type Segment = "all" | "vip" | "catering" | "kevin" | "test";
-type KlaviyoStatus = "confirmed" | "pending" | "unsubscribed" | "suppressed" | "not_on_list" | "unavailable";
-type KlaviyoResult = { email: string; status: KlaviyoStatus; checkedAt: string | null };
 type FollowUpTask = { id: string; title: string; assigned_to: string; due_at: string; completed_at: string | null };
 type CateringDecision = {
   id: string; request_id: string; question: string; requested_at: string;
@@ -102,7 +101,6 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
   const [followUp, setFollowUp] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [klaviyo, setKlaviyo] = useState<KlaviyoResult | null>(null);
   const [tasks, setTasks] = useState<{ customerId: string; items: FollowUpTask[]; unavailable?: boolean } | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskOwner, setTaskOwner] = useState("");
@@ -126,7 +124,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
     const { data: listener } = client.auth.onAuthStateChange((_event, next) => {
       if (!next) {
         refreshSequence.current += 1;
-        setOverview(null); setTasks(null); setKlaviyo(null); setDecisionQueue(null);
+        setOverview(null); setTasks(null); setDecisionQueue(null);
         setNotifications([]); setDecisionEmailDraft(null); setSelectedCustomer(null);
         setSelectedRequest(null); setBusy(false);
         setNote(""); setTaskTitle(""); setTaskOwner(""); setTaskDue("");
@@ -152,7 +150,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
     if (error || !validCrmOverview(data)) {
       setOverview(null);
       setMessage(error?.code === "42501" ? "This account does not have Nazar staff access." : "Could not load records. Try again.");
-      setDecisionQueue(null); setNotifications([]); setTasks(null); setKlaviyo(null);
+      setDecisionQueue(null); setNotifications([]); setTasks(null);
       setDecisionEmailDraft(null); setBusy(false);
       return;
     } else {
@@ -230,26 +228,6 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
   const unsentNotificationCount = notifications.filter((item) => item.tracked && !item.sent_at).length;
 
   useEffect(() => {
-    const emailAddress = currentCustomer?.email;
-    if (!emailAddress || !session?.access_token) return;
-    const controller = new AbortController();
-    queueMicrotask(() => setKlaviyo(null));
-    void fetch("/api/staff/klaviyo-status", {
-      method: "POST", signal: controller.signal,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ email: emailAddress }),
-    }).then(async (response) => {
-      if (!response.ok) throw new Error("Klaviyo lookup failed");
-      const data = await response.json();
-      if (!data || !["confirmed", "pending", "unsubscribed", "suppressed", "not_on_list", "unavailable"].includes(data.status)
-          || typeof data.checkedAt !== "string") throw new Error("Invalid Klaviyo result");
-      return data as { status: KlaviyoStatus; checkedAt: string };
-    }).then((data) => { if (!controller.signal.aborted) setKlaviyo({ email: emailAddress, status: data.status, checkedAt: data.checkedAt }); })
-      .catch(() => { if (!controller.signal.aborted) setKlaviyo({ email: emailAddress, status: "unavailable", checkedAt: null }); });
-    return () => controller.abort();
-  }, [currentCustomer?.email, session?.access_token]);
-
-  useEffect(() => {
     const customerId = currentCustomer?.id;
     if (!client || !session || !customerId) return;
     let active = true;
@@ -297,12 +275,6 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
     }
     setBusy(false);
   }
-
-  const klaviyoLabel: Record<KlaviyoStatus, string> = {
-    confirmed: "Confirmed in Klaviyo", pending: "Confirmation not completed",
-    unsubscribed: "Unsubscribed", suppressed: "Suppressed — do not email",
-    not_on_list: "Not on the Nazar VIP list", unavailable: "Could not verify now",
-  };
 
   function chooseRequest(request: CateringRequest) {
     setSelectedRequest(request.id);
@@ -423,7 +395,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#dfe7df] pb-4"><div><h2 className="text-xl font-bold">{currentCustomer.name || "Unnamed customer"}</h2><p className="break-all text-sm text-[#64736a]">{currentCustomer.email || "No email"} · {currentCustomer.phone || "No phone"}</p></div><span className="rounded-lg bg-[#eaf6ee] px-3 py-2 text-sm font-semibold text-[#176b3a]">{tasks?.customerId === currentCustomer.id && tasks.unavailable ? "Tasks unavailable" : openTasks === null ? "Loading tasks" : `${openTasks} open follow-up${openTasks === 1 ? "" : "s"}`}</span></div>
             <div className="my-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Relationship</span><strong className="mt-1 block">{[currentCustomer.vip_signup_count > 0 && "VIP", overview?.requests.some((request) => request.customer_id === currentCustomer.id) && "Catering"].filter(Boolean).join(" · ") || "Website contact"}</strong></div>
-              <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Email consent · Klaviyo</span><strong className="mt-1 block">{!currentCustomer.email ? "No email address" : klaviyo?.email === currentCustomer.email ? klaviyoLabel[klaviyo.status] : "Checking…"}</strong><span className="text-xs text-[#64736a]">{klaviyo?.email === currentCustomer.email && klaviyo.checkedAt ? `Checked ${date(klaviyo.checkedAt)}` : "Do not assume consent without verification."}</span></div>
+              <StaffEmailStatus key={`${currentCustomer.id}:${currentCustomer.email}`} customerId={currentCustomer.id} email={currentCustomer.email} accessToken={session.access_token} localStatus={currentCustomer.email_status} />
               <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Source</span><strong className="mt-1 block">{currentCustomer.last_source || "Not recorded"}</strong>{currentCustomer.kevin_signup_count > 0 && <span className="block text-xs text-[#64736a]">Kevin campaign: {currentCustomer.kevin_signup_count} signup(s)</span>}</div>
               <div className="rounded-lg bg-[#f6f7f4] p-3"><span className="text-xs text-[#64736a]">Order history</span><strong className="mt-1 block">Not linked yet</strong><span className="text-xs text-[#64736a]">A form submission is not a paid order.</span></div>
             </div>
@@ -538,7 +510,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
                 <p className="mt-1 text-xs text-stone-500">Last signup: {date(currentCustomer.last_signup_at)} · Signups: {currentCustomer.signup_count}</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <div className="rounded-lg bg-stone-50 p-3 text-sm"><span className="block text-xs text-stone-500">Local form status</span><strong>{currentCustomer.email_status}</strong><span className="block text-xs text-stone-500">This is not marketing consent.</span></div>
-                  <div className="rounded-lg bg-stone-50 p-3 text-sm"><span className="block text-xs text-stone-500">Klaviyo VIP email status</span><strong>{!currentCustomer.email ? "No email address" : klaviyo?.email === currentCustomer.email ? klaviyoLabel[klaviyo.status] : "Checking…"}</strong><span className="block text-xs text-stone-500">{klaviyo?.email === currentCustomer.email && klaviyo.checkedAt ? `Checked ${date(klaviyo.checkedAt)}` : "Do not assume consent without verification."}</span></div>
+                  <StaffEmailStatus key={`${currentCustomer.id}:${currentCustomer.email}`} customerId={currentCustomer.id} email={currentCustomer.email} accessToken={session.access_token} localStatus={currentCustomer.email_status} />
                 </div>
                 <div className="mt-3 rounded-lg bg-stone-50 p-3 text-sm"><span className="block text-xs text-stone-500">Order history</span><strong>Not linked yet</strong><span className="block text-xs text-stone-500">The Nazar-owned checkout is still in testing. No payment or order is inferred from a form signup.</span></div>
                 <h4 className="mt-4 font-semibold">Signup history</h4>
