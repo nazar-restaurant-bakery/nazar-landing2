@@ -79,6 +79,16 @@ export const translations = {
       en: "Retry confirmation email",
       ar: "أعد محاولة إرسال رسالة التأكيد",
     },
+    retryLimit: {
+      tr: "Sonucu doğrulayamadık. Tekrar göndermek yerine lütfen bizi arayın; başvurunuzun ulaşıp ulaşmadığını kontrol edelim. Bilgileriniz bu ekranda duruyor.",
+      en: "We couldn't confirm the result. Please call us instead of sending again so we can check whether your request arrived. Your details remain on this screen.",
+      ar: "تعذّر تأكيد النتيجة. يرجى الاتصال بنا بدلاً من الإرسال مجدداً لنتحقق من وصول طلبك. بياناتك باقية في هذه الشاشة.",
+    },
+    confirmationLimit: {
+      tr: "Kaydınız Nazar'a ulaştı, ancak e-posta onayının başladığını doğrulayamadık. Kaydınızı yeniden göndermeyin. Yardım için bizi arayın.",
+      en: "Nazar received your signup, but we couldn't confirm that email confirmation started. Please don't submit your signup again. Call us for help.",
+      ar: "وصل تسجيلك إلى نازار، لكن تعذّر تأكيد بدء رسالة التأكيد. لا ترسل التسجيل مجدداً. اتصل بنا للمساعدة.",
+    },
     errorContact: {
       tr: "Lütfen e-posta veya telefon numarası girin.",
       en: "Please enter an email address or a phone number.",
@@ -146,6 +156,11 @@ export const translations = {
     },
   },
   catering: {
+    errorDateGuests: {
+      tr: "Lütfen etkinlik tarihini ve kişi sayısını girin.",
+      en: "Please enter the event date and guest count.",
+      ar: "يرجى إدخال تاريخ المناسبة وعدد الضيوف.",
+    },
     eyebrow: { tr: "Nazar catering", en: "Nazar catering", ar: "نازار للتموين" },
     title: { tr: "Catering ve Kutlamalar", en: "Catering & Parties", ar: "التموين والاحتفالات" },
     eventTypesLabel: { tr: "Hizmet verdiğimiz etkinlikler", en: "Events we cater", ar: "المناسبات التي نخدمها" },
