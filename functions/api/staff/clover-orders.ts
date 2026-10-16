@@ -65,6 +65,7 @@ export async function onRequestGet({ request, env }: Context): Promise<Response>
           || typeof order.createdTime !== "number" || !Number.isFinite(order.createdTime)) throw new Error("Unexpected order type");
         return {
           id: order.id,
+          cloverUrl: `https://www.clover.com/orders/m/${merchant}/orders/${order.id}`,
           createdAt: new Date(order.createdTime).toISOString(),
           orderType: typeof kind.name === "string" ? kind.name : typeof kind.label === "string" ? kind.label : "Online order",
           totalCents: typeof order.total === "number" && Number.isSafeInteger(order.total) ? order.total : null,

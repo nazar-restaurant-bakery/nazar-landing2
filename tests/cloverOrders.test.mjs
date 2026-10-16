@@ -60,6 +60,7 @@ test('returns only the configured online type and minimal order fields', async (
   const body = await response.json();
   assert.equal(body.orders.length, 1);
   assert.equal(body.orders[0].id, 'ORDER1234567');
+  assert.equal(body.orders[0].cloverUrl, 'https://www.clover.com/orders/m/F8Q154GMDKFD1/orders/ORDER1234567');
   assert.equal(body.orders[0].totalCents, 1610);
   assert.ok(!JSON.stringify(body).includes('private@example.invalid'));
   assert.ok(!('paymentState' in body.orders[0]));
