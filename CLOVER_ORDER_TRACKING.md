@@ -1,0 +1,14 @@
+# Clover storefront order visibility — staged
+
+The existing Clover Online Ordering storefront remains the live ordering system. This change adds a **read-only** section to Nazar's private `/staff/crm` screen. Staff explicitly loads recent orders; the server uses the existing `crm_staff_authorized_v1` allowlist before requesting Clover. The browser never receives a Clover token. The response contains only Clover order ID, time, order type, total, order state, and payment state. It does not copy customer contact details into Nazar's CRM or claim that a Clover order came from the Nazar website.
+
+## Activation prerequisites
+
+1. On October 16, 2026, Nazar's production merchant dashboard created a token named **Nazar CRM order visibility** with only **Orders → Read** selected. Its value is stored as a Cloudflare Pages **Production** secret `CLOVER_ORDERS_ACCESS_TOKEN`; it was not copied to the repository or Preview environment. Clover's published developer guidance describes merchant-level tokens mainly for direct sandbox access and recommends expiring OAuth tokens for production apps. Therefore, verify this token against the production Orders API before relying on it operationally; if Clover rejects it, replace it with a production OAuth integration and secure refresh flow. Do not add broader permissions.
+2. The verified production merchant ID **`F8Q154GMDKFD1`** is stored as `CLOVER_MERCHANT_ID`. The Clover October order-type report shows online **Delivery `NAJM24T7CQC1R`** and **In-store Pickup `912777FPE4SM4`**, separated from Clover Devices order types; these are stored as comma-separated `CLOVER_ONLINE_ORDER_TYPE_IDS`. All three are server variables, not `VITE_` browser variables.
+3. With an allowlisted staff account, load the last seven days in `/staff/crm`. Confirm that the October 15 test delivery order **`VC9D60CHEKW4M`** appears **once**, with **$44.53** and **PAID** as shown in Clover Orders on October 16, 2026. Check one POS sale does **not** appear. Confirm an unlisted authenticated account and an anonymous visitor cannot access the route.
+4. If the read fails or reaches a page limit, use Clover Orders as the source of truth and investigate. The panel explicitly marks partial results. No customer order-history linkage, marketing attribution, or new-order alert is implied by this view.
+
+Without the secrets/configuration, the panel says the connection is not set up. Production order details above were checked manually in the merchant dashboard; the CRM API connection has not read production orders yet. Cloudflare states the new Production variables take effect on the next deployment. No database migration is required.
+
+Reference: Clover [REST API base URLs and production OAuth](https://docs.clover.com/dev/docs/making-rest-api-calls), [list orders](https://docs.clover.com/dev/reference/ordergetorders), [order permissions](https://docs.clover.com/dev/docs/gdp-set-app-permissions).
