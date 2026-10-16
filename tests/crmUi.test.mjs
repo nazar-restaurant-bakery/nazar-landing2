@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {safeCrmRequest,crmDisplayDate,crmLocalInput,crmTaskError,crmRequestError,validCrmOverview,validCrmTasks,validCrmDecisions} from '../src/lib/crmUi.ts';
+import {safeCrmRequest,crmDisplayDate,crmNoteAuthor,crmLocalInput,crmTaskError,crmRequestError,validCrmOverview,validCrmTasks,validCrmDecisions} from '../src/lib/crmUi.ts';
+
+test('note attribution identifies the stored staff account without inferring a person',()=>{
+ assert.equal(crmNoteAuthor('AABBCCDD-1111-4222-8333-0123456789AB'),'Staff account aabbccdd');
+ for(const author of [undefined,null,'','Owner','<script>bad</script>',123,{}]) assert.equal(crmNoteAuthor(author),'Author unavailable');
+});
 test('missing and malformed dates never throw while valid dates remain usable',()=>{
  assert.equal(crmDisplayDate(null),'—'); assert.equal(crmDisplayDate('broken'),'Invalid date');
  assert.equal(crmLocalInput('broken'),''); assert.match(crmLocalInput('2026-10-20T16:00:00Z'),/^2026-10-20T/);
