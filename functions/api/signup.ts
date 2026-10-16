@@ -91,8 +91,8 @@ async function errorRpc(env: Env, name: string, body: Record<string, unknown>): 
   });
 }
 
-async function recordFormFailure(env: Env, failure: FormFailure): Promise<void> {
-  if (!env.SUPABASE_SECRET_KEY?.startsWith("sb_secret_")) return;
+export async function recordFormFailure(env: Env, failure: FormFailure): Promise<"accepted" | "failed" | "not_sent"> {
+  if (!env.SUPABASE_SECRET_KEY?.startsWith("sb_secret_")) return "not_sent";
   try {
     const saved = await errorRpc(env, "record_form_error_v1", {
       p_id: failure.id, p_request_id: failure.request_id, p_kind: failure.form_kind,
@@ -102,15 +102,16 @@ async function recordFormFailure(env: Env, failure: FormFailure): Promise<void> 
     if (!saved.ok) throw new Error("form error log unavailable");
     const claimed = await saved.json();
     if (claimed !== true && claimed !== false) throw new Error("invalid form error log result");
-    if (!claimed) return;
+    if (!claimed) return "not_sent";
     let accepted = false;
     try {
       const delivery = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
         method: "POST", signal: AbortSignal.timeout(5000),
         headers: { Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`, "Content-Type": "application/json" },
         body: JSON.stringify({ to: STAFF_EMAIL, from: STAFF_EMAIL_FROM,
-          subject: "Nazar form needs attention",
-          text: [`Time (UTC): ${failure.occurred_at}`, `Reference: ${failure.id}`,
+          subject: failure.error_code === "controlled_delivery_test" ? "[TEST] Nazar form needs attention" : "Nazar form needs attention",
+          text: [failure.error_code === "controlled_delivery_test" ? "CONTROLLED SETUP TEST — no customer submission or real form failure." : "Nazar server-reported form failure.",
+            `Time (UTC): ${failure.occurred_at}`, `Reference: ${failure.id}`,
             `Form: ${failure.form_kind}`, `Stage: ${failure.stage}`, `Code: ${failure.error_code}`,
             "Check Form errors in the staff CRM. This is not a new customer request.",
             "Alerts are limited to one attempt per 15 minutes; check the CRM for other errors.",
@@ -124,8 +125,10 @@ async function recordFormFailure(env: Env, failure: FormFailure): Promise<void> 
     } catch { /* Alert delivery must never change the form response. */ }
     const finished = await errorRpc(env, "finish_form_error_alert_v1", { p_id: failure.id, p_accepted: accepted });
     if (!finished.ok) throw new Error("form error alert result unavailable");
+    return accepted ? "accepted" : "failed";
   } catch {
     console.error(JSON.stringify({ event: "nazar_form_error_log_unavailable", id: failure.id }));
+    return "failed";
   }
 }
 
