@@ -171,6 +171,7 @@ export default function ContactPage() {
                   </div>
                 </div>
                 <a
+                  data-analytics="directions"
                   href={`https://www.google.com/maps?q=${encodeURIComponent(
                     `${addressLine1}, ${cityStateZip}`
                   )}`}
