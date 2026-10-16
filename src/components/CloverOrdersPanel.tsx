@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 type Order = {
-  id: string; createdAt: string; orderType: string;
+  id: string; cloverUrl: string; createdAt: string; orderType: string;
   totalCents: number | null;
 };
 type Result = { code: string; orders?: Order[]; checkedAt?: string; truncated?: boolean };
@@ -44,10 +44,10 @@ export default function CloverOrdersPanel({ accessToken }: { accessToken: string
     </div>
     {message && <p role="status" className="mt-3 rounded-lg bg-amber-50 p-3 text-sm">{message}</p>}
     {orders && <div className="mt-4 space-y-2">
-      <p className="text-xs text-[#64736a]">{orders.length} orders shown{checkedAt ? ` · Checked ${new Date(checkedAt).toLocaleString()}` : ""}{truncated ? " · More orders may exist in Clover" : ""}. Confirm payment and fulfillment in Clover.</p>
+      <p className="text-xs text-[#64736a]">{orders.length} orders shown{checkedAt ? ` · Checked ${new Date(checkedAt).toLocaleString()}` : ""}{truncated ? " · More orders may exist in Clover" : ""}. Order amount may differ from the payment collected. Confirm payment and fulfillment in Clover.</p>
       {orders.map(order => <div key={order.id} className="flex flex-wrap justify-between gap-2 rounded-lg border border-[#dfe7df] p-3 text-sm">
-        <div><strong>{order.orderType}</strong><p className="text-xs text-[#64736a]">Order {order.id} · {new Date(order.createdAt).toLocaleString()}</p></div>
-        <div className="text-right"><strong>{order.totalCents === null ? "Total unavailable" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(order.totalCents / 100)}</strong></div>
+        <div><strong>{order.orderType}</strong><p className="text-xs text-[#64736a]">Order {order.id} · {new Date(order.createdAt).toLocaleString()}</p><a className="text-xs font-semibold text-[#176b3a] underline" href={order.cloverUrl} target="_blank" rel="noopener noreferrer">View order in Clover</a></div>
+        <div className="text-right"><strong>{order.totalCents === null ? "Order amount unavailable" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(order.totalCents / 100)}</strong><p className="text-xs text-[#64736a]">Order amount</p></div>
       </div>)}
       {orders.length === 0 && <p className="text-sm text-[#64736a]">No matching Clover online orders in the last 7 days.</p>}
     </div>}
