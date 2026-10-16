@@ -1,3 +1,5 @@
+import { PHONE_NUMBER_TEL } from "../data/menu.ts";
+
 type EventTag = (command: "event", name: string, parameters: Record<string, string>) => void;
 
 const sentEvents = new WeakMap<Window, Set<string>>();
@@ -37,7 +39,11 @@ export function trackVipConfirmationStarted(requestId: string): void {
   trackSavedSignup("vip_confirmation_started", "vip", requestId);
 }
 
-// Clover hosts checkout on another domain. This is a handoff, not a sale.
+const publicPaths = new Set(["/", "/menu", "/specials", "/catering", "/gallery", "/reviews", "/about", "/contact", "/vip"]);
+
+// One delegated listener for public-site link activations. These are clicks,
+// never proof of a phone conversation, a physical visit or a completed sale.
+// Keep the existing initializer name so initialization remains a single call.
 export function trackCloverOrderHandoffs(): void {
   if (typeof document === "undefined") return;
   if (handoffDocuments.has(document)) return;
@@ -49,11 +55,21 @@ export function trackCloverOrderHandoffs(): void {
     if (!(link instanceof HTMLAnchorElement)) return;
 
     try {
+      const pagePath = window.location.pathname.replace(/\/+$/, "") || "/";
+      if (!publicPaths.has(pagePath)) return;
       const url = new URL(link.href);
-      if (url.hostname !== "nazar-bakery-west-haven.cloveronline.com") return;
+      let name: string;
+      if (url.protocol === "https:" && url.hostname === "nazar-bakery-west-haven.cloveronline.com") {
+        name = "clover_order_click";
+      } else if (url.protocol === "tel:" && url.pathname.replace(/\D/g, "") === PHONE_NUMBER_TEL.replace(/\D/g, "")) {
+        name = "phone_click";
+      } else if (link.getAttribute("data-analytics") === "directions" && url.protocol === "https:"
+        && ["www.google.com", "google.com"].includes(url.hostname) && /^\/maps(?:\/|$)/.test(url.pathname)) {
+        name = "directions_click";
+      } else return;
       const tag = (window as Window & { gtag?: EventTag }).gtag;
-      tag?.("event", "clover_order_click", {
-        page_path: window.location.pathname,
+      tag?.("event", name, {
+        page_path: pagePath,
       });
     } catch {
       // A blocked analytics script must never interrupt navigation.

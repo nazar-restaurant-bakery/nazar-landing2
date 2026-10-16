@@ -100,6 +100,7 @@ export default function HomePage() {
   <div className="rounded-2xl border border-zinc-200 bg-white p-4">
     <a
       href={mapsUrl}
+      data-analytics="directions"
       target="_blank"
       rel="noreferrer"
       className="block text-md font-semibold text-zinc-900 hover:underline"
@@ -229,6 +230,7 @@ export default function HomePage() {
 
               <a
                 href={mapsUrl}
+                data-analytics="directions"
                 target="_blank"
                 rel="noreferrer"
                 className="mt-2 block text-sm font-semibold text-zinc-700 hover:underline"
@@ -262,6 +264,7 @@ export default function HomePage() {
               <div className="mt-6">
                 <a
                   href={mapsUrl}
+                  data-analytics="directions"
                   target="_blank"
                   rel="noreferrer"
                   className="text-sm font-extrabold text-brand-primary hover:underline"
