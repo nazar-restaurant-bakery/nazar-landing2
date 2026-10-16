@@ -37,6 +37,7 @@ export default function VipSignupForm({
 
   const [status, setStatus] = React.useState<Status>("idle");
   const [errorKey, setErrorKey] = React.useState<string | null>(null);
+  const [errorReference, setErrorReference] = React.useState("");
   const [pendingEmail, setPendingEmail] = React.useState<{
     email: string; name: string; campaign: string | null; requestId: string;
   } | null>(null);
@@ -127,6 +128,7 @@ export default function VipSignupForm({
 
     setStatus("submitting");
     setErrorKey(null);
+    setErrorReference("");
 
     const utm = getUtmOrNull();
     saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, consentEmail });
@@ -144,7 +146,7 @@ export default function VipSignupForm({
       turnstileToken,
       extra: honeypot,
       utm,
-    });
+    }, setErrorReference);
     setTurnstileToken("");
     setResetSignal((value) => value + 1);
     if (!ok) {
@@ -323,6 +325,7 @@ export default function VipSignupForm({
       {errorKey && (
         <p role="alert" className="text-sm font-bold text-red-700">
           {t(errorKey, lang)}
+          {errorReference && <span className="block break-all" dir="ltr">Ref: {errorReference}</span>}
           {errorKey === "vip.errorOffline" || errorKey === "vip.errorGeneric" ? (
             <>
               {" "}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
+import StaffFormErrors from "../components/StaffFormErrors";
 import { safeCrmRequest, crmDisplayDate, crmLocalInput, crmTaskError, crmRequestError, validCrmOverview, validCrmTasks, validCrmDecisions } from "../lib/crmUi";
 
 type Customer = {
@@ -398,6 +399,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="mb-5"><h1 className="text-2xl font-bold sm:text-3xl">Customer relationships</h1><p className="text-sm text-[#64736a]">VIP, catering and staff follow-up in one private view</p></div>
         {overview && <StaffPassword />}
+        {overview && client && <StaffFormErrors key={session.user.id} client={client} />}
         <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
             ["Customers shown", overview?.customers.length ?? "—"],
@@ -466,6 +468,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
           <button disabled={busy || (signInMethod === "link" && linkWait > 0)} className="rounded-lg bg-green-800 px-5 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Please wait…" : signInMethod === "password" ? "Sign in" : linkWait > 0 ? `Wait ${linkWait}s before requesting again` : "Send sign-in link"}</button>
         </form> : <>
           {overview && <StaffPassword />}
+          {overview && client && <StaffFormErrors key={session.user.id} client={client} />}
           <form onSubmit={(e) => { e.preventDefault(); void refresh(search, segment); }} className="mb-3 flex flex-wrap gap-2">
             <input aria-label="Search customers" placeholder="Search name, email or phone" value={search} onChange={(e) => setSearch(e.target.value)} className="min-w-64 flex-1 rounded-lg border bg-white p-3" />
             <button disabled={busy} className="rounded-lg bg-green-800 px-5 py-3 font-semibold text-white disabled:opacity-50">Search</button>
