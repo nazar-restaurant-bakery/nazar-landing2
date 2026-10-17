@@ -1,5 +1,11 @@
 # React + TypeScript + Vite
 
+## Cloudflare Pages routing
+
+The deployed site uses Cloudflare Pages' [default SPA fallback](https://developers.cloudflare.com/pages/configuration/serving-pages/#single-page-application-spa-rendering). Keep the build output free of a top-level `404.html` so direct visits and reloads of client routes such as `/vip`, `/catering`, and `/staff/crm` serve the app shell. Pages Functions continue to handle `/api/*` routes separately.
+
+Do not add a catch-all `/* /index.html 200` rule: Pages rejects it as an infinite loop, so it only adds a deployment warning. After changing routing or adding a top-level `404.html`, verify direct route visits and reloads on a Pages Preview deployment; a Vite preview alone does not validate Pages routing.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
