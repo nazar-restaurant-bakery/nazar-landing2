@@ -175,14 +175,38 @@ BEGIN
 END;
 $fn$;
 
+CREATE OR REPLACE FUNCTION public.catering_record_quote_response_v1(
+  p_quote_id uuid, p_response text, p_note text
+) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fn$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM core.crm_staff WHERE auth_user_id = auth.uid() AND active) THEN
+    RAISE EXCEPTION 'Staff access required' USING ERRCODE = '42501';
+  END IF;
+  IF p_response IS NULL OR p_response NOT IN ('accepted', 'declined')
+     OR length(trim(coalesce(p_note, ''))) NOT BETWEEN 1 AND 2000 THEN
+    RAISE EXCEPTION 'Invalid customer response' USING ERRCODE = '22023';
+  END IF;
+  UPDATE core.catering_quote_versions q
+  SET stage = p_response, response_note = trim(p_note), response_at = now()
+  FROM core.catering_requests r JOIN core.customers c ON c.id = r.customer_id
+  WHERE q.id = p_quote_id AND q.request_id = r.id AND q.stage = 'sent'
+    AND q.version = (SELECT max(q2.version) FROM core.catering_quote_versions q2
+      WHERE q2.request_id = q.request_id)
+    AND c.business_id = 'a358eba4-b197-4309-805b-46f43a718454'::uuid;
+  RETURN FOUND;
+END;
+$fn$;
+
 REVOKE ALL ON FUNCTION public.catering_issue_quote_link_v1(uuid),
   public.catering_quote_link_context_v1(text),
   public.catering_decide_quote_v1(text,text,integer,text,text),
   public.catering_quote_overview_v1(),
-  public.catering_mark_quote_sent_v1(uuid,text,text) FROM PUBLIC, anon;
+  public.catering_mark_quote_sent_v1(uuid,text,text),
+  public.catering_record_quote_response_v1(uuid,text,text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.catering_issue_quote_link_v1(uuid),
   public.catering_quote_overview_v1(),
-  public.catering_mark_quote_sent_v1(uuid,text,text) TO authenticated;
+  public.catering_mark_quote_sent_v1(uuid,text,text),
+  public.catering_record_quote_response_v1(uuid,text,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.catering_quote_link_context_v1(text),
   public.catering_decide_quote_v1(text,text,integer,text,text) TO anon, authenticated;
 NOTIFY pgrst, 'reload schema';

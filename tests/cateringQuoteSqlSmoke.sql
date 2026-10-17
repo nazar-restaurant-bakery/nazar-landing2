@@ -123,4 +123,78 @@ SELECT public.catering_mark_quote_sent_v1(:'quote2_id'::uuid, 'email',
   \echo 'FAIL: duplicate send record accepted'
   \quit 1
 \endif
-\echo 'PASS: quote link, decision, and manual delivery state'
+SELECT public.catering_record_quote_response_v1(:'quote_id'::uuid, 'accepted',
+  'Customer replied by email') AS stale_response_ok \gset
+\if :stale_response_ok
+  \echo 'FAIL: response recorded against superseded quote'
+  \quit 1
+\endif
+SET ROLE anon;
+SET request.jwt.claim.sub = '';
+DO $$
+BEGIN
+  BEGIN
+    PERFORM public.catering_record_quote_response_v1(
+      '33333333-3333-4333-8333-333333333333', 'accepted', 'Forged response');
+    RAISE EXCEPTION 'Unexpected anonymous response success';
+  EXCEPTION WHEN SQLSTATE '42501' THEN NULL;
+  END;
+END
+$$;
+RESET ROLE;
+SET request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+SELECT public.catering_record_quote_response_v1(:'quote2_id'::uuid, 'accepted',
+  'Customer accepted by email on October 16') AS accepted_ok \gset
+\if :accepted_ok
+\else
+  \echo 'FAIL: accepted response was not recorded'
+  \quit 1
+\endif
+SELECT public.catering_record_quote_response_v1(:'quote2_id'::uuid, 'declined',
+  'Conflicting reply') AS duplicate_response_ok \gset
+\if :duplicate_response_ok
+  \echo 'FAIL: duplicate customer response accepted'
+  \quit 1
+\endif
+SELECT (stage = 'accepted' AND response_at IS NOT NULL AND
+  response_note = 'Customer accepted by email on October 16') AS response_state_ok
+FROM core.catering_quote_versions WHERE id = :'quote2_id'::uuid \gset
+\if :response_state_ok
+\else
+  \echo 'FAIL: accepted response state mismatch'
+  \quit 1
+\endif
+INSERT INTO core.catering_requests VALUES (
+  '44444444-4444-4444-8444-444444444444',
+  '22222222-2222-4222-8222-222222222222', 'new',
+  '2026-10-22', 10, 'Second synthetic request'
+);
+SELECT public.catering_issue_quote_link_v1('44444444-4444-4444-8444-444444444444') AS decline_token \gset
+SET ROLE anon;
+SET request.jwt.claim.sub = '';
+SELECT public.catering_decide_quote_v1(:'decline_token', 'Falafel tray', 12000,
+  'Pickup October 22 at noon', 'Yücel') AS decline_quote_id \gset
+RESET ROLE;
+SET request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+SELECT public.catering_mark_quote_sent_v1(:'decline_quote_id'::uuid, 'phone',
+  '+12035550123') AS decline_sent_ok \gset
+\if :decline_sent_ok
+\else
+  \echo 'FAIL: second quote delivery record failed'
+  \quit 1
+\endif
+SELECT public.catering_record_quote_response_v1(:'decline_quote_id'::uuid, 'declined',
+  'Customer declined by phone on October 16') AS declined_ok \gset
+\if :declined_ok
+\else
+  \echo 'FAIL: declined response was not recorded'
+  \quit 1
+\endif
+SELECT (stage = 'declined' AND response_at IS NOT NULL) AS declined_state_ok
+FROM core.catering_quote_versions WHERE id = :'decline_quote_id'::uuid \gset
+\if :declined_state_ok
+\else
+  \echo 'FAIL: declined response state mismatch'
+  \quit 1
+\endif
+\echo 'PASS: quote link, decision, manual delivery, and customer response state'

@@ -9,6 +9,8 @@ export type ApprovedQuote = {
   decision_name?: string;
   approved_at: string;
   sent_at: string | null;
+  response_note?: string | null;
+  response_at?: string | null;
 };
 
 // A staged quote screen must not call an RPC that has not been deployed yet.

@@ -24,6 +24,8 @@ The local implementation uses a 48-hour, one-use review link for the shared Naza
 
 For the first delivery version, staff opens the exact approved quote in a Nazar email draft and sends it manually. Only after sending does staff explicitly record delivery against the same quote version. Opening an email draft never marks it sent. The quote email says payment has not occurred. Cloudflare's [Email Service pricing](https://developers.cloudflare.com/email-service/platform/pricing/) requires Workers Paid for arbitrary customer addresses, so automatic sending is deferred. Staff must check the mail client's From address before sending.
 
+After a sent quote receives a customer reply, staff can record **accepted** or **declined** with a required note on that exact quote version. The database accepts this only from an authorized staff session, only once, and only for the latest sent version. Recording acceptance does not create an order or collect payment. This response step is local draft code, not available on the live site.
+
 The quote database migration passed a disposable local PostgreSQL test with synthetic data on October 13, 2026. The test exercised an anonymous review link, one-time consumption, anonymous denial of link creation, direct table read denial, approved quote creation, and duplicate delivery-record denial. This verifies the SQL logic only; the real Supabase project, email-client handoff, and two-person browser flow remain untested.
 
 The existing Nazar catering sandbox has `core.crm_staff` but no `core.catering_requests` or `core.installation`, so this migration cannot be run there as written. The feature flag stays off until the production-specific migration is applied and an end-to-end staff/decision/send test passes.

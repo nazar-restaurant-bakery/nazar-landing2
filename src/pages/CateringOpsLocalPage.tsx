@@ -46,6 +46,7 @@ export default function CateringOpsLocalPage() {
   const [quoteAvailable, setQuoteAvailable] = useState(false);
   const [structuredLoadError, setStructuredLoadError] = useState(false);
   const [deliveryConfirmed, setDeliveryConfirmed] = useState(false);
+  const [responseNote, setResponseNote] = useState("");
   const [reviewLink, setReviewLink] = useState<{ requestId: string; href: string } | null>(null);
 
   useEffect(() => {
@@ -127,6 +128,22 @@ export default function CateringOpsLocalPage() {
     setReviewLink({ requestId: request.id, href: `${window.location.origin}/quote-decision#token=${data}` });
   }
 
+  async function recordResponse(quote: ApprovedQuote, response: "accepted" | "declined") {
+    if (!client || !session || !quoteActionEnabled || !responseNote.trim() || busy) return;
+    setBusy(true);
+    setError("");
+    const { data, error: saveError } = await client.rpc("catering_record_quote_response_v1", {
+      p_quote_id: quote.id, p_response: response, p_note: responseNote.trim(),
+    });
+    setBusy(false);
+    if (saveError || data !== true) {
+      setError("Customer response could not be recorded. Check that this is the latest sent quote and try again.");
+    } else {
+      setResponseNote("");
+      void refresh();
+    }
+  }
+
   useEffect(() => {
     if (session) queueMicrotask(() => { void refresh(); });
   }, [session, refresh]);
@@ -136,6 +153,17 @@ export default function CateringOpsLocalPage() {
   const selectedQuote = quotes.filter((quote) => quote.request_id === selected?.id)
     .sort((a, b) => b.version - a.version)[0];
   const requestedSelection = describeCateringSelection(selected?.menu_selection);
+  const nextAction = !selected || !active.has(selected.status)
+    ? "This request is closed; no quote action is pending."
+    : selectedQuote?.stage === "accepted"
+      ? "The customer accepted this quote. Payment and order handling remain separate."
+      : selectedQuote?.stage === "declined"
+        ? "The customer declined this quote. No order has been placed."
+        : selectedQuote?.stage === "sent"
+          ? "Await the customer's reply, then record it against this quote version."
+          : selectedQuote?.stage === "approved"
+            ? "Deliver this exact approved quote, then record the delivery."
+            : "Get the final menu and price decision, then deliver the approved quote.";
 
   return <main className="min-h-screen bg-[#f6f7f4] px-4 py-7 text-stone-900">
     <div className="mx-auto max-w-6xl">
@@ -164,7 +192,7 @@ export default function CateringOpsLocalPage() {
               <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
                 <h2 className="mb-3 font-bold">Request queue</h2>
                 <div className="max-h-[38rem] space-y-2 overflow-auto">
-                  {visible.map((request) => <button key={request.id} type="button" onClick={() => setSelectedId(request.id)} aria-pressed={selected?.id === request.id}
+                  {visible.map((request) => <button key={request.id} type="button" onClick={() => { setSelectedId(request.id); setResponseNote(""); setDeliveryConfirmed(false); }} aria-pressed={selected?.id === request.id}
                     className={`w-full rounded-xl border p-3 text-left text-sm hover:bg-green-50 ${selected?.id === request.id ? "border-green-800 bg-green-50" : "border-stone-200"}`}>
                     <strong className="block">{request.name || "Unnamed customer"}</strong>
                     <span className="text-stone-600">{request.status} · Event {formatDate(request.event_date)}</span>
@@ -198,8 +226,8 @@ export default function CateringOpsLocalPage() {
                       ? "Structured product details could not be loaded. The original request text is shown; refresh or check staff access before pricing."
                       : "Older submissions keep the selection in this text. No product quantity or price is inferred from it."}</p>
                   </>}
-                  <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><strong>Next action:</strong> {active.has(selected.status) ? "Get the final menu and price decision, then deliver the approved quote." : "This request is closed; no quote action is pending."} The email draft never sends automatically; record delivery only after sending it.</div>
-                  {quoteAvailable && quoteActionEnabled && active.has(selected.status) && <section className="mt-5 rounded-xl border border-stone-200 p-4">
+                  <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><strong>Next action:</strong> {nextAction}</div>
+                  {quoteAvailable && quoteActionEnabled && active.has(selected.status) && selectedQuote?.stage !== "accepted" && selectedQuote?.stage !== "declined" && <section className="mt-5 rounded-xl border border-stone-200 p-4">
                     <h3 className="font-bold">Yücel's menu and price review</h3>
                     <p className="mt-2 text-sm text-stone-600">Create a one-use link for this request. It expires in 48 hours and the email must be sent by Nazar staff.</p>
                     <button type="button" disabled={busy} onClick={() => void prepareReviewLink(selected)} className="mt-3 rounded-lg border border-green-800 px-4 py-2 text-sm font-semibold text-green-800 disabled:opacity-50">Prepare Yücel review link</button>
@@ -227,6 +255,16 @@ export default function CateringOpsLocalPage() {
                             <button type="button" disabled={!deliveryConfirmed || busy} onClick={() => void markSent(selectedQuote, selected)} className="mt-3 rounded-lg border border-green-800 px-4 py-2 text-sm font-semibold text-green-800 disabled:opacity-50">Record quote as sent</button>
                           </>}
                           {selectedQuote.stage === "approved" && !selected.email && !selected.phone && <p className="mt-2 text-sm text-red-800">No contact method is recorded; delivery is blocked.</p>}
+                          {quoteActionEnabled && selectedQuote.stage === "sent" && <div className="mt-4 border-t border-stone-200 pt-4">
+                            <h4 className="font-semibold">Customer response</h4>
+                            <p className="mt-1 text-xs text-stone-600">Record only a response received from the customer. This does not take payment or create an order.</p>
+                            <label className="mt-3 block text-sm">Response details<textarea value={responseNote} onChange={(event) => setResponseNote(event.target.value)} maxLength={2000} placeholder="How and when did the customer respond?" className="mt-1 min-h-20 w-full rounded-lg border p-3" /></label>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button type="button" disabled={busy || !responseNote.trim()} onClick={() => void recordResponse(selectedQuote, "accepted")} className="rounded-lg bg-green-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Record accepted</button>
+                              <button type="button" disabled={busy || !responseNote.trim()} onClick={() => void recordResponse(selectedQuote, "declined")} className="rounded-lg border border-stone-400 px-4 py-2 text-sm font-semibold disabled:opacity-50">Record declined</button>
+                            </div>
+                          </div>}
+                          {(selectedQuote.stage === "accepted" || selectedQuote.stage === "declined") && <p className="mt-4 rounded-lg bg-stone-50 p-3 text-sm"><strong>Customer {selectedQuote.stage}:</strong> {selectedQuote.response_note || "Response details unavailable."}</p>}
                         </>}
                   </section>
                 </> : <p className="text-sm text-stone-600">Select a request to review it.</p>}
