@@ -40,17 +40,18 @@ export default function ContactPage() {
   const [phone, setPhone] = useState("");
   const [fromEmail, setFromEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [emailAppAttempted, setEmailAppAttempted] = useState(false);
+
+  const preparedMessage = `Name: ${name}\nPhone: ${phone}\nEmail: ${fromEmail}\n\nMessage:\n${message}\n`;
+  const emailSubject = `${BUSINESS_NAME} — Website message`;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const subject = encodeURIComponent(`${BUSINESS_NAME} — Website message`);
-    const body = encodeURIComponent(
-      `Name: ${name}\nPhone: ${phone}\nEmail: ${fromEmail}\n\nMessage:\n${message}\n`
-    );
-
-    // mailto (works now, no backend)
-    window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`;
+    // A mailto handler is optional on the customer's device, so keep the
+    // prepared message visible if the email app does not open.
+    setEmailAppAttempted(true);
+    window.location.href = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(preparedMessage)}`;
   }
 
   return (
@@ -277,6 +278,26 @@ export default function ContactPage() {
               >
                 Open email app
               </button>
+
+              {emailAppAttempted && (
+                <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-neutral-800" aria-live="polite">
+                  <p className="font-semibold">Did your email app open?</p>
+                  <p className="mt-1">
+                    If it did, press Send there. If it did not, copy the message
+                    below into an email to{" "}
+                    <span className="font-semibold">{emailTo}</span> with the subject{" "}
+                    <span className="font-semibold">{emailSubject}</span>.
+                    Nothing has been sent from this page.
+                  </p>
+                  <textarea
+                    aria-label="Prepared message to copy"
+                    className="mt-3 h-40 w-full rounded-xl border border-amber-300 bg-white p-3 text-sm"
+                    readOnly
+                    value={preparedMessage}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                </div>
+              )}
 
               {/* Small note */}
               <p className="text-xs text-neutral-500">
