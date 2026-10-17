@@ -3,6 +3,7 @@ import { createClient, type Session } from "@supabase/supabase-js";
 import StaffFormErrors from "../components/StaffFormErrors";
 import StaffFollowUpQueue from "../components/StaffFollowUpQueue";
 import StaffEmailStatus from "../components/StaffEmailStatus";
+import CloverOrdersPanel from "../components/CloverOrdersPanel";
 import { safeCrmRequest, crmDisplayDate, crmNoteAuthor, crmLocalInput, crmTaskError, crmRequestError, validCrmOverview, validCrmTasks, validCrmDecisions } from "../lib/crmUi";
 
 type Customer = {
@@ -382,6 +383,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
             ["Kevin records shown", overview?.customers.filter((customer) => customer.kevin_signup_count > 0).length ?? "—"],
           ].map(([label, value]) => <div key={label} className="rounded-xl border border-[#dfe7df] bg-white p-4"><span className="text-xs text-[#64736a]">{label}</span><strong className="mt-1 block text-2xl">{value}</strong></div>)}
         </div>
+        {overview && <CloverOrdersPanel accessToken={session.access_token} />}
         <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
           <section className="rounded-xl border border-[#dfe7df] bg-white p-4" aria-label="Customer list">
             <h2 className="mb-3 text-lg font-semibold">Customers</h2>
