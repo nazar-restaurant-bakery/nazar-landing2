@@ -9,6 +9,7 @@ import { cn, EMAIL_RE, normalizePhone } from "../lib/form";
 import { captureUtm, getUtmOrNull } from "../lib/utm";
 import { submitSignup } from "../lib/signup";
 import { trackCateringRequestSubmitted } from "../lib/analytics";
+import { isTestLead } from "../lib/testLead";
 import TurnstileWidget from "./TurnstileWidget";
 import { turnstileSiteKey } from "../lib/formConfig";
 import { useLang } from "./Language";
@@ -17,16 +18,22 @@ import { CATERING_PACKAGES, CATERING_TRAYS, cateringItemName } from "../data/cat
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
 import type { CateringChoice } from "../lib/signup";
 import { clearSignupDraft, currentSignupStorage, readSignupDraft, requestIdForSignup, saveSignupDraft } from "../lib/signupRecovery";
+import { clearSignupAttempts, signupAttemptsExhausted, takeSignupAttempt, type AttemptMemory } from "../lib/signupAttempts";
 
 type Status = "idle" | "submitting" | "success" | "error";
 type CateringDraft = { name: string; email: string; phone: string; eventDate: string; guests: string; message: string };
 const DRAFT_KEY = "nazar-catering-request-draft-v1";
+const ATTEMPT_KEY = "nazar-catering-attempts-v1";
 
 export default function CateringRequestForm({ className, menuChoice, onSuccess }: { className?: string; menuChoice?: CateringChoice | null; onSuccess?: () => void }) {
   const { lang } = useLang();
   const storage = React.useMemo(() => currentSignupStorage(), []);
-  const restored = React.useMemo(() => readSignupDraft<CateringDraft>(storage, DRAFT_KEY)?.fields, [storage]);
+  const restoredDraft = React.useMemo(() => readSignupDraft<CateringDraft>(storage, DRAFT_KEY), [storage]);
+  const restored = restoredDraft?.fields;
   const requestMemory = React.useRef<{ signature?: string; requestId?: string }>({});
+  const attemptMemory = React.useRef<AttemptMemory>({});
+  const inFlight = React.useRef(false);
+  const [retryExhausted, setRetryExhausted] = React.useState(() => signupAttemptsExhausted(storage, ATTEMPT_KEY, restoredDraft?.requestId));
 
   React.useEffect(() => {
     captureUtm();
@@ -41,6 +48,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
   const [status, setStatus] = React.useState<Status>("idle");
   const [errorKey, setErrorKey] = React.useState<string | null>(null);
+  const [errorReference, setErrorReference] = React.useState("");
 
   // Bots fill every field they can see; humans never touch a hidden one.
   const [honeypot, setHoneypot] = React.useState("");
@@ -56,7 +64,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || inFlight.current || retryExhausted) return;
 
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
@@ -88,6 +96,13 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       return;
     }
 
+    if (!eventDate || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate) ||
+        !/^[1-9]\d{0,4}$/.test(guests) || Number(guests) > 10000) {
+      setStatus("error");
+      setErrorKey("catering.errorDateGuests");
+      return;
+    }
+
     if (menuChoice?.type === "custom" && menuChoice.itemIds.length === 0) {
       setStatus("error");
       setErrorKey("catering.errorCustomItems");
@@ -116,6 +131,10 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       kind: "catering", name: trimmedName, email: trimmedEmail.toLowerCase(),
       phone: normalizedPhone || "", eventDate, guests, message: trimmedMessage, menuChoice, utm,
     }, requestMemory.current);
+    if (!takeSignupAttempt(storage, ATTEMPT_KEY, requestId, attemptMemory.current)) {
+      setStatus("error"); setErrorKey(null); setRetryExhausted(true); return;
+    }
+    setErrorReference(""); inFlight.current = true;
     const ok = await submitSignup({
       kind: "catering",
       requestId,
@@ -130,16 +149,19 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       guests,
       message: trimmedMessage,
       menuChoice,
-    });
+    }, setErrorReference);
+    inFlight.current = false;
     setTurnstileToken("");
     setResetSignal((value) => value + 1);
     if (!ok) {
       setStatus("error");
-      setErrorKey("catering.errorGeneric");
+      const exhausted = signupAttemptsExhausted(storage, ATTEMPT_KEY, requestId, attemptMemory.current);
+      setRetryExhausted(exhausted);
+      setErrorKey(exhausted ? null : "catering.errorGeneric");
       return;
     }
 
-    trackCateringRequestSubmitted();
+    if (!isTestLead({ name: trimmedName, email: trimmedEmail })) trackCateringRequestSubmitted(requestId);
     setStatus("success");
     setName("");
     setEmail("");
@@ -148,6 +170,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
     setGuests("");
     setMessage("");
     clearSignupDraft(storage, DRAFT_KEY);
+    clearSignupAttempts(storage, ATTEMPT_KEY, attemptMemory.current);
     requestMemory.current = {};
     onSuccess?.();
   }
@@ -187,7 +210,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
   );
 
   return (
-    <form onSubmit={handleSubmit} noValidate className={cn("space-y-4", className)}>
+    <form onSubmit={handleSubmit} onChange={() => setRetryExhausted(false)} noValidate className={cn("space-y-4", className)}>
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950" aria-live="polite">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="font-extrabold">{t("catering.selectedMenu", lang)}</p>
@@ -198,9 +221,9 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
         {menuChoice?.type === "package" ? (
           <p className="mt-1">{CATERING_PACKAGES.find((menu) => menu.id === menuChoice.id)?.title[lang] ?? menuChoice.id}</p>
         ) : menuChoice?.type === "custom" ? (
-          <p className="mt-1">{t("catering.customTitle", lang)}: {menuChoice.itemIds.map((id) => cateringItemName(id, lang)).join(", ") || "—"}</p>
+          <p className="mt-1">{t("catering.customTitle", lang)}: {menuChoice.itemIds.map((id) => `${menuChoice.quantities[id] ?? 1} × ${cateringItemName(id, lang)}`).join(", ") || "—"}</p>
         ) : menuChoice?.type === "trays" ? (
-          <p className="mt-1">{menuChoice.selections.map(({ id, size }) => `${CATERING_TRAYS.find((tray) => tray.id === id)?.title[lang] ?? id} (${size})`).join(", ")}{menuChoice.itemIds.length ? `; ${t("catering.customTitle", lang)}: ${menuChoice.itemIds.map((id) => cateringItemName(id, lang)).join(", ")}` : ""}</p>
+          <p className="mt-1">{menuChoice.selections.map(({ id, size }) => `${CATERING_TRAYS.find((tray) => tray.id === id)?.title[lang] ?? id} (${size})`).join(", ")}{menuChoice.itemIds.length ? `; ${t("catering.customTitle", lang)}: ${menuChoice.itemIds.map((id) => `${menuChoice.quantities[id] ?? 1} × ${cateringItemName(id, lang)}`).join(", ")}` : ""}</p>
         ) : (
           <p className="mt-1">{t("catering.noMenu", lang)}</p>
         )}
@@ -257,12 +280,13 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="cat-date" className={labelClass}>
-            {t("catering.eventDate", lang)} {optional}
+            {t("catering.eventDate", lang)}
           </label>
           <input
             id="cat-date"
             name="event_date"
             type="date"
+            required
             value={eventDate}
             onChange={(e) => setEventDate(e.target.value)}
             className={cn(fieldClass, "mt-1.5")}
@@ -271,12 +295,13 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
         <div>
           <label htmlFor="cat-guests" className={labelClass}>
-            {t("catering.guests", lang)} {optional}
+            {t("catering.guests", lang)}
           </label>
           <input
             id="cat-guests"
             name="guests"
             type="number"
+            required
             inputMode="numeric"
             min={1}
             step={1}
@@ -332,9 +357,15 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
       <TurnstileWidget onToken={setTurnstileToken} resetSignal={resetSignal} />
 
+      {retryExhausted && <p role="alert" className="text-sm font-bold text-red-700">
+        {t("vip.retryLimit", lang)} <a href={`tel:${PHONE_NUMBER_TEL}`} className="underline">{PHONE_NUMBER_DISPLAY}</a>
+        {errorReference && <span className="block break-all" dir="ltr">Ref: {errorReference}</span>}
+      </p>}
+
       {errorKey && (
         <p role="alert" className="text-sm font-bold text-red-700">
           {t(errorKey, lang)}
+          {errorReference && <span className="block break-all" dir="ltr">Ref: {errorReference}</span>}
           {errorKey === "catering.errorOffline" || errorKey === "catering.errorGeneric" ? (
             <>
               {" "}
@@ -348,7 +379,7 @@ export default function CateringRequestForm({ className, menuChoice, onSuccess }
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || retryExhausted}
         className={cn(
           "inline-flex h-12 w-full items-center justify-center rounded-full px-8",
           "bg-[#1E7A3A] text-base font-extrabold text-white shadow-sm",

@@ -8,7 +8,7 @@ Keep one stable request ID across intake, quote versions, customer communication
 
 Today `/api/signup` appends a human-readable menu summary to `p_meta.message`. That text is visible in the CRM, but it cannot reliably populate editable product rows in an operations screen. The local change stores a validated `menu_selection` snapshot and a separate `customer_message` alongside that readable summary. The database migration expands the metadata allowlist and preserves retries initiated before this change. It has **not** been applied to Nazar-production; deploying the API before that migration would reject new selections. Compare the deployed `submit_signup` definition with the migration before applying it so later database changes are not overwritten.
 
-The current public form records tray guest size and its displayed quantity. It does not yet ask for a quantity on custom dish ideas; those snapshots explicitly say `quantity: null` and must be clarified during the quote. Do not invent a quantity of one.
+The current public form records tray guest size and its displayed quantity, plus a 1–50 quantity for each selected custom dish. The structured snapshot preserves those customer-entered custom quantities. Older saved requests may still lack a structured snapshot or custom quantity; the operations screen labels those values as needing confirmation instead of inventing them.
 
 ## Nazar operations queue
 

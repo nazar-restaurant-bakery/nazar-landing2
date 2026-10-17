@@ -2,12 +2,18 @@
 type Env = {
   SUPABASE_SECRET_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
+  CLOUDFLARE_EMAIL_SEND_TOKEN?: string;
+  FORM_ERROR_ALERTS_ENABLED?: string;
 };
 
-type Context = { request: Request; env: Env };
+type Context = { request: Request; env: Env; waitUntil(promise: Promise<unknown>): void };
 
 const SUPABASE_URL = "https://khgczybubufouraqyrcj.supabase.co";
 const BUSINESS_ID = "a358eba4-b197-4309-805b-46f43a718454";
+const CLOUDFLARE_ACCOUNT_ID = "50a358ead900374fd545df744bd28bef";
+const STAFF_EMAIL = "ctnazarbakery@gmail.com";
+const STAFF_EMAIL_FROM = "notifications@alerts.nazarrestaurantandbakery.com";
+const STAFF_CRM_URL = "https://www.nazarrestaurantandbakery.com/staff";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // Keep these server-side allowlists aligned with src/data/cateringMenus.ts.
@@ -70,6 +76,82 @@ function response(status: number, code: string): Response {
   });
 }
 
+type FormFailure = {
+  id: string; occurred_at: string; request_id: string | null;
+  form_kind: "vip" | "catering" | "unknown";
+  stage: "configuration" | "challenge" | "database";
+  error_code: string; http_status: number;
+};
+
+async function errorRpc(env: Env, name: string, body: Record<string, unknown>): Promise<Response> {
+  return fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    method: "POST", signal: AbortSignal.timeout(4000),
+    headers: { apikey: env.SUPABASE_SECRET_KEY!, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function recordFormFailure(env: Env, failure: FormFailure): Promise<"accepted" | "failed" | "not_sent"> {
+  if (!env.SUPABASE_SECRET_KEY?.startsWith("sb_secret_")) return "not_sent";
+  try {
+    const saved = await errorRpc(env, "record_form_error_v1", {
+      p_id: failure.id, p_request_id: failure.request_id, p_kind: failure.form_kind,
+      p_stage: failure.stage, p_code: failure.error_code, p_status: failure.http_status,
+      p_claim_alert: env.FORM_ERROR_ALERTS_ENABLED === "true" && !!env.CLOUDFLARE_EMAIL_SEND_TOKEN,
+    });
+    if (!saved.ok) throw new Error("form error log unavailable");
+    const claimed = await saved.json();
+    if (claimed !== true && claimed !== false) throw new Error("invalid form error log result");
+    if (!claimed) return "not_sent";
+    let accepted = false;
+    try {
+      const delivery = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
+        method: "POST", signal: AbortSignal.timeout(5000),
+        headers: { Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ to: STAFF_EMAIL, from: STAFF_EMAIL_FROM,
+          subject: failure.error_code === "controlled_delivery_test" ? "[TEST] Nazar form needs attention" : "Nazar form needs attention",
+          text: [failure.error_code === "controlled_delivery_test" ? "CONTROLLED SETUP TEST — no customer submission or real form failure." : "Nazar server-reported form failure.",
+            `Time (UTC): ${failure.occurred_at}`, `Reference: ${failure.id}`,
+            `Form: ${failure.form_kind}`, `Stage: ${failure.stage}`, `Code: ${failure.error_code}`,
+            "Check Form errors in the staff CRM. This is not a new customer request.",
+            "Alerts are limited to one attempt per 15 minutes; check the CRM for other errors.",
+            "https://www.nazarrestaurantandbakery.com/staff/crm"].join("\n"),
+        }),
+      });
+      if (delivery.ok) {
+        const result = await delivery.json() as { success?: boolean; result?: { delivered?: string[]; queued?: string[] } };
+        accepted = result.success === true && (result.result?.delivered?.includes(STAFF_EMAIL) === true || result.result?.queued?.includes(STAFF_EMAIL) === true);
+      }
+    } catch { /* Alert delivery must never change the form response. */ }
+    const finished = await errorRpc(env, "finish_form_error_alert_v1", { p_id: failure.id, p_accepted: accepted });
+    if (!finished.ok) throw new Error("form error alert result unavailable");
+    return accepted ? "accepted" : "failed";
+  } catch {
+    console.error(JSON.stringify({ event: "nazar_form_error_log_unavailable", id: failure.id }));
+    return "failed";
+  }
+}
+
+function unavailable(context: Context, stage: FormFailure["stage"], code: string,
+  requestId: string | null = null, kind: FormFailure["form_kind"] = "unknown"): Response {
+  const failure: FormFailure = { id: crypto.randomUUID(), occurred_at: new Date().toISOString(),
+    request_id: requestId, form_kind: kind, stage, error_code: code, http_status: 503 };
+  // Only allowlisted metadata: never log the request, exception text, headers or form body.
+  console.error(JSON.stringify({ event: "nazar_form_error", ...failure }));
+  context.waitUntil?.(recordFormFailure(context.env, failure));
+  return new Response(JSON.stringify({ code: "unavailable", error_id: failure.id, occurred_at: failure.occurred_at }), {
+    status: 503, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Nazar-Error-ID": failure.id },
+  });
+}
+
+async function resolveFormFailures(env: Env, requestId: string): Promise<void> {
+  try {
+    const resolved = await errorRpc(env, "resolve_form_errors_v1", { p_request_id: requestId });
+    if (!resolved.ok) throw new Error("form error resolution unavailable");
+  }
+  catch { console.error(JSON.stringify({ event: "nazar_form_error_resolution_unavailable", request_id: requestId })); }
+}
+
 function text(value: unknown, max: number): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -84,7 +166,86 @@ function phone(value: string): string | null {
   return null;
 }
 
-export async function onRequestPost({ request, env }: Context): Promise<Response> {
+function validCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+}
+
+function customQuantities(value: unknown, ids: string[]): Record<string, number> | null {
+  if (value === undefined) return Object.fromEntries(ids.map((id) => [id, 1]));
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  if (Object.keys(raw).length !== ids.length || Object.keys(raw).some((id) => !ids.includes(id))) return null;
+  const quantities: Record<string, number> = {};
+  for (const id of ids) {
+    const quantity = raw[id];
+    if (typeof quantity !== "number" || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) return null;
+    quantities[id] = quantity;
+  }
+  return quantities;
+}
+
+type NotificationClaim = {
+  requestId: string;
+  requestDate: string;
+  eventDate: string;
+  guests: number;
+};
+
+async function notifyCateringStaff(env: Env, requestId: string): Promise<void> {
+  if (!env.CLOUDFLARE_EMAIL_SEND_TOKEN || !env.SUPABASE_SECRET_KEY) return;
+
+  const rpcHeaders = { apikey: env.SUPABASE_SECRET_KEY, "Content-Type": "application/json" };
+  const claimResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/claim_catering_staff_notification_v1`, {
+    method: "POST", headers: rpcHeaders, body: JSON.stringify({ p_request_id: requestId }),
+  });
+  if (!claimResponse.ok) return;
+  const claim = await claimResponse.json() as NotificationClaim | null;
+  if (!claim) return; // A retry or a deduplicated signup must not send twice.
+
+  let sent = false;
+  try {
+    const requestDate = new Date(claim.requestDate).toLocaleString("en-US", { timeZone: "America/New_York" });
+    const delivery = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: STAFF_EMAIL,
+        from: STAFF_EMAIL_FROM,
+        subject: "New Nazar catering request",
+        text: [
+          `Request date: ${requestDate}`,
+          `Event date: ${claim.eventDate}`,
+          `Guest count: ${claim.guests}`,
+          `CRM: ${STAFF_CRM_URL}`,
+        ].join("\n"),
+      }),
+    });
+    if (delivery.ok) {
+      const result = await delivery.json() as {
+        success?: boolean;
+        result?: { delivered?: string[]; queued?: string[] };
+      };
+      sent = result.success === true &&
+        (result.result?.delivered?.includes(STAFF_EMAIL) === true ||
+         result.result?.queued?.includes(STAFF_EMAIL) === true);
+    }
+  } catch {
+    // Delivery failures never change the customer's successful form response.
+  }
+  await fetch(`${SUPABASE_URL}/rest/v1/rpc/finish_catering_staff_notification_v1`, {
+    method: "POST", headers: rpcHeaders,
+    body: JSON.stringify({ p_request_id: requestId, p_sent: sent }),
+  });
+}
+
+export async function onRequestPost(context: Context): Promise<Response> {
+  const { request, env } = context;
   const url = new URL(request.url);
   if (request.headers.get("Origin") !== url.origin) return response(403, "forbidden");
   if (!request.headers.get("Content-Type")?.toLowerCase().startsWith("application/json")) {
@@ -92,7 +253,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
   }
   if (Number(request.headers.get("Content-Length") || 0) > 8192) return response(413, "too_large");
   if (!env.TURNSTILE_SECRET_KEY || !env.SUPABASE_SECRET_KEY?.startsWith("sb_secret_")) {
-    return response(503, "unavailable");
+    return unavailable(context, "configuration", "missing_server_configuration");
   }
 
   let data: Record<string, unknown>;
@@ -129,14 +290,12 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     const date = text(data.eventDate, 10);
     const guests = data.guests;
     const message = text(data.message, 2000);
-    if (date === null || message === null) return response(400, "invalid_input");
-    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return response(400, "invalid_input");
-    if (guests !== "" && guests !== null && guests !== undefined &&
-        (!Number.isInteger(Number(guests)) || Number(guests) < 1 || Number(guests) > 10000)) {
+    if (!date || !validCalendarDate(date) || message === null ||
+        typeof guests !== "string" || !/^[1-9]\d{0,4}$/.test(guests) || Number(guests) > 10000) {
       return response(400, "invalid_input");
     }
-    if (date) meta.event_date = date;
-    if (guests !== "" && guests !== null && guests !== undefined) meta.guests = Number(guests);
+    meta.event_date = date;
+    meta.guests = Number(guests);
     let menuSummary = "";
     if (data.menuChoice !== undefined && data.menuChoice !== null) {
       const choice = data.menuChoice;
@@ -155,8 +314,10 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
             !ids.every((id) => typeof id === "string" && Object.hasOwn(CUSTOM_ITEM_LABELS, id))) {
           return response(400, "invalid_input");
         }
-        menuSummary = `Create your own: ${ids.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
-        meta.menu_selection = { type: "custom", dishes: ids.map((id: string) => ({ id, label: CUSTOM_ITEM_LABELS[id], quantity: null })) };
+        const quantities = customQuantities(selected.quantities, ids);
+        if (!quantities) return response(400, "invalid_input");
+        menuSummary = `Create your own: ${ids.map((id: string) => `${quantities[id]} × ${CUSTOM_ITEM_LABELS[id]}`).join(", ")}`;
+        meta.menu_selection = { type: "custom", dishes: ids.map((id: string) => ({ id, label: CUSTOM_ITEM_LABELS[id], quantity: quantities[id] })) };
       } else if (selected.type === "trays") {
         const selections = selected.selections;
         const itemIds = selected.itemIds;
@@ -168,6 +329,8 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
             !itemIds.every((id) => typeof id === "string" && Object.hasOwn(CUSTOM_ITEM_LABELS, id))) {
           return response(400, "invalid_input");
         }
+        const quantities = customQuantities(selected.quantities, itemIds);
+        if (!quantities) return response(400, "invalid_input");
         const seen = new Set<string>();
         const labels: string[] = [];
         const trayItems: Record<string, unknown>[] = [];
@@ -190,9 +353,9 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
             includes_rice: RICE_TRAY_IDS.has(tray.id) });
         }
         menuSummary = `Catering trays: ${labels.join(", ")}; shown tray subtotal: $${subtotal.toFixed(2)}`;
-        if (itemIds.length) menuSummary += `; additional dishes: ${itemIds.map((id: string) => CUSTOM_ITEM_LABELS[id]).join(", ")}`;
+        if (itemIds.length) menuSummary += `; additional dishes: ${itemIds.map((id: string) => `${quantities[id]} × ${CUSTOM_ITEM_LABELS[id]}`).join(", ")}`;
         meta.menu_selection = { type: "trays", trays: trayItems,
-          additional_dishes: itemIds.map((id: string) => ({ id, label: CUSTOM_ITEM_LABELS[id], quantity: null })),
+          additional_dishes: itemIds.map((id: string) => ({ id, label: CUSTOM_ITEM_LABELS[id], quantity: quantities[id] })),
           shown_subtotal: subtotal };
       } else {
         return response(400, "invalid_input");
@@ -222,9 +385,11 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     if (!Object.keys(utm).length) utm = null;
   }
 
+  let stage: FormFailure["stage"] = "challenge";
   try {
     const challenge = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
+      signal: AbortSignal.timeout(5000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         secret: env.TURNSTILE_SECRET_KEY,
@@ -232,14 +397,16 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
         remoteip: request.headers.get("CF-Connecting-IP") || undefined,
       }),
     });
-    if (!challenge.ok) return response(503, "unavailable");
+    if (!challenge.ok) return unavailable(context, stage, "challenge_unavailable", requestId, kind);
     const verification = await challenge.json() as { success?: boolean; hostname?: string };
     if (!verification.success || verification.hostname !== url.hostname) {
       return response(403, "verification_failed");
     }
 
+    stage = "database";
     const db = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_signup_once`, {
       method: "POST",
+      signal: AbortSignal.timeout(7000),
       headers: {
         apikey: env.SUPABASE_SECRET_KEY,
         "Content-Type": "application/json",
@@ -257,10 +424,15 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
         p_meta: kind === "catering" && Object.keys(meta).length ? meta : null,
       }),
     });
-    if (!db.ok) return response(503, "unavailable");
+    if (!db.ok) return unavailable(context, stage, "database_unavailable", requestId, kind);
+    context.waitUntil?.(Promise.allSettled([
+      resolveFormFailures(env, requestId),
+      ...(kind === "catering" ? [notifyCateringStaff(env, requestId)] : []),
+    ]));
     return response(200, "accepted");
-  } catch {
-    return response(503, "unavailable");
+  } catch (error) {
+    const timeout = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    return unavailable(context, stage, timeout ? "upstream_timeout" : "upstream_network_error", requestId, kind);
   }
 }
 

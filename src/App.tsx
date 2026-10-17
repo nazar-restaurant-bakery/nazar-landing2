@@ -20,6 +20,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/staff" element={<StaffPage />} />
+      <Route path="/staff/crm" element={<StaffPage variant="crm" />} />
       {import.meta.env.DEV && <Route path="/staff-preview" element={<CrmPreviewPage />} />}
       {import.meta.env.DEV && <Route path="/catering-ops-preview" element={<CateringOpsPreviewPage />} />}
       {import.meta.env.DEV && <Route path="/catering-ops-local" element={<CateringOpsLocalPage />} />}

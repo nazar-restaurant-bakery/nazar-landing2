@@ -3,6 +3,8 @@ import React from "react";
 import { captureUtm, getUtmOrNull } from "../lib/utm";
 import { submitSignup } from "../lib/signup";
 import { subscribeVipEmail } from "../lib/klaviyo";
+import { isTestLead } from "../lib/testLead";
+import { trackVipSignupSubmitted, trackVipConfirmationStarted } from "../lib/analytics";
 import TurnstileWidget from "./TurnstileWidget";
 import { turnstileSiteKey } from "../lib/formConfig";
 // Shared with CateringRequestForm so both forms validate identically.
@@ -10,11 +12,14 @@ import { cn, EMAIL_RE, normalizePhone } from "../lib/form";
 import { useLang } from "./Language";
 import { t } from "./i18n";
 import { PHONE_NUMBER_DISPLAY, PHONE_NUMBER_TEL } from "../data/menu";
-import { clearSignupDraft, currentSignupStorage, readSignupDraft, requestIdForSignup, saveSignupDraft } from "../lib/signupRecovery";
+import { clearSignupDraft, currentSignupStorage, readSignupDraft, requestIdForSignup, saveSignupDraft, readPendingVipEmail, savePendingVipEmail } from "../lib/signupRecovery";
+import { clearSignupAttempts, signupAttemptsExhausted, takeSignupAttempt, type AttemptMemory } from "../lib/signupAttempts";
 
-type Status = "idle" | "submitting" | "success" | "error" | "sync_error";
+type Status = "idle" | "submitting" | "success" | "error" | "sync_error" | "test_saved";
 type VipDraft = { name: string; email: string; phone: string; consentEmail: boolean };
 const DRAFT_KEY = "nazar-vip-request-draft-v1";
+const ATTEMPT_KEY = "nazar-vip-attempts-v1";
+const CONFIRMATION_KEY = "nazar-vip-confirmation-attempts-v1";
 
 type Props = {
   className?: string;
@@ -25,19 +30,31 @@ export default function VipSignupForm({
 }: Props) {
   const { lang } = useLang();
   const storage = React.useMemo(() => currentSignupStorage(), []);
-  const restored = React.useMemo(() => readSignupDraft<VipDraft>(storage, DRAFT_KEY)?.fields, [storage]);
+  const restoredDraft = React.useMemo(() => readSignupDraft<VipDraft>(storage, DRAFT_KEY), [storage]);
+  const restored = restoredDraft?.fields;
+  const restoredPending = React.useMemo(() => {
+    const pending = readPendingVipEmail(storage, DRAFT_KEY);
+    return pending && !isTestLead(pending) ? pending : null;
+  }, [storage]);
   const requestMemory = React.useRef<{ signature?: string; requestId?: string }>({});
+  const attemptMemory = React.useRef<AttemptMemory>({});
+  const confirmationMemory = React.useRef<AttemptMemory>({});
+  const inFlight = React.useRef(false);
+  const confirmationInFlight = React.useRef(false);
+  const [retryExhausted, setRetryExhausted] = React.useState(() => signupAttemptsExhausted(storage, ATTEMPT_KEY, restoredDraft?.requestId));
+  const [confirmationExhausted, setConfirmationExhausted] = React.useState(() => signupAttemptsExhausted(storage, CONFIRMATION_KEY, restoredPending?.requestId));
 
   const [name, setName] = React.useState(typeof restored?.name === "string" ? restored.name : "");
   const [email, setEmail] = React.useState(typeof restored?.email === "string" ? restored.email : "");
   const [phone, setPhone] = React.useState(typeof restored?.phone === "string" ? restored.phone : "");
   const [consentEmail, setConsentEmail] = React.useState(restored?.consentEmail === true);
 
-  const [status, setStatus] = React.useState<Status>("idle");
+  const [status, setStatus] = React.useState<Status>(restoredPending ? "sync_error" : "idle");
   const [errorKey, setErrorKey] = React.useState<string | null>(null);
+  const [errorReference, setErrorReference] = React.useState("");
   const [pendingEmail, setPendingEmail] = React.useState<{
-    email: string; name: string; campaign: string | null;
-  } | null>(null);
+    email: string; name: string; campaign: string | null; requestId: string;
+  } | null>(restoredPending);
 
   // Bots fill every field they can see; humans never touch a hidden one.
   const [honeypot, setHoneypot] = React.useState("");
@@ -51,15 +68,24 @@ export default function VipSignupForm({
   const submitting = status === "submitting";
 
   React.useEffect(() => {
-    if (status !== "success") saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, consentEmail });
+    if (status !== "success" && status !== "test_saved") saveSignupDraft(storage, DRAFT_KEY, { name, email, phone, consentEmail });
   }, [storage, name, email, phone, consentEmail, status]);
 
   async function finishEmailConfirmation(details: NonNullable<typeof pendingEmail>) {
+    if (confirmationInFlight.current) return;
+    if (!takeSignupAttempt(storage, CONFIRMATION_KEY, details.requestId, confirmationMemory.current)) {
+      setConfirmationExhausted(true); setStatus("sync_error"); return;
+    }
+    confirmationInFlight.current = true;
     setStatus("submitting");
-    if (!await subscribeVipEmail(details)) {
+    const accepted = await subscribeVipEmail(details);
+    confirmationInFlight.current = false;
+    if (!accepted) {
+      setConfirmationExhausted(signupAttemptsExhausted(storage, CONFIRMATION_KEY, details.requestId, confirmationMemory.current));
       setStatus("sync_error");
       return;
     }
+    trackVipConfirmationStarted(details.requestId);
     setPendingEmail(null);
     setStatus("success");
     setName("");
@@ -67,12 +93,14 @@ export default function VipSignupForm({
     setPhone("");
     setConsentEmail(false);
     clearSignupDraft(storage, DRAFT_KEY);
+    clearSignupAttempts(storage, ATTEMPT_KEY, attemptMemory.current);
+    clearSignupAttempts(storage, CONFIRMATION_KEY, confirmationMemory.current);
     requestMemory.current = {};
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || inFlight.current || retryExhausted) return;
 
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
@@ -131,6 +159,10 @@ export default function VipSignupForm({
       kind: "vip", name: trimmedName, email: trimmedEmail.toLowerCase(),
       phone: normalizedPhone || "", consentEmail, utm,
     }, requestMemory.current);
+    if (!takeSignupAttempt(storage, ATTEMPT_KEY, requestId, attemptMemory.current)) {
+      setStatus("error"); setErrorKey(null); setRetryExhausted(true); return;
+    }
+    setErrorReference(""); inFlight.current = true;
     const ok = await submitSignup({
       kind: "vip",
       requestId,
@@ -141,34 +173,56 @@ export default function VipSignupForm({
       turnstileToken,
       extra: honeypot,
       utm,
-    });
+    }, setErrorReference);
+    inFlight.current = false;
     setTurnstileToken("");
     setResetSignal((value) => value + 1);
     if (!ok) {
       setStatus("error");
-      setErrorKey("vip.errorGeneric");
+      const exhausted = signupAttemptsExhausted(storage, ATTEMPT_KEY, requestId, attemptMemory.current);
+      setRetryExhausted(exhausted);
+      setErrorKey(exhausted ? null : "vip.errorGeneric");
       return;
     }
 
+    if (isTestLead({ name: trimmedName, email: trimmedEmail })) {
+      setStatus("test_saved");
+      setPendingEmail(null);
+      clearSignupDraft(storage, DRAFT_KEY);
+      clearSignupAttempts(storage, ATTEMPT_KEY, attemptMemory.current);
+      requestMemory.current = {};
+      return;
+    }
+    trackVipSignupSubmitted(requestId);
     const details = {
+      requestId,
       email: trimmedEmail.toLowerCase(),
       name: trimmedName,
-      campaign: utm?.utm_campaign ?? null,
+      campaign: utm?.utm_campaign?.slice(0, 100) ?? null,
     };
     setPendingEmail(details);
+    savePendingVipEmail(storage, DRAFT_KEY, details);
     await finishEmailConfirmation(details);
+  }
+
+  if (status === "test_saved") {
+    return <div role="status" className={cn("rounded-2xl border border-amber-200 bg-amber-50 p-6", className)}>
+      <strong>Internal test saved.</strong>
+      <p>No marketing subscription or confirmation email was requested.</p>
+    </div>;
   }
 
   if ((status === "sync_error" || status === "submitting") && pendingEmail) {
     return (
       <div className={cn("rounded-2xl border border-amber-200 bg-amber-50 p-6", className)}>
         <p role="alert" className="text-sm font-bold text-amber-950">
-          {t(status === "sync_error" ? "vip.savedSyncError" : "vip.confirmationStarting", lang)}
+          {t(confirmationExhausted ? "vip.confirmationLimit" : status === "sync_error" ? "vip.savedSyncError" : "vip.confirmationStarting", lang)}
+          {confirmationExhausted && <> <a href={`tel:${PHONE_NUMBER_TEL}`} className="underline">{PHONE_NUMBER_DISPLAY}</a></>}
         </p>
         <button
           type="button"
           onClick={() => void finishEmailConfirmation(pendingEmail)}
-          disabled={status === "submitting"}
+          disabled={status === "submitting" || confirmationExhausted}
           className="mt-4 rounded-full bg-[#1E7A3A] px-6 py-3 text-sm font-bold text-white"
         >
           {t("vip.retryConfirmation", lang)}
@@ -208,6 +262,7 @@ export default function VipSignupForm({
   return (
     <form
       onSubmit={handleSubmit}
+      onChange={() => setRetryExhausted(false)}
       noValidate
       className={cn("space-y-4", className)}
     >
@@ -301,9 +356,15 @@ export default function VipSignupForm({
 
       <TurnstileWidget onToken={setTurnstileToken} resetSignal={resetSignal} />
 
+      {retryExhausted && <p role="alert" className="text-sm font-bold text-red-700">
+        {t("vip.retryLimit", lang)} <a href={`tel:${PHONE_NUMBER_TEL}`} className="underline">{PHONE_NUMBER_DISPLAY}</a>
+        {errorReference && <span className="block break-all" dir="ltr">Ref: {errorReference}</span>}
+      </p>}
+
       {errorKey && (
         <p role="alert" className="text-sm font-bold text-red-700">
           {t(errorKey, lang)}
+          {errorReference && <span className="block break-all" dir="ltr">Ref: {errorReference}</span>}
           {errorKey === "vip.errorOffline" || errorKey === "vip.errorGeneric" ? (
             <>
               {" "}
@@ -320,7 +381,7 @@ export default function VipSignupForm({
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || retryExhausted}
         className={cn(
           "inline-flex h-12 w-full items-center justify-center rounded-full px-8",
           "bg-[#1E7A3A] text-base font-extrabold text-white shadow-sm",
