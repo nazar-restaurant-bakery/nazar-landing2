@@ -8,8 +8,17 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM core.installation WHERE declared_project_ref = 'khgczybubufouraqyrcj')
      OR to_regclass('core.signups') IS NULL
      OR to_regclass('core.catering_requests') IS NULL
-     OR to_regprocedure('public.submit_signup(uuid,text,text,text,text,boolean,boolean,jsonb,jsonb)') IS NULL THEN
+     OR to_regprocedure('public.submit_signup(uuid,text,text,text,text,boolean,boolean,jsonb,jsonb)') IS NULL
+     OR to_regprocedure('public.submit_signup_once(uuid,uuid,text,text,text,text,boolean,boolean,jsonb,jsonb)') IS NULL THEN
     RAISE EXCEPTION 'STOP: expected Nazar-production catering intake is missing';
+  END IF;
+  -- Fingerprints captured read-only from Nazar-production on 2026-10-16.
+  -- Stop rather than replace form/retry logic if another release changed it.
+  IF md5(pg_get_functiondef('public.submit_signup(uuid,text,text,text,text,boolean,boolean,jsonb,jsonb)'::regprocedure))
+       <> '71a8543f121f7499e954bd83c0cbcd99'
+     OR md5(pg_get_functiondef('public.submit_signup_once(uuid,uuid,text,text,text,text,boolean,boolean,jsonb,jsonb)'::regprocedure))
+       <> '606b291d6f83f39836ee2ea4477af6ed' THEN
+    RAISE EXCEPTION 'STOP: live signup function changed; reconcile before installing structured selection';
   END IF;
 END
 $guard$;
