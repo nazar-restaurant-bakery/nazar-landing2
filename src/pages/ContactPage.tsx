@@ -198,7 +198,8 @@ export default function ContactPage() {
               Send us a message
             </h2>
             <p className="mt-2 text-sm text-neutral-600">
-              We’ll get back to you as soon as we can.
+              This form opens your email app with your message prepared. Please
+              press Send in your email app to deliver it.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -274,13 +275,19 @@ export default function ContactPage() {
                 type="submit"
                 className="w-full rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white hover:bg-brand-dark"
               >
-                Submit
+                Open email app
               </button>
 
               {/* Small note */}
               <p className="text-xs text-neutral-500">
-                Tip: This form opens your email app for now (development stage).
-                Later we can connect it to a real form backend.
+                If your email app does not open, call{" "}
+                <a
+                  href={`tel:${PHONE_NUMBER_TEL}`}
+                  className="underline underline-offset-2"
+                >
+                  {PHONE_NUMBER_DISPLAY}
+                </a>
+                .
               </p>
             </form>
 
