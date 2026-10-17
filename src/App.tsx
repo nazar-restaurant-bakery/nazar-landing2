@@ -12,6 +12,9 @@ import SpecialsPage from "./pages/SpecialsPage";
 import CateringPage from "./pages/CateringPage";
 import StaffPage from "./pages/StaffPage";
 import CrmPreviewPage from "./pages/CrmPreviewPage";
+import CateringOpsPreviewPage from "./pages/CateringOpsPreviewPage";
+import CateringOpsLocalPage from "./pages/CateringOpsLocalPage";
+import QuoteDecisionPage from "./pages/QuoteDecisionPage";
 
 export default function App() {
   return (
@@ -19,6 +22,10 @@ export default function App() {
       <Route path="/staff" element={<StaffPage />} />
       <Route path="/staff/crm" element={<StaffPage variant="crm" />} />
       {import.meta.env.DEV && <Route path="/staff-preview" element={<CrmPreviewPage />} />}
+      {import.meta.env.DEV && <Route path="/catering-ops-preview" element={<CateringOpsPreviewPage />} />}
+      {import.meta.env.DEV && <Route path="/catering-ops-local" element={<CateringOpsLocalPage />} />}
+      {import.meta.env.VITE_CATERING_QUOTE_ENABLED === "true" && <Route path="/staff/catering" element={<CateringOpsLocalPage />} />}
+      <Route path="/quote-decision" element={<QuoteDecisionPage />} />
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/menu" element={<MenuPage />} />
