@@ -2,7 +2,8 @@
 //
 // Campaign attribution for signups. A visitor usually lands on an ad URL and
 // then clicks around before signing up, so the params are stashed in
-// sessionStorage on first sight and read back at submit time.
+// sessionStorage and read back at submit time. Each tagged visit is a complete
+// attribution context; missing tags must not be borrowed from an older visit.
 
 const STORAGE_KEY = "nazar_utm";
 
@@ -34,8 +35,8 @@ function readFromUrl(search: string): Utm {
 }
 
 /**
- * Capture campaign params from the current URL, merging them over anything
- * already stored. Safe to call on every mount.
+ * Replace the saved context when this URL contains campaign params. Untagged
+ * navigation keeps the last tagged visit available to the signup form.
  */
 export function captureUtm(): void {
   if (typeof window === "undefined") return;
@@ -44,22 +45,20 @@ export function captureUtm(): void {
   if (Object.keys(fresh).length === 0) return;
 
   try {
-    const merged: Utm = { ...getUtm(), ...fresh };
+    const captured: Utm = { ...fresh, landing_page: window.location.pathname };
 
-    // Record where the first campaign hit came from, once.
-    if (!merged.landing_page) merged.landing_page = window.location.pathname;
-    if (!merged.referrer && document.referrer) {
-      merged.referrer = document.referrer.slice(0, 200);
+    if (document.referrer) {
+      captured.referrer = document.referrer.slice(0, 200);
     }
 
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(captured));
   } catch {
     // Private-browsing modes can refuse sessionStorage; attribution is a
     // nice-to-have, so never let it break the form.
   }
 }
 
-/** Everything captured so far this session. */
+/** The most recent tagged visit captured in this tab. */
 export function getUtm(): Utm {
   if (typeof window === "undefined") return {};
 
