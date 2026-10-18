@@ -429,6 +429,8 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div><p className="text-xs font-bold uppercase tracking-widest text-green-800">Nazar staff</p><h1 className="text-3xl font-bold">{variant === "crm" ? "CRM sign-in" : "Customer follow-up"}</h1></div>
         {session && <a href="/staff/crm" className="rounded-lg border border-green-800 px-4 py-2 font-semibold text-green-800">Open CRM</a>}
+        {session && import.meta.env.VITE_CATERING_QUOTE_ENABLED === "true" && <a className="rounded-lg border border-green-800 px-4 py-2 text-sm font-semibold text-green-800" href="/staff/catering">Catering decisions</a>}
+        {session && import.meta.env.DEV && import.meta.env.VITE_CATERING_QUOTE_ENABLED !== "true" && <a className="rounded-lg border border-green-800 px-4 py-2 text-sm font-semibold text-green-800" href="/catering-ops-local">Open local catering queue</a>}
         {session && <button className="rounded-lg border px-4 py-2" onClick={() => { void client?.auth.signOut(); setOverview(null); }}>Sign out</button>}
       </header>
       {!client ? <p>Staff access is not configured.</p> : !session ?

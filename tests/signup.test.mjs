@@ -90,7 +90,7 @@ test("catering data stays separate from marketing consent", async () => {
   const sent = JSON.parse(calls[1].options.body);
   assert.equal(sent.p_source, "catering");
   assert.equal(sent.p_consent_email, false);
-  assert.deepEqual(sent.p_meta, { event_date: "2027-01-20", guests: 25, message: "Test order" });
+  assert.deepEqual(sent.p_meta, { event_date: "2027-01-20", guests: 25, customer_message: "Test order", message: "Test order" });
 });
 
 test("catering quote requests need an event date and guest count before verification", async () => {
@@ -118,8 +118,16 @@ test("catering menu choices reach the existing request message field", async () 
   const base = { ...vip(), kind: "catering", consentEmail: false, eventDate: "2027-01-20", guests: "25", message: "" };
   assert.equal((await onRequestPost({ request: request({ ...base, menuChoice: { type: "package", id: "doner-gyro" } }), env })).status, 200);
   assert.equal(JSON.parse(sent[1].body).p_meta.message, "Requested catering menu: Doner & Gyro Table (doner-gyro)");
+  assert.deepEqual(JSON.parse(sent[1].body).p_meta.menu_selection,
+    { type: "package", id: "doner-gyro", label: "Doner & Gyro Table" });
   assert.equal((await onRequestPost({ request: request({ ...base, message: "No onions", menuChoice: { type: "custom", itemIds: ["falafel-6pcs", "baklava-4pcs"], quantities: { "falafel-6pcs": 40, "baklava-4pcs": 20 } } }), env })).status, 200);
   assert.equal(JSON.parse(sent[3].body).p_meta.message, "Create your own: 40 × Falafel, 20 × Baklava\n\nNo onions");
+  assert.equal(JSON.parse(sent[3].body).p_meta.customer_message, "No onions");
+  assert.deepEqual(JSON.parse(sent[3].body).p_meta.menu_selection,
+    { type: "custom", dishes: [
+      { id: "falafel-6pcs", label: "Falafel", quantity: 40 },
+      { id: "baklava-4pcs", label: "Baklava", quantity: 20 },
+    ] });
   assert.equal(JSON.parse(sent[3].body).p_consent_email, false);
 });
 
@@ -144,6 +152,14 @@ test("selected catering trays and quantities reach the quote request", async () 
   assert.equal((await onRequestPost({ request: request(payload), env })).status, 200);
   assert.equal(JSON.parse(sent[1].body).p_meta.message,
     "Catering trays: Cold Appetizers Platter (30 servings, 30-guest option) $160.00, Jajik (Cacık) (10 servings, 10-guest option) $50.00, Grilled Chicken Wings (210 wings, 30-guest option) $450.00, Falafel (10 pieces, 10-guest option, with rice pilav) $22.00; shown tray subtotal: $682.00; additional dishes: 15 × Baklava\n\nMixed cold appetizers, please");
+  const selection = JSON.parse(sent[1].body).p_meta.menu_selection;
+  assert.equal(JSON.parse(sent[1].body).p_meta.customer_message, "Mixed cold appetizers, please");
+  assert.equal(selection.type, "trays");
+  assert.equal(selection.trays[2].quantity, 210);
+  assert.equal(selection.trays[2].unit, "wings");
+  assert.equal(selection.trays[2].shown_price, 450);
+  assert.deepEqual(selection.additional_dishes,
+    [{ id: "baklava-4pcs", label: "Baklava", quantity: 15 }]);
 });
 
 test("unknown or empty catering menu choices are rejected before verification", async () => {
