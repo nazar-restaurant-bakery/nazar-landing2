@@ -1,22 +1,10 @@
 // src/pages/ReviewsPage.tsx
-//
-// Static content — no database. Everything Talip needs to edit is in the
-// PLACEHOLDERS block directly below.
+// Review links resolve to the Google listing so ratings stay current there.
 
 import { Link } from "react-router-dom";
 import { useLang } from "../components/Language";
 import { t } from "../components/i18n";
 import { useSeo } from "../hooks/useSeo";
-
-/* ========================================================================== */
-/* PLACEHOLDERS — edit these, nothing else on this page needs touching        */
-/* ========================================================================== */
-
-/** Current Google star rating. */
-const GOOGLE_RATING = 4.7;
-
-/** How many Google reviews that rating is based on. */
-const GOOGLE_REVIEW_COUNT = 46;
 
 /**
  * The Google Maps listing — this is where the reviews live. Official Maps URLs
@@ -39,40 +27,6 @@ const WRITE_REVIEW_URL = GOOGLE_PLACE_ID
   ? `https://search.google.com/local/writereview?placeid=${GOOGLE_PLACE_ID}`
   : GOOGLE_PROFILE_URL;
 
-// NOTE: no testimonial quotes live on this page. We do not write our own
-// reviews. TODO(Talip): if you want snippets here, copy them verbatim from the
-// real Google listing (reviewer name + text as written) and add them below.
-
-/* ========================================================================== */
-
-/**
- * Fractional star bar: a grey row of five stars with an amber row clipped over
- * it. Uses only the ★ glyph — a dedicated half-star character renders as a tofu
- * box in plenty of fonts, and 4.7 needs a partial star to be honest.
- */
-function Stars({ value, className }: { value: number; className?: string }) {
-  const pct = Math.max(0, Math.min(100, (value / 5) * 100));
-
-  return (
-    <span
-      className={`relative inline-block whitespace-nowrap ${className ?? ""}`}
-      role="img"
-      aria-label={`${value} out of 5 stars`}
-    >
-      <span aria-hidden="true" className="text-zinc-300">
-        ★★★★★
-      </span>
-      <span
-        aria-hidden="true"
-        className="absolute inset-0 overflow-hidden text-amber-500"
-        style={{ width: `${pct}%` }}
-      >
-        ★★★★★
-      </span>
-    </span>
-  );
-}
-
 export default function ReviewsPage() {
   useSeo("Reviews", "What our neighbors say about Nazar Restaurant & Bakery in West Haven, CT.", "/reviews");
 
@@ -89,7 +43,7 @@ export default function ReviewsPage() {
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-10">
-      {/* Rating summary */}
+      {/* Review navigation */}
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
           {t("reviews.title", lang)}
@@ -120,17 +74,13 @@ export default function ReviewsPage() {
         </div>
       </header>
 
-      {/* Rating summary — real Google numbers, no quotes we wrote ourselves. */}
+      {/* Google maintains the current rating, review count and customer reviews. */}
       <div className="mt-8 rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
-        <Stars value={GOOGLE_RATING} className="text-3xl leading-none" />
-
-        <p className="mt-3 text-4xl font-extrabold text-zinc-900">
-          {GOOGLE_RATING.toFixed(1)}
-        </p>
-
-        <p className="mt-1 text-sm font-semibold text-zinc-600">
-          {t("reviews.ratedOn", lang)} • {GOOGLE_REVIEW_COUNT}{" "}
-          {t("reviews.reviewCount", lang)}
+        <h2 className="text-2xl font-extrabold text-zinc-900">
+          {t("reviews.googleTitle", lang)}
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-sm font-semibold text-zinc-600">
+          {t("reviews.googleBody", lang)}
         </p>
 
         <a

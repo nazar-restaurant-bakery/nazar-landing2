@@ -258,6 +258,16 @@ export const translations = {
   },
   reviews: {
     title: { tr: "Yorumlar", en: "Reviews", ar: "التقييمات" },
+    googleTitle: {
+      tr: "Müşterilerimizin Google yorumları",
+      en: "Customer reviews on Google",
+      ar: "تقييمات العملاء على Google",
+    },
+    googleBody: {
+      tr: "Güncel puanımızı, yorum sayısını ve müşteri deneyimlerini Google işletme profilimizde görebilirsiniz.",
+      en: "See our current rating, review count and customer experiences on our Google business profile.",
+      ar: "اطّلع على تقييمنا الحالي وعدد التقييمات وتجارب العملاء على ملف نشاطنا التجاري على Google.",
+    },
     ratedOn: { tr: "Google’da puanımız", en: "Rated on Google", ar: "تقييمنا على Google" },
     reviewCount: { tr: "yorum", en: "reviews", ar: "تقييم" },
     readOnGoogle: { tr: "Google’da Oku", en: "Read on Google", ar: "اقرأ على Google" },
