@@ -31,7 +31,63 @@ INSERT INTO core.catering_requests VALUES (
   '22222222-2222-4222-8222-222222222222', 'new',
   '2026-10-20', 20, 'Synthetic tray request'
 );
+CREATE TABLE core.signups(id uuid PRIMARY KEY, meta jsonb NOT NULL);
+INSERT INTO core.signups VALUES (
+  '44444444-4444-4444-8444-444444444444',
+  '{"menu_selection":{"trays":[]},"customer_message":"Synthetic request"}'::jsonb
+);
+ALTER TABLE core.catering_requests
+  ADD COLUMN signup_id uuid REFERENCES core.signups(id),
+  ADD COLUMN created_at timestamptz NOT NULL DEFAULT now(),
+  ADD COLUMN assigned_to text,
+  ADD COLUMN follow_up_at timestamptz;
+UPDATE core.catering_requests SET signup_id = '44444444-4444-4444-8444-444444444444';
+\ir ../database/20261013_catering_ops_queue.sql
 \ir ../database/20261013_catering_quote_versions.sql
+
+SELECT NOT has_function_privilege('anon', 'public.catering_ops_requests_v1()', 'EXECUTE')
+  AS ops_anon_denied \gset
+\if :ops_anon_denied
+\else
+  \echo 'FAIL: anonymous catering operations access is exposed'
+  \quit 1
+\endif
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+SELECT jsonb_array_length(public.catering_ops_requests_v1()->'items') = 1
+  AS ops_staff_can_read \gset
+\if :ops_staff_can_read
+\else
+  \echo 'FAIL: existing CRM staff cannot read catering operations'
+  \quit 1
+\endif
+SET request.jwt.claim.sub = '55555555-5555-4555-8555-555555555555';
+DO $$
+BEGIN
+  BEGIN
+    PERFORM public.catering_ops_requests_v1();
+    RAISE EXCEPTION 'Unexpected non-staff catering operations access';
+  EXCEPTION WHEN SQLSTATE '42501' THEN NULL;
+  END;
+END
+$$;
+RESET ROLE;
+UPDATE core.crm_staff SET active = false
+WHERE auth_user_id = '11111111-1111-4111-8111-111111111111';
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+DO $$
+BEGIN
+  BEGIN
+    PERFORM public.catering_ops_requests_v1();
+    RAISE EXCEPTION 'Unexpected inactive-staff catering operations access';
+  EXCEPTION WHEN SQLSTATE '42501' THEN NULL;
+  END;
+END
+$$;
+RESET ROLE;
+UPDATE core.crm_staff SET active = true
+WHERE auth_user_id = '11111111-1111-4111-8111-111111111111';
 
 SELECT NOT has_table_privilege('anon', 'core.catering_quote_versions', 'SELECT')
   AND NOT has_table_privilege('authenticated', 'core.catering_quote_versions', 'SELECT')

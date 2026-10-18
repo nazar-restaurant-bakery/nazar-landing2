@@ -1,4 +1,4 @@
--- Nazar-production: read-only catering operations queue. This grants no user access.
+-- Nazar-production: read-only catering operations queue for existing CRM staff.
 -- Apply after 20261013_catering_structured_selection.sql; do not invite users here.
 BEGIN;
 SET LOCAL lock_timeout = '5s';
@@ -9,26 +9,18 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM core.installation WHERE declared_project_ref = 'khgczybubufouraqyrcj')
      OR to_regclass('core.catering_requests') IS NULL
      OR to_regclass('core.signups') IS NULL
-     OR to_regclass('core.customers') IS NULL THEN
+     OR to_regclass('core.customers') IS NULL
+     OR to_regclass('core.crm_staff') IS NULL THEN
     RAISE EXCEPTION 'STOP: expected Nazar-production catering tables are missing';
   END IF;
 END
 $guard$;
 
-CREATE TABLE IF NOT EXISTS core.catering_ops_users (
-  auth_user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  role text NOT NULL CHECK (role IN ('owner', 'staff')),
-  active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE core.catering_ops_users ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON core.catering_ops_users FROM PUBLIC, anon, authenticated;
-
 CREATE OR REPLACE FUNCTION public.catering_ops_requests_v1()
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fn$
 DECLARE v_items jsonb;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM core.catering_ops_users
+  IF NOT EXISTS (SELECT 1 FROM core.crm_staff
                  WHERE auth_user_id = auth.uid() AND active) THEN
     RAISE EXCEPTION 'Catering operations access required' USING ERRCODE = '42501';
   END IF;
