@@ -12,6 +12,22 @@ The output contains one test business, three synthetic customers (`subscribed`, 
 
 The loader is transactional and refuses absent boolean test-marker columns before the first INSERT. `supabase/migrations/20261019000100_test_record_markers.sql` explicitly adds markers to businesses/customers/offers; signups/catering markers already come from the existing migration. This additive SQL has not been applied to production or a hosted test project. It requires the reviewed full baseline first.
 
+`renderSeedSql(fixture)` still emits its own `BEGIN`/`COMMIT`; omitting options or
+passing `{ transactional: true }` preserves that default. A caller that already
+owns an outer transaction may explicitly use
+`renderSeedSql(fixture, { transactional: false })`. This removes only the seed's
+outer transaction commands; prerequisites, collision guard and every test flag
+remain intact. The option accepts only a boolean; strings such as `"false"`,
+numbers and null are rejected. The caller must start and retain the transaction;
+this option alone does not verify a hosted target or authorize execution.
+
+**The marker additive SQL contains its own `BEGIN`/`COMMIT`. Do not blindly
+nest it inside an outer installer transaction:** its `COMMIT` would commit the
+caller's transaction. The separately reviewed hosted compiler below unwraps only
+that file's exact pinned hash and known wrapper. The seed regression also proves
+all nine unwrapped seed rows disappear on rollback while pre-existing synthetic
+Auth/storage fixture rows and managed schemas stay.
+
 Customer `identity_key` uses the unchanged application RPC convention
 `email:<normalized-email>`. The generator and validator must agree with that rule;
 adding a business prefix would make the later form create a duplicate customer.
@@ -45,6 +61,53 @@ pwsh -NoProfile -File tools/test-env/reset-local.ps1 -ValidateOnly
 pwsh -NoProfile -File tools/test-env/reset-local.ps1
 ```
 
-It fails closed while the canonical baseline/full replay is unverified. It uses explicit `--local` and cannot reset a remote/linked project. It never runs the generator or claims a successful cloud reset. A hosted reset is not supplied until the new project identity and a reviewed canonical migration chain exist; generic `db reset --linked` instructions would risk the wrong environment.
+The historical local entry point remains deliberately blocked; it must not be used to replay the old migration chain. It uses explicit `--local` and cannot reset a remote/linked project. It never runs the generator or claims a successful cloud reset. Do not use generic `db reset --linked` commands.
+
+## Gated hosted application reset
+
+`tools/test-env/verify-hosted-reset-gates.mjs` checks the actual private capture,
+review, exact local recovery readback, production/local privileges, current health
+and manual Pages/Clover disconnection evidence. Status flags alone cannot pass.
+This verifier is offline and does not authorize or execute a reset.
+
+`tools/test-env/hosted-reset-plan.mjs` compiles the bounded installer offline. Its
+private config extends the gate spec with `phase` (`legacy_sandbox` first,
+`reviewed_baseline` for repeat), explicit `staffRole`, `testBusinessId`, current
+read-only sandbox metadata and provider Data API schema evidence. Project refs
+are supplied only in private environment/config files. The test ref must differ
+from the existing production guard. A repeat also needs the real prior committed
+installation receipt; a claimed status is insufficient.
+
+```powershell
+node tools/test-env/hosted-reset-plan.mjs --config <private-config.json> --output <new-private-plan.json>
+node tools/test-env/hosted-reset-plan.mjs --validate-plan <private-plan.json>
+```
+
+The installer locks and checks an exact application allowlist and row counts
+before dropping anything. Drops use `RESTRICT`, never `CASCADE`; Auth, storage,
+extensions, the public schema and managed helper are preserved. The existing
+staff Auth link and active flag stay in a private transaction-local TEMP table,
+are restored with the configured role, and never enter a file or log. The
+baseline, bounded marker body and nine synthetic rows run in one transaction.
+Unexpected privileges, schema drift or postflight mismatch fail the transaction;
+there is no automatic privilege repair. The source baseline and historical SQL
+files/checksums are unchanged.
+
+`tools/test-env/hosted-reset-operator.py --validate-config` is local only.
+`--gui` opens a masked password window. Required operator variables are
+`K3_SANDBOX_PROJECT_REF`, `K3_PRODUCTION_PROJECT_REF`, `K3_SANDBOX_HOST`,
+`K3_SANDBOX_PORT`, `K3_SANDBOX_USER`, `K3_SANDBOX_DATABASE`,
+`K3_SANDBOX_SSLROOTCERT`, `K3_PG_BIN`, `K3_NODE`, `K3_RESET_PLAN`,
+`K3_RESET_PRIVATE_ROOT`, and `K3_STAFF_ROLE`. Use the verified session pooler,
+port 5432, database postgres, ref-bound username and TLS `verify-full`.
+
+Talip enters only the sandbox database password in that local window, first
+runs read-only inspection, then checks the displayed target and starts the
+application reset. The password is held only in window/child-process memory
+for at most ten minutes between inspection and submission, never in arguments,
+files or logs. A consumed plan cannot automatically run twice. A lost or
+unusable acknowledgement means outcome unknown; reconcile read-only before
+any new attempt. An accepted SQL receipt is not real Auth/REST acceptance,
+Preview write proof or K3 closure; those remain separate checks.
 
 Migration rule: **test first, production later**. Keep the reviewed SQL bytes/checksums in version control, apply to the isolated project, record the successful replay and Preview write, then use those same reviewed files in a separate Talip-controlled production release. Do not use emergency pause, test fixture SQL or an unmerged Ops migration as an ordinary deployment migration. Do not mark a baseline applied in production or run migration repair in K3.

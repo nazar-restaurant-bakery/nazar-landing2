@@ -86,15 +86,20 @@ export function validateFixture(fixture) {
   }
 }
 
-export function renderSeedSql(fixture) {
+export function renderSeedSql(fixture, options = {}) {
   validateFixture(fixture);
+  if (!options || typeof options !== 'object' || Array.isArray(options)
+      || Object.keys(options).some(key => key !== 'transactional')
+      || (Object.hasOwn(options, 'transactional') && typeof options.transactional !== 'boolean'))
+    throw new Error('Seed rendering options accept only an explicit boolean transactional value');
+  const transactional = Object.hasOwn(options, 'transactional') ? options.transactional : true;
   const tables = ['businesses', 'customers', 'signups', 'catering_requests', 'offers'];
-  const preflight = `BEGIN;\nSET LOCAL lock_timeout='5s';\nSET LOCAL statement_timeout='30s';\nDO $k3$\nDECLARE t text;\nBEGIN\n  IF current_setting('app.k3_test_environment',true) IS DISTINCT FROM 'isolated-test' THEN\n    RAISE EXCEPTION 'K3 seed requires an explicitly verified isolated test target';\n  END IF;\n  FOREACH t IN ARRAY ARRAY[${tables.map(quote).join(',')}] LOOP\n    IF NOT EXISTS(SELECT 1 FROM information_schema.columns\n      WHERE table_schema='core' AND table_name=t AND column_name='is_test'\n        AND data_type='boolean') THEN\n      RAISE EXCEPTION 'K3 schema prerequisite missing: core.%.is_test boolean. No flags will be silently omitted.',t;\n    END IF;\n  END LOOP;\nEND $k3$;\n`;
+  const preflight = `${transactional ? 'BEGIN;\n' : ''}SET LOCAL lock_timeout='5s';\nSET LOCAL statement_timeout='30s';\nDO $k3$\nDECLARE t text;\nBEGIN\n  IF current_setting('app.k3_test_environment',true) IS DISTINCT FROM 'isolated-test' THEN\n    RAISE EXCEPTION 'K3 seed requires an explicitly verified isolated test target';\n  END IF;\n  FOREACH t IN ARRAY ARRAY[${tables.map(quote).join(',')}] LOOP\n    IF NOT EXISTS(SELECT 1 FROM information_schema.columns\n      WHERE table_schema='core' AND table_name=t AND column_name='is_test'\n        AND data_type='boolean') THEN\n      RAISE EXCEPTION 'K3 schema prerequisite missing: core.%.is_test boolean. No flags will be silently omitted.',t;\n    END IF;\n  END LOOP;\nEND $k3$;\n`;
   const businessId = quote(fixture.businesses[0].id);
   const collisionGuard = `DO $k3_collision$ BEGIN\n  IF EXISTS(SELECT 1 FROM core.businesses WHERE id=${businessId}::uuid AND (NOT is_test OR name IS DISTINCT FROM 'Nazar-test')) THEN\n    RAISE EXCEPTION 'K3 seed refuses to retag or rename an existing non-fixture business';\n  END IF;\nEND $k3_collision$;\n`;
   return preflight + collisionGuard + tables.flatMap(table => fixture[table].map(row =>
     `INSERT INTO core.${table} (${Object.keys(row).join(',')}) VALUES (${Object.values(row).map(quote).join(',')})`
       + (table === 'businesses'
         ? ' ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name,timezone=EXCLUDED.timezone,intake_enabled=EXCLUDED.intake_enabled,is_test=true;' : ';')
-  )).join('\n') + '\nCOMMIT;\n';
+  )).join('\n') + (transactional ? '\nCOMMIT;\n' : '\n');
 }
