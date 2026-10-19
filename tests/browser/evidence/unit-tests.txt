@@ -1,0 +1,30 @@
+✔ valid full-database count and nullable missing fields remain visible (2.9245ms)
+✔ missing, wrong-category and inconsistent results cannot appear as an empty queue (0.5805ms)
+✔ an empty database result differs from inaccessible data (0.2618ms)
+✔ pagination validates rows against the full total, not a hundred-row ceiling (0.3443ms)
+✔ note attribution identifies the stored staff account without inferring a person (2.138ms)
+✔ missing and malformed dates never throw while valid dates remain usable (11.4936ms)
+✔ task inputs reject whitespace and oversized fields before saving (1.0287ms)
+✔ existing rules allow valid past task dates and closed requests without follow-up (0.3165ms)
+✔ request validation rejects missing owner, missing open follow-up and malformed status/date (0.1805ms)
+✔ network rejection becomes a recoverable error and denial is preserved (0.2775ms)
+✔ empty CRM records are valid but malformed payloads are not zero customer results (0.3764ms)
+✔ unavailable task/decision payloads cannot masquerade as empty valid lists (0.5646ms)
+(node:30148) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ New York wall-time conversion round-trips winter and summer independent of process timezone (397.2274ms)
+✔ nonexistent DST wall time and malformed input are rejected without moving a deadline (4.1035ms)
+✔ calendar-only event dates never shift to the prior day and invalid dates remain visible (2.0276ms)
+✔ field validation preserves existing past-date and closed-request rules (2.1212ms)
+✔ combined real/test view retains one shared customer, deduplicates shared notes, and leaves both input payloads unchanged (0.9386ms)
+✔ customer labels use available contact identity without inventing a person (0.1657ms)
+✔ last known activity ignores malformed dates and another customer’s request (0.2556ms)
+✔ task groups use New York calendar boundaries and Sunday week end (1.6906ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 680.9395

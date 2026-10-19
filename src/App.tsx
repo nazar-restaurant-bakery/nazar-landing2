@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import Layout from "./components/Layout";
 
 import HomePage from "./pages/HomePage";
@@ -10,14 +11,15 @@ import ContactPage from "./pages/ContactPage";
 import VipPage from "./pages/VipPage";
 import SpecialsPage from "./pages/SpecialsPage";
 import CateringPage from "./pages/CateringPage";
-import StaffPage from "./pages/StaffPage";
 import CrmPreviewPage from "./pages/CrmPreviewPage";
+import { staffCopy } from "./lib/staffCopy";
+
+const StaffPage = lazy(() => import("./pages/StaffPage"));
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/staff" element={<StaffPage />} />
-      <Route path="/staff/crm" element={<StaffPage variant="crm" />} />
+      <Route path="/staff/*" element={<Suspense fallback={<div role="status" className="p-6">{staffCopy.loading}</div>}><StaffPage /></Suspense>} />
       {import.meta.env.DEV && <Route path="/staff-preview" element={<CrmPreviewPage />} />}
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />

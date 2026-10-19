@@ -1,0 +1,54 @@
+{
+  "scope": "Synthetic local tests only. No live Supabase, Klaviyo, Clover or customer requests.",
+  "baseRevision": "aa53f6d5fb5c02f814cfbba13a1b57df08874e62",
+  "typescript": "passed",
+  "targetedEslint": "passed, zero warnings",
+  "unitTests": {
+    "passed": 20,
+    "failed": 0
+  },
+  "browserTests": {
+    "passed": 41,
+    "failed": 0
+  },
+  "viteBuild": "passed",
+  "bundle": {
+    "before": {
+      "files": [
+        {
+          "name": "index-DKv4Erhj.js",
+          "gzipBytes": 141762
+        },
+        {
+          "name": "index-mr7I8JF7.css",
+          "gzipBytes": 6028
+        }
+      ],
+      "totalGzipBytes": 147790
+    },
+    "after": {
+      "files": [
+        {
+          "name": "index-DNBE24yO.js",
+          "gzipBytes": 139433
+        },
+        {
+          "name": "index-nbe0-V4M.css",
+          "gzipBytes": 6625
+        },
+        {
+          "name": "StaffPage-BpYwMRUX.css",
+          "gzipBytes": 498
+        },
+        {
+          "name": "StaffPage-CDlJD3BG.js",
+          "gzipBytes": 13884
+        }
+      ],
+      "totalGzipBytes": 160440
+    },
+    "increaseGzipBytes": 12650,
+    "limitGzipBytes": 60000,
+    "passed": true
+  }
+}
