@@ -21,6 +21,17 @@ reviewed follow-up, never deletion of the attempt marker to blindly retry.
 The production runner requires a successful test receipt for the same exact
 migration, acceptance source, psql version and executable hash.
 
+If a human-started Production run stopped **before DDL**, a reviewed continuation
+is available only through `--reviewed-preflight-continuation <absolute-review.json>`.
+Normal repeat remains blocked. The review pins the original attempt/failure,
+credential-free restricted-DNS/approved-network diagnosis, and a fresh read-only
+Production inventory proving every K4 object absent. The old records remain
+untouched; a separate exclusive followup marker permits one human-started attempt.
+It cannot continue an ambiguous migration-submission or committed phase. The
+launcher must run with the verified network access; Talip still enters the
+Production database password and starts the migration. Safe psql error categories
+are shown without raw server output or credential values.
+
 ## What the migration does
 
 - A trigger guards every exit from `unsubscribed` and clearing/backdating its

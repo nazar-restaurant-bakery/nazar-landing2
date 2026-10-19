@@ -5,6 +5,7 @@ No real executable, connection, database, Auth account, browser or email is used
 from __future__ import annotations
 
 import importlib.util
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -329,7 +330,7 @@ class K4MigrationTests(unittest.TestCase):
             return success(args, **kwargs)
 
         self.mock_run.side_effect = fail_migration
-        with self.assertRaisesRegex(RuntimeError, '^SYNTHETIC_MIGRATION_FAILED$'):
+        with self.assertRaisesRegex(RuntimeError, '^PSQL_FAILED_STOP_NO_RETRY$'):
             operator.execute(cfg, 'test', 'SYNTHETIC_PASSWORD', version)
         self.assertEqual(len(self.calls), 2)
         self.assert_no_success()
@@ -452,6 +453,255 @@ class K4MigrationTests(unittest.TestCase):
         execute.assert_not_called()
         self.assertIn('Password ve hedef onayı gerekli.', state.messages)
         self.assertEqual(list(self.receipts.iterdir()), [])
+
+    def reviewed_fixture(self):
+        self.write_test_proof()
+        now = datetime.now(timezone.utc)
+        self.review_path = self.receipts / 'reviewed-continuation.json'
+        self.review_proofs = {
+            'prior_attempt': {
+                'scope': 'K4_OPERATOR_ATTEMPT', 'target': 'production',
+                'target_ref': self.config['production_ref'],
+                'migration_sha256': self.config['migration_sha256'],
+                'phase': 'read_only_preflight', 'password_recorded': False,
+                'automatic_retry': False,
+                'updated_at_utc': (now - timedelta(minutes=3)).isoformat(),
+            },
+            'prior_failure': {
+                'scope': 'K4_OPERATOR_FAILURE', 'target': 'production',
+                'code': 'PSQL_FAILED_STOP_NO_RETRY', 'password_recorded': False,
+            },
+            'network_diagnosis': {
+                'scope': 'K4_CREDENTIAL_FREE_NETWORK_DIAGNOSIS',
+                'host': self.config['host'], 'port': 5432,
+                'observed_at_utc': (now - timedelta(minutes=2)).isoformat(),
+                'restricted_outcome': 'DNS_HOST_NOT_FOUND', 'restricted_error_code': 11001,
+                'approved_environment_outcome': 'TCP_CONNECTED',
+                'credentials_used': False, 'database_connection_started': False,
+            },
+            'inventory': {
+                'scope': 'K4_PRODUCTION_READ_ONLY_PREFLIGHT_INVENTORY',
+                'target_ref': self.config['production_ref'],
+                'observed_at_utc': (now - timedelta(minutes=1)).isoformat(),
+                'transaction_read_only': True, 'rolled_back': True,
+                'business_marked_test': False, 'account_operations': 0,
+                **{name + '_present': False for name in (
+                    'restore_function', 'list_offers_function', 'evidence_table',
+                    'capability_table', 'customer_guard', 'guard_function',
+                    'evidence_guard_function')},
+            },
+        }
+        self.proof_paths = {
+            'prior_attempt': self.receipts / 'production-attempt.json',
+            'prior_failure': self.receipts / 'production-last-failure.json',
+            'network_diagnosis': self.receipts / 'network-diagnosis.json',
+            'inventory': self.receipts / 'production-inventory.json',
+        }
+        self.review = {
+            'scope': 'K4_REVIEWED_PREFLIGHT_CONTINUATION', 'target': 'production',
+            'target_ref': self.config['production_ref'],
+            'migration_sha256': self.config['migration_sha256'],
+            'acceptance_sha256': self.config['acceptance_sha256'],
+            'psql_binary_sha256': operator.sha(self.psql),
+            'ca_sha256': operator.sha(self.ca), 'reviewed_at_utc': now.isoformat(),
+        }
+        self.write_review()
+        return self.review_path
+
+    def write_review(self):
+        for key, proof in self.review_proofs.items():
+            self.proof_paths[key].write_text(json.dumps(proof), encoding='utf8')
+            self.review[key + '_path'] = str(self.proof_paths[key])
+            self.review[key + '_sha256'] = operator.sha(self.proof_paths[key])
+        self.review_path.write_text(json.dumps(self.review), encoding='utf8')
+
+    def validated_followup(self):
+        return operator.validate(self.config_path, 'production', self.review_path)
+
+    def test_explicit_review_is_required_and_original_failure_files_are_preserved(self):
+        self.reviewed_fixture()
+        before = {key: self.proof_paths[key].read_bytes() for key in ('prior_attempt', 'prior_failure')}
+        self.mock_run.reset_mock()
+        with self.assertRaisesRegex(ValueError, '^PRIOR_ATTEMPT_REQUIRES_INDEPENDENT_READBACK$'):
+            self.validated('production')
+        self.mock_run.assert_not_called()
+        cfg, version = self.validated_followup()
+        self.assertEqual(version, self.version)
+        self.assertEqual(Path(cfg['_reviewed_preflight_continuation']['attempt_path']).name,
+                         'production-followup-attempt.json')
+        self.assertEqual(before, {key: self.proof_paths[key].read_bytes() for key in before})
+        self.assertTrue(all(call.args[0][-1] == '--version' for call in self.mock_run.call_args_list))
+
+    def test_review_cannot_authorize_a_fresh_target_or_a_nonproduction_followup(self):
+        self.reviewed_fixture()
+        self.proof_paths['prior_attempt'].unlink()
+        with self.assertRaisesRegex(ValueError, '^REVIEW_ORIGINAL_PREFLIGHT_ATTEMPT_REQUIRED$'):
+            self.validated_followup()
+        (self.receipts / 'test-success.json').unlink()
+        (self.receipts / 'test-attempt.json').write_text('{}')
+        with self.assertRaisesRegex(ValueError, '^REVIEWED_CONTINUATION_PRODUCTION_ONLY$'):
+            operator.validate(self.config_path, 'test', self.review_path)
+
+    def test_any_post_preflight_or_ambiguous_phase_is_ineligible_even_with_new_manifest_hashes(self):
+        self.reviewed_fixture()
+        for phase in ('claimed_before_connection', 'migration_submitting_outcome_unknown_until_receipt',
+                      'migration_committed', 'completed_success_receipt_written'):
+            with self.subTest(phase=phase):
+                self.review_proofs['prior_attempt']['phase'] = phase
+                self.write_review()
+                with self.assertRaisesRegex(ValueError, '^REVIEW_CONCLUSIVE_PREFLIGHT_FAILURE_REQUIRED$'):
+                    self.validated_followup()
+
+    def test_review_requires_same_original_paths_and_pinned_source_tool_target(self):
+        self.reviewed_fixture()
+        original = dict(self.review)
+        for key in ('target_ref', 'migration_sha256', 'acceptance_sha256',
+                    'psql_binary_sha256', 'ca_sha256'):
+            with self.subTest(key=key):
+                self.review = dict(original)
+                self.review[key] = 'x' * (20 if key == 'target_ref' else 64)
+                self.review_path.write_text(json.dumps(self.review))
+                with self.assertRaisesRegex(ValueError, '^REVIEWED_CONTINUATION_PLAN_MISMATCH$'):
+                    self.validated_followup()
+        self.review = original
+        duplicate = self.receipts / 'other-attempt.json'
+        duplicate.write_bytes(self.proof_paths['prior_attempt'].read_bytes())
+        self.review['prior_attempt_path'] = str(duplicate)
+        self.review_path.write_text(json.dumps(self.review))
+        with self.assertRaisesRegex(ValueError, '^REVIEW_ORIGINAL_ATTEMPT_PATH_MISMATCH$'):
+            self.validated_followup()
+
+    def test_unknown_network_reason_credentials_or_changed_preflight_failure_cannot_authorize(self):
+        self.reviewed_fixture()
+        for key, value in (('restricted_error_code', 123), ('restricted_outcome', 'UNKNOWN'),
+                           ('approved_environment_outcome', 'UNKNOWN'), ('credentials_used', True),
+                           ('database_connection_started', True)):
+            original = dict(self.review_proofs['network_diagnosis'])
+            with self.subTest(key=key):
+                self.review_proofs['network_diagnosis'][key] = value
+                self.write_review()
+                with self.assertRaisesRegex(ValueError, '^REVIEW_KNOWN_CREDENTIAL_FREE_NETWORK_DIAGNOSIS_REQUIRED$'):
+                    self.validated_followup()
+                self.review_proofs['network_diagnosis'] = original
+        self.review_proofs['prior_failure']['code'] = 'AUTH_REJECTED'
+        self.write_review()
+        with self.assertRaisesRegex(ValueError, '^REVIEW_CONCLUSIVE_PREFLIGHT_FAILURE_REQUIRED$'):
+            self.validated_followup()
+
+    def test_read_only_inventory_requires_correct_production_and_every_new_k4_object_absent(self):
+        self.reviewed_fixture()
+        original = dict(self.review_proofs['inventory'])
+        for key, value in (('target_ref', self.config['test_ref']), ('transaction_read_only', False),
+                           ('rolled_back', False), ('business_marked_test', True), ('account_operations', 1),
+                           ('restore_function_present', True), ('capability_table_present', True),
+                           ('customer_guard_present', True), ('evidence_guard_function_present', None)):
+            with self.subTest(key=key):
+                self.review_proofs['inventory'] = dict(original, **{key: value})
+                self.write_review()
+                with self.assertRaisesRegex(ValueError, '^REVIEW_FRESH_PRODUCTION_K4_ABSENT_INVENTORY_REQUIRED$'):
+                    self.validated_followup()
+
+    def test_proofs_must_be_fresh_dated_after_failure_and_not_after_review(self):
+        self.reviewed_fixture()
+        original = dict(self.review_proofs['inventory'])
+        now = datetime.now(timezone.utc)
+        for timestamp in ((now - timedelta(hours=2)).isoformat(),
+                          (now - timedelta(minutes=4)).isoformat(),
+                          (now + timedelta(minutes=4)).isoformat(), None, 'not-a-date'):
+            with self.subTest(timestamp=timestamp):
+                self.review_proofs['inventory'] = dict(original, observed_at_utc=timestamp)
+                self.write_review()
+                with self.assertRaisesRegex(ValueError, '^REVIEW_(FRESH_POST_FAILURE_PROOF|DATED_PROOF)_REQUIRED$'):
+                    self.validated_followup()
+
+    def test_pinned_proofs_changed_after_review_are_rejected_without_a_followup_attempt(self):
+        self.reviewed_fixture()
+        cfg, version = self.validated_followup()
+        self.proof_paths['inventory'].write_bytes(b'{"changed":true}')
+        self.mock_run.reset_mock()
+        with self.assertRaisesRegex(RuntimeError, '^REVIEW_PINNED_PROOF_CHANGED$'):
+            operator.execute(cfg, 'production', 'SYNTHETIC_PASSWORD', version)
+        self.mock_run.assert_not_called()
+        self.assertFalse((self.receipts / 'production-followup-attempt.json').exists())
+
+    def test_reviewed_execution_has_separate_exclusive_attempt_same_sql_and_no_automatic_login(self):
+        self.reviewed_fixture()
+        before = {key: self.proof_paths[key].read_bytes() for key in ('prior_attempt', 'prior_failure')}
+        cfg, version = self.validated_followup()
+        self.mock_run.side_effect = self.fake_psql(classification='f')
+        result = operator.execute(cfg, 'production', 'SYNTHETIC_PASSWORD', version)
+        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(result['reviewed_preflight_continuation_sha256'], operator.sha(self.review_path))
+        self.assertEqual(result['prior_attempt_sha256'], operator.sha(self.proof_paths['prior_attempt']))
+        marker = json.loads((self.receipts / 'production-followup-attempt.json').read_text())
+        self.assertEqual(marker['phase'], 'completed_success_receipt_written')
+        self.assertEqual(before, {key: self.proof_paths[key].read_bytes() for key in before})
+        self.assertEqual(Path(self.calls[1][0][-1]).read_bytes(), self.migration_bytes)
+        for path in self.receipts.glob('*.json'):
+            self.assertNotIn('SYNTHETIC_PASSWORD', path.read_text())
+
+    def test_second_followup_or_racing_review_manifest_cannot_start_another_connection(self):
+        self.reviewed_fixture()
+        cfg, version = self.validated_followup()
+        marker = self.receipts / 'production-followup-attempt.json'
+        marker.write_text('{"phase":"preserve"}')
+        self.mock_run.reset_mock()
+        with self.assertRaises(FileExistsError):
+            operator.execute(cfg, 'production', 'SYNTHETIC_PASSWORD', version)
+        self.mock_run.assert_not_called()
+        with self.assertRaisesRegex(ValueError, '^REVIEWED_CONTINUATION_ALREADY_ATTEMPTED$'):
+            self.validated_followup()
+        self.assertEqual(json.loads(marker.read_text()), {'phase': 'preserve'})
+
+    def test_review_proof_change_after_probe_stops_before_any_ddl_file(self):
+        self.reviewed_fixture()
+        cfg, version = self.validated_followup()
+        before = self.proof_paths['prior_attempt'].read_bytes()
+        def tamper(args, kwargs):
+            if '--file' not in args:
+                self.review_path.write_text('{"changed":true}')
+        self.mock_run.side_effect = self.fake_psql(classification='f', inspect=tamper)
+        with self.assertRaisesRegex(RuntimeError, '^REVIEW_PINNED_PROOF_CHANGED$'):
+            operator.execute(cfg, 'production', 'SYNTHETIC_PASSWORD', version)
+        self.assertEqual(len(self.calls), 1)
+        self.assertNotIn('--file', self.calls[0][0])
+        self.assertEqual(before, self.proof_paths['prior_attempt'].read_bytes())
+        self.assert_no_success('production')
+
+    def test_reviewed_gui_failure_never_overwrites_original_preflight_failure(self):
+        self.reviewed_fixture()
+        before = self.proof_paths['prior_failure'].read_bytes()
+        cfg, version = self.validated_followup()
+        tk, state = self.fake_tk()
+        class ImmediateThread:
+            def __init__(self, target, **kwargs): self.target = target
+            def start(self): self.target()
+        with patch.dict(sys.modules, {'tkinter': tk}), \
+             patch.object(operator, 'validate', return_value=(cfg, version)), \
+             patch.object(operator.threading, 'Thread', ImmediateThread), \
+             patch.object(operator, 'execute', side_effect=RuntimeError('AUTH_REJECTED')):
+            operator.gui(self.config_path, 'production', self.review_path)
+        self.assertEqual(before, self.proof_paths['prior_failure'].read_bytes())
+        followup_failure = json.loads((self.receipts / 'production-followup-last-failure.json').read_text())
+        self.assertEqual(followup_failure['code'], 'AUTH_REJECTED')
+        self.assertEqual(state.entry.value, '')
+
+    def test_stderr_classifier_returns_only_fixed_safe_categories(self):
+        cases = (
+            (b'FATAL: password authentication failed for user PRIVATE_USER secret=PRIVATE_VALUE', 'AUTH_REJECTED'),
+            (b'could not translate host name PRIVATE_HOST', 'DNS_HOST_NOT_FOUND'),
+            (b'connection refused; PRIVATE_VALUE', 'NETWORK_UNREACHABLE'),
+            (b'connection timed out PRIVATE_VALUE', 'NETWORK_UNREACHABLE'),
+            (b'SSL certificate verification failed PRIVATE_VALUE', 'TLS_VERIFICATION_FAILED'),
+            (b'FATAL: Tenant or user not found PRIVATE_VALUE', 'TARGET_NOT_FOUND'),
+            (b'ERROR: permission denied for table PRIVATE_TABLE', 'DATABASE_PERMISSION_REJECTED'),
+            (b'FATAL: remaining connection slots PRIVATE_VALUE', 'SERVER_UNAVAILABLE'),
+            (b'ERROR: PRIVATE_PASSWORD_OR_CUSTOM_TOKEN', 'PSQL_FAILED_STOP_NO_RETRY'),
+        )
+        for stderr, expected in cases:
+            with self.subTest(expected=expected):
+                self.assertEqual(operator.classify_psql_error(stderr), expected)
+                self.assertNotIn('PRIVATE', operator.classify_psql_error(stderr))
 
 
 if __name__ == '__main__':
