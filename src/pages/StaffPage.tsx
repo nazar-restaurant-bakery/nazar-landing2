@@ -5,6 +5,7 @@ import StaffFollowUpQueue from "../components/StaffFollowUpQueue";
 import StaffEmailStatus from "../components/StaffEmailStatus";
 import CloverOrdersPanel from "../components/CloverOrdersPanel";
 import { safeCrmRequest, crmDisplayDate, crmNoteAuthor, crmLocalInput, crmTaskError, crmRequestError, validCrmOverview, validCrmTasks, validCrmDecisions } from "../lib/crmUi";
+import { browserDeployment } from "../lib/supabase";
 
 type Customer = {
   id: string; name: string | null; email: string | null; phone: string | null;
@@ -32,9 +33,11 @@ type DecisionQueue = { items: CateringDecision[] };
 type DecisionEmailDraft = { decisionId: string; to: string; cc: string; subject: string; body: string };
 type CateringNotification = { request_id: string; tracked: boolean; attempted_at: string | null; sent_at: string | null; error: string | null };
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const client = url && key ? createClient(url, key) : null;
+const url = browserDeployment.url;
+const key = browserDeployment.key;
+// Existing staff features reach provider routes. Keep this client unavailable
+// in isolated Preview until their test-safe provider routing is enabled.
+const client = !browserDeployment.isolated && url && key ? createClient(url, key) : null;
 async function crmRpc(name: string, params?: Record<string, unknown>) {
   return safeCrmRequest(() => client ? client.rpc(name, params)
     : Promise.resolve({ data: null, error: { code: "MISSING_CONFIG" } }));
