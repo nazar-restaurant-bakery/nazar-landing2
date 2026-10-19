@@ -20,3 +20,4 @@ export const staffCopy = {
 } as const;
 export const staffStatuses: Record<string, string> = { new: "Yeni", contacted: "İletişime geçildi", quoted: "Teklif verildi", won: "Kazanıldı", lost: "Kaybedildi", closed: "Kapandı" };
 export const staffEmailLabels: Record<string, string> = { subscribed: "Abone", pending_review: "Onay bekliyor", not_subscribed: "Abone değil", unsubscribed: "Abonelikten ayrıldı", confirmed: "Klaviyo’da doğrulandı", pending: "Onay tamamlanmadı", suppressed: "Gönderim kapalı", not_on_list: "VIP listesinde değil", unavailable: "Doğrulanamadı" };
+export { opsCopy } from "./opsCopy.ts";

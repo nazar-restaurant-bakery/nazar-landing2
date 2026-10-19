@@ -5,6 +5,8 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { staffCopy as c } from '../../src/lib/staffCopy.ts';
+import { opsCopy as o } from '../../src/lib/opsCopy.ts';
+import { runOpsScenarios } from './opsScenarios.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../..');
@@ -231,7 +233,7 @@ try {
   await run('23 Default staff route opens Tasks', 'normal', async page => {
     await page.waitForURL('**/staff/tasks*'); await page.getByRole('heading', exact(c.tasks)).waitFor();
   }, '/staff');
-  for (const route of ['customers', 'crm', 'catering', 'tasks', 'offers', 'system']) {
+  for (const route of ['customers', 'crm', 'catering', 'tasks', 'offers', 'system', 'ops']) {
     await run('24 Denied direct route /staff/' + route, 'auth-denied', async page => {
       await visible(page, c.accessDenied); const s = await snapshot(page);
       assert.equal(s.calls.filter(call => call.name !== 'auth.getSession' && call.name !== 'crm_staff_authorized_v1').length, 0);
@@ -282,6 +284,7 @@ try {
     await visible(page, c.pendingDecision); assert.equal((await calls(page, 'crm_request_catering_decision_v1')).length, 1);
   }, '/staff/catering');
   await run('32 System resolves mocked form error without any email action', 'normal', async page => {
+    await page.getByText(o.existingSystem, { exact: true }).click();
     await page.getByRole('button', exact(c.resolve)).first().click(); await visible(page, c.resolved);
     assert.deepEqual((await calls(page, 'crm_resolve_form_error_v1'))[0].params, { p_id: (await snapshot(page)).ids?.error || '99999999-9999-4999-8999-999999999999' });
     assert.equal((await snapshot(page)).calls.filter(call => /setup-test|send|email-draft/.test(call.name)).length, 0);
@@ -327,6 +330,7 @@ try {
     await visible(page, 'SYNTHETIC — belirsiz görev');
     assert.equal((await calls(page, 'crm_create_task_v1')).length, 1);
   });
+  await runOpsScenarios({ run, visible, screenshot, exact, snapshot, calls, setMode, c });
 } finally {
   await browser.close(); await server.close();
   const report = { scope: 'Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.',

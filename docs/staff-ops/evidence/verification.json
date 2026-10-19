@@ -1,0 +1,90 @@
+{
+  "scope": "Local synthetic tests only. Database migration executed solely in isolated in-memory PGlite. No live source or customer records.",
+  "checkedAt": "2026-10-19T04:21:55.601Z",
+  "baseRevision": "65efdb769f90e65d8e211ad41786720cb81c71ce",
+  "unitAndDatabaseTests": {
+    "tests": 172,
+    "passed": 172,
+    "failed": 0,
+    "skipped": 0
+  },
+  "typescript": "passed",
+  "serverTypescript": "passed",
+  "targetedEslint": "passed, zero warnings",
+  "viteBuild": "passed",
+  "bundle": {
+    "before": {
+      "files": [
+        {
+          "name": "StaffPage-BpYwMRUX.css",
+          "gzipBytes": 498
+        },
+        {
+          "name": "StaffPage-CDlJD3BG.js",
+          "gzipBytes": 13884
+        },
+        {
+          "name": "index-DNBE24yO.js",
+          "gzipBytes": 139433
+        },
+        {
+          "name": "index-nbe0-V4M.css",
+          "gzipBytes": 6625
+        }
+      ],
+      "totalGzipBytes": 160440
+    },
+    "after": {
+      "files": [
+        {
+          "name": "StaffPage-4iZcs09p.js",
+          "gzipBytes": 23906
+        },
+        {
+          "name": "StaffPage-BpYwMRUX.css",
+          "gzipBytes": 498
+        },
+        {
+          "name": "index-BefYpJZG.js",
+          "gzipBytes": 142186
+        },
+        {
+          "name": "index-C2YY10cy.css",
+          "gzipBytes": 6746
+        }
+      ],
+      "totalGzipBytes": 173336
+    },
+    "increaseGzipBytes": 12896,
+    "limitGzipBytes": 40000,
+    "passed": true
+  },
+  "privateCsvValidation": {
+    "comparedCells": 180,
+    "passedCells": 180,
+    "sourceSHA256": "2565b0769423860430c8c156004c59855caf6d20d5796f473b26deda117b5a13",
+    "referenceSHA256": "2cff2f6c62a11a909d18dc0426d20cf9fe7834ee62555def24d13222a5c3baee",
+    "privateSourceIncluded": false
+  },
+  "pdfQa": {
+    "syntheticOnly": true,
+    "strictParser": "passed",
+    "pages": 1,
+    "totalsAndEscapedFilename": "passed",
+    "popplerRender": "passed",
+    "visualInspection": "passed"
+  },
+  "liveMigrationApplied": false,
+  "liveFunctionDeployed": false,
+  "automaticScheduling": false,
+  "browserTests": {
+    "passed": 59,
+    "failed": 0,
+    "report": "browser/results.json"
+  },
+  "finalVisualChecks": {
+    "passed": 2,
+    "failed": 0,
+    "report": "visual/results.json"
+  }
+}

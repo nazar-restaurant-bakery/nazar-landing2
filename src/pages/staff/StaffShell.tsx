@@ -12,6 +12,7 @@ import CateringView from "./CateringView";
 import TasksView from "./TasksView";
 import OffersView from "./OffersView";
 import SystemView from "./SystemView";
+import OpsController from "./OpsController";
 import StaffSignIn, { StaffPassword } from "./StaffSignIn";
 import "./staff.css";
 
@@ -245,23 +246,27 @@ export default function StaffShell() {
 
   const tab = location.pathname.split("/")[2];
   const busy = reading || writing;
-  const tabs = [["customers", c.customers], ["catering", c.catering], ["tasks", c.tasks], ["offers", c.offers], ["system", c.system]];
+  const tabs = [["customers", c.customers], ["catering", c.catering], ["tasks", c.tasks], ["offers", c.offers], ["ops", c.system]];
   return <main className="staff-workspace" lang="tr" dir="ltr">
     {!sessionReady ? <Skeleton /> : !session ? <><StaffSignIn onSigningIn={() => { locallySignedOut.current = false; }} />{message && <p role="status" className="mx-auto max-w-md px-4 text-sm text-amber-800">{message}</p>}</> : <>
       <header className="border-b border-brand-border bg-white px-4 lg:px-6"><div className="mx-auto flex max-w-[1800px] flex-wrap items-center gap-x-5 gap-y-3 py-3"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand font-bold text-white">N</span><div><p className="text-sm font-bold">{c.brand}</p><p className="text-[11px] text-stone-500">{c.workspace}</p></div></div><nav className="order-3 flex w-full flex-wrap gap-1 lg:order-none lg:w-auto" aria-label={c.workspace}>{tabs.map(([path, label]) => <NavLink key={path} to={`/staff/${path}`} className={({ isActive }) => `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? "bg-brand-primarySoft text-brand-dark" : "text-stone-600 hover:bg-brand-bg"}`}>{label}</NavLink>)}</nav><div className="ml-auto flex min-w-0 flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs" title={c.testsHelp}><input type="checkbox" checked={includeTests} disabled={busy || phase !== "allowed"} onChange={event => toggleTests(event.target.checked)} className="accent-brand" />{c.tests}</label><div className="max-w-48"><p className="truncate text-xs">{session.user.email || "—"}</p><p className="text-[10px] text-stone-500">{c.role}: —</p></div><button type="button" className="text-xs font-semibold text-brand underline" onClick={() => void signOut()}>{c.logout}</button></div></div></header>
-      <div className="mx-auto max-w-[1800px] px-3 py-4 sm:px-5 lg:px-6"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-stone-500">{c.privacy}</p><button type="button" className="staff-button staff-secondary" disabled={busy} onClick={() => void refresh(true)}>{reading ? c.loading : c.refresh}</button></div>
+      <div className="mx-auto max-w-[1800px] px-3 py-4 sm:px-5 lg:px-6"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-stone-500">{c.privacy}</p>{tab !== "ops" && <button type="button" className="staff-button staff-secondary" disabled={busy} onClick={() => void refresh(true)}>{reading ? c.loading : c.refresh}</button>}</div>
         {(message || writeBlocked) && <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{message || c.refreshFirst}</p>}
         {phase === "denied" ? <section className="staff-panel p-6"><h1 className="text-xl font-semibold">{c.accessDenied}</h1><p className="mt-2 text-sm">{c.deniedHelp}</p></section>
           : phase === "unavailable" ? <p role="status" className="staff-panel p-6">{c.unavailable}</p>
             : phase === "checking" ? <Skeleton /> : <>
               {(!tab || tab === "crm") && <Navigate to={tab === "crm" ? "/staff/customers" : "/staff/tasks"} replace />}
-              {tab && !["customers", "catering", "tasks", "offers", "system", "crm"].includes(tab) && <Navigate to="/staff/tasks" replace />}
+              {tab === "system" && <Navigate to="/staff/ops" replace />}
+              {tab && !["customers", "catering", "tasks", "offers", "system", "ops", "crm"].includes(tab) && <Navigate to="/staff/tasks" replace />}
               {overview && <div hidden={tab !== "customers"}><CustomersView overview={overview} selectedId={selectedCustomer} onSelect={setSelectedCustomer} tasksByCustomer={tasks} tasksLoading={tasksLoading} emailStates={emailStates} onRefreshEmail={id => void refreshEmail(id)} onAddNote={addNote} onCreateTask={createTask} onCompleteTask={id => mutate(() => crmData.completeTask(id), "boolean", c.taskDone, selectedCustomer ? { kind: "tasks", customerId: selectedCustomer } : { kind: "queue" })} onOpenRequest={openRequest} busy={busy} writeBlocked={writeBlocked} /></div>}
               {overview && <div hidden={tab !== "catering"}><CateringView requests={overview.requests} selectedId={selectedRequest} onSelect={setSelectedRequest} decisions={decisions} notifications={notifications} busy={busy} writeBlocked={writeBlocked} onUpdate={updateRequest} onQuestion={askQuestion} /></div>}
               {!overview && ["customers", "catering"].includes(tab) && <p role="status">{c.unavailable}</p>}
               {tab === "tasks" && <TasksView data={queueData} loading={reading} owner={queueOwner} onOwnerChange={setQueueOwner} onPage={value => { setQueueData(null); setOffset(value); }} onQueue={value => { setQueueData(null); setQueue(value); setOffset(0); }} queue={queue} onOpenCustomer={openCustomer} onOpenRequest={openRequest} onComplete={id => mutate(() => crmData.completeTask(id), "boolean", c.taskDone, { kind: "queue" })} busy={busy} writeBlocked={writeBlocked} />}
               {tab === "offers" && <OffersView offers={offers} loading={reading} />}
-              {tab === "system" && <><SystemView errors={errors} loading={reading} notifications={notifications} requests={overview?.requests || []} email={session.user.email || ""} authorized={phase === "allowed"} onResolve={id => mutate(() => crmData.resolveError(id), "boolean", c.resolved, { kind: "errors" })} busy={busy} writeBlocked={writeBlocked} /><StaffPassword /></>}
+              {tab === "ops" && <OpsController key={session.user.id} identity={session.user.id} includeTests={includeTests}
+                onDenied={() => { clearPrivate(); setPhase("denied"); }} onRefreshLegacy={() => { void refresh(true); }}
+                errorsSection={<SystemView section="errors" aggregateOnly errors={errors} loading={reading} notifications={notifications} requests={overview?.requests || []} email={session.user.email || ""} authorized={phase === "allowed"} onResolve={id => mutate(() => crmData.resolveError(id), "boolean", c.resolved, { kind: "errors" })} busy={busy} writeBlocked={writeBlocked} />}
+                detailsSection={<><SystemView section="details" aggregateOnly errors={errors} loading={reading} notifications={notifications} requests={overview?.requests || []} email={session.user.email || ""} authorized={phase === "allowed"} onResolve={id => mutate(() => crmData.resolveError(id), "boolean", c.resolved, { kind: "errors" })} busy={busy} writeBlocked={writeBlocked} /><StaffPassword /></>} />}
             </>}
       </div>
     </>}
