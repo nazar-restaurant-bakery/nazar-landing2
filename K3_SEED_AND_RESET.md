@@ -10,7 +10,7 @@ node tools/test-env/generate-seed.mjs <new-local-output.sql>
 
 The output contains one test business, three synthetic customers (`subscribed`, `not_subscribed`, `unsubscribed`), three signups, one catering request and one inactive offer. All rows have `is_test=true`; emails use `example.invalid`, phone is null, names are INTERNAL TEST. No real records or provider credentials are read. The subscribed case is only a synthetic database state; it grants no real marketing consent.
 
-The loader is transactional and refuses absent boolean test-marker columns before the first INSERT. `supabase/migrations/20261019000100_test_record_markers.sql` explicitly adds markers to businesses/customers/offers; signups/catering markers already come from the existing migration. This additive SQL has not been applied to production or a hosted test project. It requires the reviewed full baseline first.
+The loader is transactional and refuses absent boolean test-marker columns before the first INSERT. `supabase/migrations/20261019000100_test_record_markers.sql` explicitly adds markers to businesses/customers/offers; signups/catering markers already come from the existing migration. The hosted installer requires the reviewed full baseline first and includes the marker body in its transaction. K3 does not apply this SQL to production; actual test-target execution must be established by the dated installer receipt and independent readback.
 
 `renderSeedSql(fixture)` still emits its own `BEGIN`/`COMMIT`; omitting options or
 passing `{ transactional: true }` preserves that default. A caller that already
@@ -109,5 +109,17 @@ files or logs. A consumed plan cannot automatically run twice. A lost or
 unusable acknowledgement means outcome unknown; reconcile read-only before
 any new attempt. An accepted SQL receipt is not real Auth/REST acceptance,
 Preview write proof or K3 closure; those remain separate checks.
+
+After installation, [tools/test-env/inspect-installed-readonly.sql](tools/test-env/inspect-installed-readonly.sql)
+observes aggregate application/test-marker counts, catalogue hashes, function
+privileges, RLS and the preserved staff/Auth link without exporting its identity.
+It is read-only and does not replace a real HTTP/Auth check. Use the
+[existing-account Auth / REST helper](K3_AUTH_REST.md) for that separate test:
+Talip enters the existing preserved sandbox staff Email and Auth password only
+in its local window. Its private config contains no login credentials, database
+password or secret API key. No new Auth account or staff permission is created.
+Only a successful real hosted receipt can establish that check; local validation
+and mock tests do not. The single Preview submission and production-zero proof
+described above remain separately required.
 
 Migration rule: **test first, production later**. Keep the reviewed SQL bytes/checksums in version control, apply to the isolated project, record the successful replay and Preview write, then use those same reviewed files in a separate Talip-controlled production release. Do not use emergency pause, test fixture SQL or an unmerged Ops migration as an ordinary deployment migration. Do not mark a baseline applied in production or run migration repair in K3.

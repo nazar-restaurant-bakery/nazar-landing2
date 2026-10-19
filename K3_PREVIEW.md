@@ -10,7 +10,7 @@ Public Vite build variables (rebuild required): `VITE_APP_ENV=isolated-test`, `V
 
 Server-only Pages Preview bindings: `APP_ENV=isolated-test`, `TEST_SUPABASE_URL`, `TEST_BUSINESS_ID` (must match browser business), `TEST_SUPABASE_SECRET_KEY` (test project's `sb_secret_` key), `TEST_TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA`, `TEST_TURNSTILE_EXPECTED_HOSTNAME` (exact hostname returned by the public dummy Siteverify response). No `VITE_` secret values.
 
-Use only synthetic seed data and synthetic staff accounts in the isolated project. Reconfigure Auth site/redirect URLs for the Preview origin in that test project, never in production. Creating an environment and applying its schema is Talip's separate setup decision.
+Use only synthetic customer seed data in the isolated project. The separate [Auth / REST check](K3_AUTH_REST.md) reuses the existing preserved sandbox staff account with Talip's masked sign-in; it does not create a new Auth account or permission. That direct password-grant test does not require Auth Site URL or redirect changes. Any later Preview login/redirect setup is a separate test-project operation; production Auth settings remain unchanged.
 
 ## Implemented boundary
 
