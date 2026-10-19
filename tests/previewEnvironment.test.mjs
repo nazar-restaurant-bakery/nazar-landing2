@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 import { readFileSync } from 'node:fs';
-import { runInNewContext } from 'node:vm';
+import { productionAnalyticsHtml } from '../tools/build/productionAnalytics.ts';
 import { resolveBrowserEnvironment, resolveServerEnvironment, PRODUCTION_SUPABASE_URL, PRODUCTION_BUSINESS_ID, TEST_TURNSTILE_SITE_KEY, TEST_TURNSTILE_SECRET_KEY } from '../src/lib/deploymentEnvironment.ts';
 import { onRequestPost } from '../functions/api/signup.ts';
 import { onRequest as middleware } from '../functions/api/_middleware.ts';
@@ -81,13 +81,11 @@ test('preview browser never invokes public Klaviyo writer or emits analytics eve
   assert.equal(await subscribeVipEmail({email:'synthetic@customer.example',name:'Synthetic',campaign:null}),false);
   assert.doesNotThrow(()=>{trackCloverOrderHandoffs();trackCateringRequestSubmitted('synthetic-id');});
 });
-test('HTML loads production GA4 only on exact production domains, never preview or local',()=>{
+test('build-time isolation removes production GA4 while Production keeps its original static loader',()=>{
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
-  assert.doesNotMatch(html,/<script[^>]+src="https:\/\/www\.googletagmanager/);
-  const source=html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
-  const script=source.replace('import.meta.env.VITE_APP_ENV','undefined');
-  for(const hostname of [host,'localhost']) runInNewContext(script,{location:{hostname},window:{},document:{createElement:()=>{throw Error('Forbidden Google tag load');}}});
-  const appended=[],window={};runInNewContext(script,{location:{hostname:'www.nazarrestaurantandbakery.com'},window,document:{createElement:()=>({}),head:{appendChild:e=>appended.push(e)}}});
-  assert.equal(appended.length,1);assert.match(appended[0].src,/googletagmanager/);assert.equal(window.dataLayer.length,2);
-  runInNewContext(source.replace('import.meta.env.VITE_APP_ENV',JSON.stringify('isolated-test')),{location:{hostname:'nazar-restaurant-website.pages.dev'},window:{},document:{createElement:()=>{throw Error('Forbidden Google tag load');}}});
+  const transform=(env)=>productionAnalyticsHtml({command:'build',mode:'production',env}).transformIndexHtml.handler(html);
+  assert.equal(transform({}),html);
+  assert.match(html,/<script async src="https:\/\/www\.googletagmanager/);
+  assert.doesNotMatch(transform({VITE_APP_ENV:'isolated-test'}),/googletagmanager|G-LK46HFY46G/);
+  assert.doesNotMatch(transform({CF_PAGES_BRANCH:'feat/isolated-test-env'}),/googletagmanager|G-LK46HFY46G/);
 });
