@@ -102,3 +102,7 @@ export default defineConfig([
 ## K4 consent and staff offers
 
 See [K4_SUPPRESSION.md](K4_SUPPRESSION.md) for the LF migration, same-psql test/production procedure, human-only authentication and acceptance limits. Production application and merge are performed by Talip.
+
+## K5 profile attributes and error queue — preparation
+
+See [K5_PROFILE_SYNC.md](K5_PROFILE_SYNC.md) for the disabled-by-default adapter, exact Preview/Production secret names, profile-only scope, manual queue/retry limits, pending hosted migration and proposed real-account test method. This branch has not applied hosted SQL or written a real Klaviyo profile. K5 remains open pending its acceptance evidence.

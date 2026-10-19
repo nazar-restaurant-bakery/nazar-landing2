@@ -369,7 +369,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
       <header className="border-b border-[#dfe7df] bg-white px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#176b3a] text-xl font-black text-white">N</span><strong>NAZAR STAFF</strong><span className="text-[#64736a]">/ CRM</span></div>
-          <div className="flex flex-wrap items-center gap-3"><a href="/staff" className="text-sm font-medium text-[#176b3a] underline">Customer follow-up</a><a href="/staff/offers" className="text-sm font-medium text-[#176b3a] underline">Teklifler</a><button type="button" onClick={() => { void client?.auth.signOut(); setOverview(null); }} className="rounded-lg border border-[#dfe7df] px-3 py-2 text-sm">Sign out</button></div>
+          <div className="flex flex-wrap items-center gap-3"><a href="/staff" className="text-sm font-medium text-[#176b3a] underline">Customer follow-up</a><a href="/staff/offers" className="text-sm font-medium text-[#176b3a] underline">Teklifler</a><a href="/staff/profile-sync" className="text-sm font-medium text-[#176b3a] underline">Profil senkronu</a><button type="button" onClick={() => { void client?.auth.signOut(); setOverview(null); }} className="rounded-lg border border-[#dfe7df] px-3 py-2 text-sm">Sign out</button></div>
         </div>
       </header>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -430,7 +430,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
     <div className="mx-auto max-w-7xl">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div><p className="text-xs font-bold uppercase tracking-widest text-green-800">Nazar staff</p><h1 className="text-3xl font-bold">{variant === "crm" ? "CRM sign-in" : "Customer follow-up"}</h1></div>
-        {session && <nav aria-label="Personel sayfaları" className="flex flex-wrap gap-3"><a href="/staff/crm" className="rounded-lg border border-green-800 px-4 py-2 font-semibold text-green-800">Open CRM</a><a href="/staff/offers" className="rounded-lg border border-green-800 px-4 py-2 font-semibold text-green-800">Teklifler</a></nav>}
+        {session && <nav aria-label="Personel sayfaları" className="flex flex-wrap gap-3"><a href="/staff/crm" className="rounded-lg border border-green-800 px-4 py-2 font-semibold text-green-800">Open CRM</a><a href="/staff/offers" className="rounded-lg border border-green-800 px-4 py-2 font-semibold text-green-800">Teklifler</a><a href="/staff/profile-sync" className="rounded-lg border border-green-800 px-4 py-2 font-semibold text-green-800">Profil senkronu</a></nav>}
         {session && <button className="rounded-lg border px-4 py-2" onClick={() => { void client?.auth.signOut(); setOverview(null); }}>Sign out</button>}
       </header>
       {!client ? <p>Staff access is not configured.</p> : !session ?

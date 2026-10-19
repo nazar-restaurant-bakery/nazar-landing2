@@ -1,0 +1,47 @@
+{
+  "scope": "K5_LOCAL_MOCK_PREPARATION",
+  "base_commit": "6f7b8b26a31ddc02a06ecc9c972c4c9dd588686e",
+  "branch": "feat/klaviyo-profile-sync",
+  "closed": false,
+  "node_tests": {
+    "passed": 272,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "all-node-tests.txt"
+  },
+  "k5_sql_tests": 14,
+  "k5_integration_tests": 9,
+  "provider_engine_tests": 19,
+  "runtime_tests": 18,
+  "http_api_tests": 15,
+  "ui_unit_tests": 10,
+  "synthetic_browser_scenarios": 11,
+  "tsc_build": "pass",
+  "strict_functions_tsc": "pass",
+  "targeted_eslint": "pass",
+  "vite_build": "pass",
+  "bundle_gzip_bytes_same_node_method": {
+    "reviewed_k4_artifact": 181241,
+    "k5_artifact": 183421,
+    "delta": 2180
+  },
+  "migration_sha256": "d28672a87149839c71e44c72116ebbf3b96b2e76c7ec42a2a79c1f7b9f4fabc2",
+  "migration_lf_only": true,
+  "new_fixed_project_or_business_ids": false,
+  "hosted_migration_applied": false,
+  "real_provider_calls": 0,
+  "production_database_writes": 0,
+  "production_secret_changes": 0,
+  "account_operations": 0,
+  "live_test_method_approved": false,
+  "public_form_and_ga4_source_changes": false,
+  "warnings": [
+    "Existing Browserslist dataset outdated",
+    "Existing main bundle exceeds Vite 500kB threshold"
+  ],
+  "limits": [
+    "Local SQL tests do not prove hosted Auth/REST or true multi-connection scheduling",
+    "Tags absent in current schema; omitted",
+    "Real-account flow and billing behavior unverified; method approval required"
+  ]
+}

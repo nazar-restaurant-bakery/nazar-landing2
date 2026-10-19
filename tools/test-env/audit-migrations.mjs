@@ -6,6 +6,12 @@ import {fileURLToPath} from 'node:url';
 const defaultRoot=fileURLToPath(new URL('../../',import.meta.url));
 const manifestPath='tools/test-env/migration-manifest.json';
 const sha=/^[a-f0-9]{64}$/;
+// Explicit non-executable delivery inventory policies. A new ID/tool requires a
+// code review; a manifest string can never select an arbitrary executable path.
+const additivePolicy=new Map([
+ ['k4_suppression_consent_offers',{path:'supabase/migrations/20261019000200_suppression_consent_offers.sql',tool:'tools/test-env/k4-migrate.py'}],
+ ['k5_klaviyo_profile_sync',{path:'supabase/migrations/20261019000300_klaviyo_profile_sync.sql',tool:'psql18.6 K5 release pending'}],
+]);
 export const sha256Lf=text=>createHash('sha256').update(text.replace(/\r\n/g,'\n'),'utf8').digest('hex');
 
 // Inventory only: no subprocess, database driver, network, secret environment
@@ -66,8 +72,9 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   }else if(entry.classification==='pending_canonical_additive'){
    if(positions.has(entry.id)||entry.requires_reviewed_baseline!==true)issue('CANONICAL_BASELINE_REQUIRED',relative);
   }else if(entry.classification==='reviewed_additive_delivery'){
+   const policy=additivePolicy.get(entry.id);
    if(positions.has(entry.id)||entry.requires_reviewed_baseline!==true
-     ||entry.application_tool!=='tools/test-env/k4-migrate.py')issue('ADDITIVE_DELIVERY_CONTRACT',relative);
+     ||!policy||relative!==policy.path||entry.application_tool!==policy.tool)issue('ADDITIVE_DELIVERY_CONTRACT',relative);
   }else if(!positions.has(entry.id))issue('SOURCE_MISSING_FROM_ORDER',relative);
   if(entry.requires!==undefined&&!Array.isArray(entry.requires))issue('DEPENDENCY_INVALID',String(entry.id));
   if(positions.has(entry.id))for(const dependency of Array.isArray(entry.requires)?entry.requires:[]){

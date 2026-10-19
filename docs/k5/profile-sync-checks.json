@@ -1,0 +1,15 @@
+{
+  "typecheck": "tsc -b: PASS",
+  "targetedLint": "StaffProfileSyncPage.tsx, ProfileSyncPanel.tsx, profileSyncUi.ts, App.tsx, StaffOffersPage.tsx: PASS",
+  "build": "vite build: PASS",
+  "bundleGzipKb": 184.74,
+  "warnings": [
+    "Existing Browserslist data is outdated; no package update performed.",
+    "Main bundle exceeds Vite 500 kB warning threshold."
+  ],
+  "syntheticBrowserScenarios": 11,
+  "unitTests": 10,
+  "actualAccountActions": 0,
+  "externalNetworkRequests": 0,
+  "timeoutRecheck": "GET 20 seconds, manual POST 45 seconds; 10/10 units + targeted ESLint PASS"
+}

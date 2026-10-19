@@ -1,0 +1,58 @@
+# K5 — profile attributes only (review package)
+
+Status: local SQL, synthetic adapter and staff UI preparation. **Not installed on a hosted database; no real Klaviyo write has been approved or performed.** This branch is based on merged #55, independently of held #52/#53. It neither applies those changes nor alters the existing VIP double-opt-in flow, notification functions, public forms or GA4 events.
+
+## Operation and consent boundary
+
+`/staff/profile-sync` uses the existing staff session. The same-origin `/api/staff/profile-sync` checks active staff before reading or running. GET shows durable queue counts and the latest 100 jobs, with safe error codes and no contact details. A failed read is unavailable, never an invented zero.
+
+One explicit **Şimdi senkronla** command collects up to 100 eligible candidates and claims at most **one** due job. There is no scheduler or unattended retry. Retry jobs are durable and become eligible on a later manual command; six attempts maximum. A lost response requires a successful queue refresh before another command. The lease expires after 120 seconds; an expired job can be reconciled by a later command. A failed job stays visible; no automatic reset of its attempt counter occurs unless its managed payload changes.
+
+Local `subscribed`, no suppression and no test marker are mandatory. Eligibility is read immediately before every provider request. `unsubscribed`, suppressed, known provider blocks and test records produce no new provider call. The existing test-name/domain exclusions remain enforced. Native profile subscriptions and suppression are never written. A provider unsubscribe/suppression readback wins locally through the existing negative-evidence function and K4 guard. A distributed transaction with the remote API is not claimed.
+
+The adapter permits only GET `/api/profiles` (exact email, subscriptions metadata, page size 2) and POST `/api/profile-import`, pinned to revision `2026-07-15`. POST contains only email plus managed custom properties `crm_name`, `crm_source`, `crm_registered_at`, `crm_utm`, `crm_tags`. These are not native Klaviyo tags. There are no list, subscription, suppression, event, send or profile-delete operations. No unrelated fields are cleared; unavailable data is omitted. **Missing data: the current schema has no authoritative tags field, so `crm_tags` is not exported.** Only five standard UTM fields are exported; click IDs and form messages are excluded.
+
+Email upsert plus a scoped queue fingerprint and GET reconciliation prevent duplicate profile creation on the second run or after a lost acknowledgement. Ambiguous/paginated identities fail closed. HTTP errors retain only enumerated error codes; raw provider bodies/credentials/contact data are not logged.
+
+## Exact environment names
+
+Reuse the existing K3 variables in [K3_PREVIEW.md](K3_PREVIEW.md); do not change Production bindings while preparing Preview. Existing browser public keys are `VITE_SUPABASE_ANON_KEY` / `VITE_TEST_SUPABASE_ANON_KEY`. Existing server target/key names are selected by `resolveServerEnvironment`; no new project or business identity is hardcoded.
+
+| Purpose | Production | Isolated Preview |
+|---|---|---|
+| Mode (absent = disabled) | `KLAVIYO_PROFILE_SYNC_MODE` | `TEST_KLAVIYO_PROFILE_SYNC_MODE` |
+| Account label / human-verified key binding | `KLAVIYO_PROFILE_SYNC_ACCOUNT_ID` | `TEST_KLAVIYO_PROFILE_SYNC_ACCOUNT_ID` |
+| Server secret, never VITE | `KLAVIYO_PROFILE_SYNC_KEY` | `TEST_KLAVIYO_PROFILE_SYNC_KEY` |
+| Recorded approval reference | `KLAVIYO_PROFILE_SYNC_LIVE_APPROVAL_ID` | `TEST_KLAVIYO_PROFILE_SYNC_LIVE_APPROVAL_ID` |
+| Optional exact customer UUID | `KLAVIYO_PROFILE_SYNC_CUSTOMER_ID` | `TEST_KLAVIYO_PROFILE_SYNC_CUSTOMER_ID` |
+| Synthetic 429 injection | — | `TEST_KLAVIYO_PROFILE_SYNC_MOCK_FAILURE=rate_limit` |
+
+`mock` is accepted only in the isolated environment and uses no provider network/key. `live` requires a valid private key and approval reference; isolated live mode additionally requires one exact customer UUID and a key different from any configured Production key. A present but invalid UUID disables the command, never broadens its scope. Preview has no Production target/key fallback. Missing or invalid configuration displays **Bağlantı bekliyor**. The new variables have not been set on any hosted environment.
+
+Talip creates a dedicated key named **Nazar — K5 Profile Sync** with only **profiles:read + profiles:write**. There is no accounts:read, subscriptions:write, lists:write, tags:write or events:write. Talip must create it in the intended Nazar account; the configured account label is not an independently verified provider account identity. No key value belongs in Git, reports, chat or screenshots.
+
+## Migration release — Talip, test first
+
+Migration: `supabase/migrations/20261019000300_klaviyo_profile_sync.sql`. It adds one private RLS-enabled job table, two private payload/eligibility helpers, four service-only queue RPCs, and one active-staff queue-read RPC. Existing K4 and historical SQL stay unchanged. It does not expose `core` through the Data API. See [data contract](docs/k5/data-contract.md).
+
+Use the **same psql 18.6 executable, verified TLS settings and exact LF-only file bytes** on test and Production. Record SHA-256 before either run. The K4-specific `k4-migrate.py` is not a K5 installer and must not be pointed at this migration. Before a hosted release, prepare/review the K5 target manifest and receipt in the same human-operated manner; that hosted release is pending. Do not replay the old migration chain or bypass historical guards.
+
+Release order: Talip reviews → apply this file to the isolated test DB with psql 18.6 / `ON_ERROR_STOP=1` → actual test Auth/REST and Preview checks → record successful test receipt and file hash → Talip separately approves and applies the identical file with the same psql to Production → read-only readback. No real profile key is needed for the isolated mock checks. Login/password/account and secret entry are Talip's steps. No hosted installation or credential window is started by these tests.
+
+Rollback/stop: set the selected sync mode to `disabled` (or remove it), then deploy the preceding app commit if needed; retain the private job/evidence table. Do not roll back K4 suppression protections. There is no destructive down migration or automatic remote profile cleanup.
+
+## Proposed real-account acceptance — awaiting Talip's separate approval
+
+Use only Talip-controlled Gmail domain **gmail.com**, exact alias `ctnazarbakery+k5profilesync20261019@gmail.com`. First Talip confirms it is absent from the Nazar Klaviyo account and that existing flows cannot send to this isolated test profile; profile creation may be seen by existing flows even without subscribing it. If it already exists or is suppressed, stop and choose a newly approved alias; do not unblock/reuse the earlier VIP test profile.
+
+One named fixture in the **isolated DB only** must simulate positive local consent. It needs `is_test=false` to exercise the real eligibility guard; this explicit test-fixture exception requires Talip approval, cannot be silently hidden or used in Production, and does not establish real consent. All ordinary `is_test=true` fixtures remain excluded. Isolated live configuration is restricted to that exact fixture UUID. The mock tests do not relax the live guard.
+
+With approval: run once, read back the single profile ID/properties, repeat unchanged and show no duplicate; do not send email, subscribe, add to a list or lift suppression. Capture counts/IDs only. Afterwards Talip deletes only that newly created synthetic provider profile through Klaviyo's UI and removes the isolated fixture; this writer does not gain delete authority. Return test mode to mock/disabled and remove the temporary key binding. No cleanup step has been executed.
+
+Billing cannot be promised free: one new profile can affect profile counts and existing automation; account plan/threshold has not been inspected. Talip reviews the current count/plan before approval. Klaviyo documents that [property changes can cause segment-triggered flow entry](https://help.klaviyo.com/hc/en-us/articles/360003040052) and [active profiles can count irrespective of marketing consent](https://help.klaviyo.com/hc/en-us/articles/115000976672). `NEVER_SUBSCRIBED` is not a no-send or no-billing guarantee. Deletion must not be represented as reversing an already billed period. Real-account evidence, cleanup and any billing outcome remain **not done**, so K5 remains open. If the Nazar account's flow exclusion cannot be proved, do not run there; a separately approved [Klaviyo test account](https://developers.klaviyo.com/en/docs/create_a_test_account) with no live flows is an alternative, not an account created by this work and not automatically free.
+
+## Validation
+
+Local tests: set `PGLITE_MODULE` to a local PGlite ESM module file URL, then `node --test --test-concurrency=1 tests/*.test.mjs` (Node 24); targeted tests can select `klaviyoProfileSync`, `k5Database`, `profileSyncRuntime`, `profileSyncApi`, `profileSyncIntegration`, `profileSyncUi`. No hosted DB URL/key/password is needed. SQL tests restore the reviewed baseline and K4 into isolated PGlite; this is not hosted Auth/REST, parallel multi-connection or actual provider evidence. Browser tests use synthetic data only. UI screenshots and contract details are under [docs/k5](docs/k5/).
+
+Build: `tsc -b` and `vite build`; Functions are additionally checked with strict TypeScript and targeted ESLint. A Vite preview does not prove Pages Functions or a hosted database migration. Cloudflare method dispatch follows its [Pages Functions API contract](https://developers.cloudflare.com/pages/functions/api-reference/). See [provider contract and primary sources](docs/k5/provider-contract.md).

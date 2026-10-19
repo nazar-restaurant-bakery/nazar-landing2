@@ -78,6 +78,7 @@ export default function StaffOffersPage() {
           <a href="/staff" className="min-h-11 py-3 underline">Takip</a>
           <a href="/staff/crm" className="min-h-11 py-3 underline">CRM</a>
           <a href="/staff/offers" aria-current="page" className="min-h-11 py-3 font-bold">Teklifler</a>
+          <a href="/staff/profile-sync" className="min-h-11 py-3 underline">Profil senkronu</a>
           {session && <button type="button" disabled={busy} onClick={() => void signOut()}
             className="min-h-11 rounded-lg border border-brand-border bg-white px-3 py-2 disabled:opacity-50">Çıkış</button>}
         </nav>
