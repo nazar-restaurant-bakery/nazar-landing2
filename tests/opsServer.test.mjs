@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {handleRequest} from '../supabase/functions/ops-collect/index.ts';
 import {createCommissionPdf} from '../supabase/functions/ops-collect/commission_report.ts';
-import {NAZAR_BUSINESS,NAZAR_PROJECT} from '../supabase/functions/ops-collect/contracts.ts';
+import {allowedOrigin,NAZAR_BUSINESS,NAZAR_PROJECT} from '../supabase/functions/ops-collect/contracts.ts';
 
 const staff='11111111-1111-4111-8111-111111111111',id='22222222-2222-4222-8222-222222222222',claim='33333333-3333-4333-8333-333333333333';
 const env={SUPABASE_ANON_KEY:'SYNTHETIC_ANON',SUPABASE_SERVICE_ROLE_KEY:'SYNTHETIC_SERVICE'};
@@ -90,4 +90,12 @@ test('single-page PDF has valid xref offsets, formula source and no second refun
  const data={business_id:NAZAR_BUSINESS,period_month:'2020-01-01',qualified_sales:15000,baseline:12000,refunds:0,qicr:3000,rate:.2,commission_amount:600,computed_at:'2020-02-01T12:00:00Z',persisted:true,source_file:'synthetic.csv',collected_at:'2020-02-01T12:00:00Z',period_start:'2020-01-01',period_end:'2020-01-31'};
  const text=new TextDecoder().decode(createCommissionPdf(data));assert.ok(text.startsWith('%PDF-1.4'));assert.match(text,/\/Count 1/);assert.match(text,/600\.00/);assert.match(text,/NOT deducted a second time/);const offset=Number(/startxref\n(\d+)/.exec(text)[1]);assert.equal(text.slice(offset,offset+4),'xref');
  assert.throws(()=>createCommissionPdf({...data,business_id:id}),/invalid_commission/);
+});
+test('manual-only release rejects scheduled request bodies and accepts only the actual Nazar Pages origin',async()=>{
+ for(const body of [{scheduledCollect:true,runKey:id},{scheduled:true,runKey:id,scheduledDay:'2026-10-19'}]){
+  const h=harness();const response=await handleRequest(new Request(NAZAR_PROJECT+'/functions/v1/ops-collect',{method:'POST',headers:{'Content-Type':'application/json',Authorization:jwt},body:JSON.stringify(body)}),env,h.request);
+  assert.equal(response.status,400);assert.equal(h.calls.length,0);
+ }
+ for(const origin of ['https://nazar-restaurant-website.pages.dev','https://preview.nazar-restaurant-website.pages.dev'])assert.equal(allowedOrigin(origin,{}),true);
+ for(const origin of ['https://nazar-landing2.pages.dev','https://x.nazar-restaurant-website.pages.dev.evil.example'])assert.equal(allowedOrigin(origin,{}),false);
 });

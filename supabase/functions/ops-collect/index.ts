@@ -10,8 +10,6 @@ import { collect as site } from "./site_ping.ts";
 import { collect as ga4 } from "./ga4.ts";
 import { collect as googleAds } from "./google_ads.ts";
 import { collect as meta } from "./meta.ts";
-import { collect as scheduler } from "./scheduler.ts";
-import { scheduleSecretMatches, validScheduleSecret } from "./schedule_auth.ts";
 
 const messages = {
   collected: "Bağlı kaynaklar kontrol edildi. Eksik bağlantılar ve kaynak hataları ayrı kaydedildi.",
@@ -33,13 +31,10 @@ async function collectSources(store: OpsStore, ctx: CollectorContext) {
     try { sources.push(await run(ctx)); }
     catch { sources.push({ source, status: "error", metrics: [], error: "collector_failed", requestsUsed: 0 }); }
   }
-  // An optional migration/credential is not a verified connection. Until both
-  // activation and terminal snapshot proof exist, the scheduler stays grey.
-  let scheduleEvidence;
-  if (validScheduleSecret(ctx.env.OPS_SCHEDULE_SECRET)) {
-    try { scheduleEvidence = await store.scheduleStatus(); } catch { /* Optional migration is not installed. */ }
-  }
-  sources.push(await scheduler(ctx, scheduleEvidence));
+  // A visible waiting tile is not a scheduler implementation. This release
+  // accepts authenticated staff requests only and never installs a timer/job.
+  sources.push({ source: "scheduler", status: "not_connected", metrics: [], requestsUsed: 0,
+    note: "Bu sürüm yalnız Şimdi topla ile çalışır. Günlük otomatik toplama ayrı karardır." });
   const importProof = snapshot.metrics.find(item => item.metric === "last_clover_import_at" && item.value_text);
   if (importProof) {
     const cloverStatus = sources.find(item => item.source === "clover");
@@ -52,7 +47,7 @@ async function collectSources(store: OpsStore, ctx: CollectorContext) {
   if (cloverSource) cloverSource.capabilities = ["sync_clover_csv"];
   sources.push({ source: "supabase", status: "connected", metrics: snapshot.metrics, capabilities: snapshot.capabilities,
     requestsUsed: 0, note: "Yalnız gerçek başvuruların aggregate sayımı. Sütunu / kaynağı olmayan ölçü bilinmiyor." });
-  const schedulerMetrics = [metric(ctx, "scheduler", "scheduler_mode", null, sources.find(source => source.source === "scheduler")?.status === "connected" ? "pg_cron; 10:00 UTC" : "manual; scheduler awaiting activation and snapshot proof"),
+  const schedulerMetrics = [metric(ctx, "scheduler", "scheduler_mode", null, "manual; daily scheduler not installed"),
     metric(ctx, "scheduler", "manual_runs_24h", typeof snapshot.scheduler.runs_24h === "number" ? snapshot.scheduler.runs_24h : null),
     metric(ctx, "scheduler", "manual_failed_24h", typeof snapshot.scheduler.failed_24h === "number" ? snapshot.scheduler.failed_24h : null)];
   return { metrics: [...sources.flatMap(source => source.metrics), ...schedulerMetrics], sources };
@@ -107,44 +102,31 @@ export async function handleRequest(request: Request, env: Environment, requestF
   const bearer = request.headers.get("Authorization") || "";
   if (!/^Bearer [A-Za-z0-9_.-]{20,4096}$/.test(bearer)) return reply(401, "unauthorized");
   if (!request.headers.get("Content-Type")?.toLowerCase().startsWith("application/json")) return reply(415, "invalid_content_type");
-  let actionId: string | undefined; let newAction: ActionName | undefined; let payload: Record<string, unknown> = {}; let scheduledKey: string | undefined;
+  let actionId: string | undefined; let newAction: ActionName | undefined; let payload: Record<string, unknown> = {};
   try {
     if (Number(request.headers.get("Content-Length") || 0) > 1100000) return reply(413, "too_large");
     const raw = await request.text(); if (new TextEncoder().encode(raw).length > 1100000) return reply(413, "too_large");
     const body: unknown = JSON.parse(raw);
     if (!body || typeof body !== "object" || Array.isArray(body)) return reply(400, "invalid_action");
     const input = body as Record<string, unknown>;
-    if (Object.keys(input).length === 2 && input.scheduledCollect === true && uuid(input.runKey)) scheduledKey = input.runKey;
-    else if (Object.keys(input).length === 1 && uuid(input.actionId)) actionId = input.actionId;
+    if (Object.keys(input).length === 1 && uuid(input.actionId)) actionId = input.actionId;
     else if (Object.keys(input).every(key => ["action", "payload"].includes(key)) && ACTIONS.includes(input.action as ActionName)
       && input.payload && typeof input.payload === "object" && !Array.isArray(input.payload) && uuid((input.payload as Record<string, unknown>).clientRequestId)) {
       newAction = input.action as ActionName; payload = input.payload as Record<string, unknown>;
     } else return reply(400, "invalid_action");
   } catch { return reply(400, "invalid_action"); }
-  const schedulerHeader = request.headers.get("x-nazar-ops-schedule-secret");
-  if (scheduledKey) {
-    if (origin !== null) return reply(403, "forbidden");
-    if (!validScheduleSecret(env.OPS_SCHEDULE_SECRET)) return reply(503, "schedule_not_configured");
-    if (!scheduleSecretMatches(schedulerHeader, env.OPS_SCHEDULE_SECRET)) return reply(403, "forbidden");
-  } else if (schedulerHeader !== null) return reply(403, "forbidden");
   if (env.SUPABASE_URL && env.SUPABASE_URL !== "https://khgczybubufouraqyrcj.supabase.co") return reply(503, "wrong_project_configuration");
   const store = new OpsStore(env, requestFetch); let action: ClaimedAction | null = null;
   try {
-    if (scheduledKey) {
-      action = await store.enqueueScheduled(scheduledKey);
-      if (!action) return reply(202, "scheduled_skipped");
-      if (action.action !== "collect" || action.requested_by !== null || action.actor_kind !== "scheduler" || action.request_key !== scheduledKey) return reply(503, "invalid_schedule_receipt");
-    } else {
-      const userId = await store.authenticate(bearer);
-      if (newAction) {
-        const enqueued = await store.enqueue(newAction, payload, bearer);
-        if (["done", "failed", "not_connected"].includes(enqueued.status)) return new Response(JSON.stringify({ code: enqueued.status, action: enqueued }), { status: 200, headers });
-        actionId = enqueued.id;
-      }
-      if (!actionId) return reply(400, "invalid_action");
-      action = await store.claim(actionId, userId);
-      if (!action) return reply(409, "already_claimed_or_unavailable");
+    const userId = await store.authenticate(bearer);
+    if (newAction) {
+      const enqueued = await store.enqueue(newAction, payload, bearer);
+      if (["done", "failed", "not_connected"].includes(enqueued.status)) return new Response(JSON.stringify({ code: enqueued.status, action: enqueued }), { status: 200, headers });
+      actionId = enqueued.id;
     }
+    if (!actionId) return reply(400, "invalid_action");
+    action = await store.claim(actionId, userId);
+    if (!action) return reply(409, "already_claimed_or_unavailable");
     const ctx: CollectorContext = { env, now: new Date(), budget: { remaining: 30 }, fetch: async (url, init) => {
       let reserved = false;
       try { reserved = await store.reserveExternal(); }
@@ -166,7 +148,7 @@ export async function handleRequest(request: Request, env: Environment, requestF
       }
     };
     if (defer) defer(work()); else await work();
-    return new Response(JSON.stringify({ code: "running", action: { id: claimed.id, request_key: claimed.request_key, action: claimed.action, requested_by: claimed.requested_by, actor_kind: claimed.actor_kind || "staff", requested_at: claimed.requested_at, status: "running", result: {}, finished_at: null } }), { status: 202, headers });
+    return new Response(JSON.stringify({ code: "running", action: { id: claimed.id, request_key: claimed.request_key, action: claimed.action, requested_by: claimed.requested_by, requested_at: claimed.requested_at, status: "running", result: {}, finished_at: null } }), { status: 202, headers });
   } catch (error) {
     const code = error instanceof Error ? error.message : "ops_failed";
     if (!action) return reply(code === "forbidden" ? 403 : 503, code === "forbidden" ? "forbidden" : "ops_unavailable");

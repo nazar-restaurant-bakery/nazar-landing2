@@ -1,6 +1,5 @@
 import { NAZAR_PROJECT, OPS_BUCKET, uuid, type ActionName, type ClaimedAction, type Commission, type Environment, type SafeAction, type SafeResult } from "./contracts.ts";
 import type { CollectorResult, MetricSnapshot } from "./collectors.ts";
-import type { ScheduleEvidence } from "./scheduler.ts";
 
 export class OpsStore {
   readonly env: Environment;
@@ -28,8 +27,6 @@ export class OpsStore {
     return id;
   }
   claim(actionId: string, userId: string) { return this.rpc<ClaimedAction | null>("ops_claim_action", { p_action_id: actionId, p_user_id: userId }); }
-  enqueueScheduled(runKey: string) { return this.rpc<ClaimedAction | null>("ops_enqueue_scheduled_collect", { p_run_key: runKey }); }
-  scheduleStatus() { return this.rpc<ScheduleEvidence>("ops_schedule_status_v"); }
   async enqueue(action: ActionName, payload: Record<string, unknown>, bearer: string) {
     if (!uuid(payload.clientRequestId)) throw new Error("invalid_request_key");
     try { return await this.rpc<SafeAction>("ops_request_action", { p_action: action, p_payload: payload }, bearer); }

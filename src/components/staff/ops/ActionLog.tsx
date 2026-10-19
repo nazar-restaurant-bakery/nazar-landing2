@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import type { OpsAction } from "../../../lib/opsData";
-import { opsCanResume } from "../../../lib/opsUi";
 import { opsCopy as c } from "../../../lib/staffCopy";
 import { staffDisplayDate } from "../../../lib/staffUi";
 
@@ -12,7 +11,7 @@ export default function ActionLog({ actions, loading, onDownload, onResume, iden
   const [resumeError, setResumeError] = useState("");
   const resumePending = useRef(false);
   async function resume(action: OpsAction) {
-    if (!onResume || busy || resumePending.current || !opsCanResume(action, identity)) return;
+    if (!onResume || busy || resumePending.current || action.status !== "queued" || !identity || action.requested_by !== identity) return;
     resumePending.current = true; setResuming(true); setResumeError("");
     try { await onResume(action.id); setResumeId(null); }
     catch { setResumeError(c.unknownAction); }
@@ -25,11 +24,11 @@ export default function ActionLog({ actions, loading, onDownload, onResume, iden
       : actions === null ? <p className="mt-3 text-sm text-stone-500">{c.actionLogUnavailable}</p>
         : !rows.length ? <p className="mt-3 text-sm text-stone-500">{c.noActions}</p>
           : <ol className="mt-3 space-y-3">{rows.map(action => {
-            const canResume = !!onResume && opsCanResume(action, identity);
+            const canResume = !!onResume && action.status === "queued" && !!identity && action.requested_by === identity;
             return <li key={action.id} className="rounded-lg border border-brand-border p-3 text-xs">
               <div className="flex flex-wrap items-start justify-between gap-2"><h3 className="font-semibold">{names[action.action] || action.action}</h3><span className={action.status === "failed" ? "text-red-800" : action.status === "done" ? "text-brand-dark" : "text-stone-500"}>{states[action.status] || "—"}</span></div>
               <p className="mt-2 text-stone-500">{c.requestedAt}: {staffDisplayDate(action.requested_at)}</p>
-              <p className="mt-1 text-stone-500">{c.requestedBy}: {action.actor_kind === "scheduler" ? c.schedulerActor : action.requested_by && /^[0-9a-f-]{36}$/i.test(action.requested_by) ? `${c.staffAccount} ${action.requested_by.slice(0, 8)}` : "—"}</p>
+              <p className="mt-1 text-stone-500">{c.requestedBy}: {action.requested_by && /^[0-9a-f-]{36}$/i.test(action.requested_by) ? `${c.staffAccount} ${action.requested_by.slice(0, 8)}` : "—"}</p>
               {action.finished_at && <p className="mt-1 text-stone-500">{c.finishedAt}: {staffDisplayDate(action.finished_at)}</p>}
               {action.result?.code && /^[A-Z_0-9-]{1,80}$/i.test(action.result.code) && <p className="mt-2 break-words text-stone-500">{c.result}: {action.result.code}</p>}
               {onDownload && action.action === "commission_report" && action.status === "done" && typeof action.result?.downloadPath === "string" && <button type="button" disabled={busy || resuming} className="mt-3 font-semibold text-brand-dark underline" onClick={() => void onDownload(action.id)}>{c.downloadReport}</button>}

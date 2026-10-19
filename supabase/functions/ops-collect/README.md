@@ -4,23 +4,9 @@ This PR does **not** apply the migration, deploy an Edge Function, create a live
 
 ## Execution and scope
 
-First release is **manual only**. The optional `supabase/migrations/20261019_ops_schedule.sql` prepares **pg_cron + pg_net** for later activation; it is not applied by this PR. No Cloudflare Worker, `scheduled()` or n8n is added. Existing Pages `waitUntil` remains request-bound. The **Şimdi topla** button continues to execute its authenticated request independently of the optional schedule. Neither an unapplied SQL file nor an HTTP queue receipt is a connected scheduler.
+First release is **manual only**. There is no cron, `scheduled()`, n8n, timer, or notification replay. Existing Pages `waitUntil` remains request-bound. This Edge Function uses `EdgeRuntime.waitUntil` only to finish the one action a staff user explicitly requested. The scheduler tile remains not connected; separate manual run counters and the action log describe actual ops history.
 
-## Optional schedule preparation — not installed
-
-- **Uzantıların projede açık olup olmadığını Talip kontrol eder:** `pg_cron`, `pg_net` and Vault. This migration does not silently install extensions or change the project's global cron timezone. Missing prerequisites stop the optional migration.
-- The file registers `cron.schedule('nazar-ops-collect', '0 10 * * *', ...)` calling a fixed Nazar `ops-collect` URL via `net.http_post`, and sets the job inactive in the same transaction. Settings also begin disabled. It never dispatches or activates collection during application. An existing same-named job is not overwritten.
-- **Fixed 10:00 UTC = 06:00 EDT in summer and 05:00 EST in winter. It is not 06:00 New York year round.** The SQL comments state this and require the cron timezone to be UTC/GMT. Automatic DST adjustment is outside this fixed expression.
-- Keep the Edge Function's platform **JWT verification enabled**. Vault `nazar_ops_gateway_anon_jwt` is a matching Nazar **legacy anon JWT**, used only for the gateway's Authorization/apikey check. It is not scheduler authorization. Never put a service-role key or a staff login/session into this Vault entry.
-- Vault `nazar_ops_schedule_secret` and server-only Edge secret `OPS_SCHEDULE_SECRET` must contain the same independently generated **64 hexadecimal characters (256 bits)**. No value is included here, in the migration, cron command text or test evidence. Secret entry/rotation is Talip's separate deployment step.
-- Scheduled requests have exactly `{scheduledCollect:true,runKey}` and header `x-nazar-ops-schedule-secret`; they must have no browser Origin. The handler validates the separate secret and calls the service-only, collect-only enqueue/claim RPC. It never uses a service-role key as a staff user. CSV, offer, Ads, product, report and staff-action resume requests reject this credential.
-- The database enforces the one New York date-derived run key, a shared collect mutex, one scheduled occurrence per day, and the same **30 provider requests/day** budget as manual collection. A scheduled actor is recorded as `scheduler`, with no invented human staff identity. No automatic replay is added.
-- The scheduler remains **Bağlantı bekliyor** until enabled settings, the exact active job, credential checks and a recent, completed scheduled snapshot receipt all agree. A `net.http_post` request ID or HTTP 202 is not proof of a successful snapshot. Other sources keep their independent secret/read/snapshot requirements.
-- Deploy the Edge change and complete a manual collection first. Only after a separate owner review of deployment, extension availability, Vault entries and timing should Talip use the optional migration's explicit activation procedure. The initial panel needs only the base migration/function and **Şimdi topla**; it does not depend on this optional migration.
-
-The owner-only procedure is `core.ops_set_schedule_enabled(boolean,text)`: enabling requires a reviewed Edge deployment reference and matching prerequisites; disabling is explicit. Both transitions reset the stored scheduler badge to waiting. The service-only status RPC returns a digest for comparison with the Edge secret; that digest is never copied into metrics, UI or logs. A recent private dispatch receipt is required before a scheduled request can claim the daily slot. Manual collect/retry and scheduled collect share one in-flight collector lock.
-
-Official references: [scheduled Edge calls / Vault](https://supabase.com/docs/guides/functions/schedule-functions), [Cron](https://supabase.com/docs/guides/cron/quickstart), [pg_net](https://supabase.com/docs/guides/database/extensions/pg_net), [Edge gateway authentication](https://supabase.com/docs/guides/functions/auth-headers). Gateway compatibility must be checked during the separate deployment; do not turn off JWT verification to bypass a failed test.
+Talip's latest decision supersedes the specification's §6 “günde 1 (06:00)” requirement for this release: only **“istekle” / Şimdi topla** applies. No schedule migration, scheduler module or scheduler credential/callback route is included. Daily automatic collection requires a separate future decision. The `scheduler` source name remains only as the requested grey UI tile and aggregate manual-history labels; it cannot execute scheduled work.
 
 The primary request is `{action, payload: {..., clientRequestId: UUID}}`. The server validates the user JWT through Auth and `crm_staff_authorized_v1`, calls the narrow `ops_request_action` with that **user** JWT, then claims the row using the service role **before** acknowledging it. The response is `{code, action: safeAction}`. An acknowledgement contains no private input, source CSV, claim token, provider key or user profile. The frontend polls only action history, not another execution request.
 
@@ -84,7 +70,6 @@ After **at least five minutes**, a privileged operator must inspect the exact ac
 Secrets are server-only; values must never enter Vite configuration, snapshots, logs, tests or screenshots.
 
 - Platform: `SUPABASE_URL` (must be Nazar), `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
-- Optional future schedule only: Edge `OPS_SCHEDULE_SECRET`; matching Vault `nazar_ops_schedule_secret` and gateway-only Vault `nazar_ops_gateway_anon_jwt`. No scheduler credential is a browser/Vite variable.
 - Optional local development CORS only: `OPS_ALLOW_LOCALHOST=true`; leave unset in production.
 - Klaviyo: `KLAVIYO_OPS_READ_KEY`; optional `KLAVIYO_CONVERSION_METRIC_ID` for campaign statistics. Account/list identity and consent/test exclusion are checked.
 - Places: `GOOGLE_PLACES_API_KEY`. Rating/total reviews are direct reads. The seven-day value is a net snapshot difference, not a count of newly posted reviews.
@@ -100,9 +85,9 @@ Klaviyo growth and review change need a historical snapshot at/before the seven-
 No live project or provider access is needed for these checks:
 
 ```text
-node --test tests/opsServer.test.mjs tests/opsScheduleServer.test.mjs tests/opsCollectors.test.mjs tests/opsCsv.test.mjs
-PGLITE_MODULE=<installed isolated @electric-sql/pglite module URL> node --test tests/opsDb.test.mjs tests/opsScheduleDb.test.mjs
+node --test tests/opsServer.test.mjs tests/opsCollectors.test.mjs tests/opsCsv.test.mjs
+PGLITE_MODULE=<installed isolated @electric-sql/pglite module URL> node --test tests/opsDb.test.mjs
 node node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --allowImportingTsExtensions --lib ES2023,DOM supabase/functions/ops-collect/index.ts
 ```
 
-The database tests create in-memory isolated PostgreSQL fixtures and load the migrations there only. The optional schedule tests execute the actual new DDL/private functions with **SQL stubs for cron, pg_net and Vault**; they do not prove live extension installation or real network scheduling. The included commission fixture is the existing historical engine; tests verify the actual formula call and absence of a second refund deduction. No production migration is run.
+The database test creates an in-memory isolated PostgreSQL fixture and loads the migration there only. The included commission fixture is the existing historical engine; tests verify the actual formula call and absence of a second refund deduction. It is not a production migration.

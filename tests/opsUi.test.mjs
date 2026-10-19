@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validOpsDashboard, validOpsConnections, validOpsAction, validOpsActions, opsReportPath, selectOpsMetric, opsCanResume } from '../src/lib/opsUi.ts';
+import { validOpsDashboard, validOpsConnections, validOpsActions, opsReportPath, selectOpsMetric } from '../src/lib/opsUi.ts';
 import { freshOps, opsBusiness, opsActor, opsRequestKey } from './fixtures/opsDashboard.mjs';
 const now = new Date('2026-10-19T14:00:00Z');
 const action = () => ({ id:'eeeeeeee-eeee-4eee-8eee-000000000001', request_key:opsRequestKey, action:'commission_report',
@@ -54,37 +54,4 @@ test('PDF download accepts only a completed matching business/month/action stora
     assert.equal(opsReportPath({...report,result:{downloadPath:path}},opsBusiness),null);
   }
   assert.equal(opsReportPath({...report,status:'running'},opsBusiness),null);
-});
-test('Legacy manual actions remain valid while explicit scheduler actors require collect and no staff identity', () => {
-  const manual = {...action(),action:'collect',status:'queued'};
-  assert.equal(validOpsAction(manual),true);
-  assert.equal(validOpsAction({...manual,actor_kind:'staff'}),true);
-  const scheduled = {...manual,actor_kind:'scheduler',requested_by:null};
-  assert.equal(validOpsAction(scheduled),true);
-  assert.equal(validOpsActions({items:[manual,scheduled]}),true);
-  for(const malformed of [
-    {...scheduled,requested_by:opsActor},
-    {...scheduled,action:'offer_set_active'},
-    {...scheduled,action:'retry_failed_job'},
-    {...manual,actor_kind:'cron'},
-    {...manual,actor_kind:null},
-    {...manual,actor_kind:undefined},
-    {...manual,actor_kind:'staff',requested_by:null},
-  ]) {
-    assert.equal(validOpsAction(malformed),false);
-    assert.equal(validOpsActions({items:[malformed]}),false);
-  }
-});
-test('Scheduler actions never acquire staff resume rights, including malformed identity fallbacks', () => {
-  const queued = {...action(),action:'collect',status:'queued'};
-  assert.equal(opsCanResume(queued,opsActor),true);
-  assert.equal(opsCanResume({...queued,actor_kind:'staff'},opsActor),true);
-  for(const actor of [null,opsActor]) {
-    const scheduled = {...queued,actor_kind:'scheduler',requested_by:actor};
-    for(const identity of ['',opsActor,'scheduler']) assert.equal(opsCanResume(scheduled,identity),false);
-  }
-  assert.equal(opsCanResume({...queued,requested_by:null},opsActor),false);
-  assert.equal(opsCanResume(queued,'ffffffff-ffff-4fff-8fff-ffffffffffff'),false);
-  assert.equal(opsCanResume({...queued,status:'running'},opsActor),false);
-  assert.equal(opsCanResume({...queued,status:'done'},opsActor),false);
 });

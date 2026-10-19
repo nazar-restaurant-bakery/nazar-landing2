@@ -1,7 +1,7 @@
 {
   "scope": "Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.",
-  "startedAt": "2026-10-19T04:38:30.065Z",
-  "finishedAt": "2026-10-19T04:40:05.819Z",
+  "startedAt": "2026-10-19T04:46:59.756Z",
+  "finishedAt": "2026-10-19T04:48:33.543Z",
   "browserExecutable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "passed": 59,
   "failed": 0,
@@ -244,10 +244,10 @@
     }
   ],
   "screenshots": [
-    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\schedule-browser\\staff-customers-desktop.png",
-    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\schedule-browser\\staff-customers-mobile-list.png",
-    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\schedule-browser\\staff-customers-mobile-record.png",
-    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\schedule-browser\\staff-ops-desktop.png",
-    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\schedule-browser\\staff-ops-mobile.png"
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\manual-only\\staff-customers-desktop.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\manual-only\\staff-customers-mobile-list.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\manual-only\\staff-customers-mobile-record.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\manual-only\\staff-ops-desktop.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\manual-only\\staff-ops-mobile.png"
   ]
 }
