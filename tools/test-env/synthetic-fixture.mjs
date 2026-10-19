@@ -21,7 +21,7 @@ export function createFixture(input) {
       const email = `${status.replaceAll('_', '-')}.${input.id}@example.invalid`;
       const name = `INTERNAL TEST tenant ${tenantIndex + 1} ${status}`;
       fixture.customers.push({ id: customerId, business_id: input.id,
-        identity_key: `${input.id}:email:${email}`, name, email, phone: null,
+        identity_key: `email:${email}`, name, email, phone: null,
         email_status: status,
         email_suppressed_at: status === 'unsubscribed' ? '2026-01-01T00:00:00Z' : null,
         is_test: true });
@@ -62,6 +62,8 @@ export function validateFixture(fixture) {
     if (!tenants.has(row.business_id) || !row.email.endsWith('@example.invalid')
         || row.phone !== null || !row.name.startsWith('INTERNAL TEST'))
       throw new Error('Only reserved-domain synthetic customers are allowed');
+    if (row.identity_key !== `email:${row.email.trim().toLowerCase()}`)
+      throw new Error('Synthetic customer identity must match the existing signup RPC email key');
   }
   for (const signup of fixture.signups) {
     const customer = customers.get(signup.customer_id);

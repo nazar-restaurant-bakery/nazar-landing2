@@ -12,6 +12,30 @@ The output contains one test business, three synthetic customers (`subscribed`, 
 
 The loader is transactional and refuses absent boolean test-marker columns before the first INSERT. `supabase/migrations/20261019000100_test_record_markers.sql` explicitly adds markers to businesses/customers/offers; signups/catering markers already come from the existing migration. This additive SQL has not been applied to production or a hosted test project. It requires the reviewed full baseline first.
 
+Customer `identity_key` uses the unchanged application RPC convention
+`email:<normalized-email>`. The generator and validator must agree with that rule;
+adding a business prefix would make the later form create a duplicate customer.
+The configured business UUID must be compatible with the existing reviewed
+baseline; this preparation does not change its historical business guard.
+
+For the eventual Preview write proof, select one reserved-email identity from
+this freshly generated seed and record its customer ID and aggregate before-counts
+privately. Use that same identity in the single synthetic form submission. Verify
+the existing customer is reused and remains `is_test=true`, one request key and
+one additional test signup are recorded, and an exact repeated request adds no
+second signup. Every seeded identity already has one signup, so the expected
+same-email signup count becomes two, not one. Production must still have zero
+matches for this request and synthetic identity. A fresh unseeded identity is not
+interchangeable: the unchanged RPC marks its signup/catering request through test
+classification, but the newly added customer marker defaults to false. Do not
+claim all its records are marked without a separately verified test-only action.
+
+The seed regression test executes the actual reviewed SQL baseline, marker
+additive, generated seed and existing idempotent signup RPC in an in-memory
+PostgreSQL-compatible fixture. Only psql client restrict/unrestrict directives
+are removed for that SQL-only fixture. It does not establish a hosted reset,
+real Auth/JWT behavior, Preview deployment or production write proof.
+
 After the selected test target is independently verified, a PostgreSQL operator session must set `app.k3_test_environment=isolated-test` before executing the generated seed. This session flag is a human checkpoint, not proof of server identity; never use it to excuse an unverified connection. An existing non-fixture business row is never renamed or retagged by the loader: it refuses the collision. The reviewed test baseline must create/identify Nazar-test explicitly before reusing an existing business UUID. No seed is loaded by the generator itself.
 
 Local reset entry point:
