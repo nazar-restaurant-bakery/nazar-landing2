@@ -39,15 +39,43 @@ function Invoke-Tool([string]$Name,[string[]]$Arguments,[string]$Sql='',[int]$Ti
  $info.StandardInputEncoding=[Text.UTF8Encoding]::new($false)
  if($capture){$info.StandardOutputEncoding=[Text.UTF8Encoding]::new($false);$info.StandardErrorEncoding=[Text.UTF8Encoding]::new($false)}
  foreach($key in @($info.Environment.Keys)){if($key.StartsWith('PG',[StringComparison]::OrdinalIgnoreCase)){[void]$info.Environment.Remove($key)}}
- $info.Environment['PGCLIENTENCODING']='UTF8';$info.Environment['PGOPTIONS']='-c statement_timeout=30000 -c lock_timeout=3000'
- $process=[Diagnostics.Process]::new();$process.StartInfo=$info;[void]$process.Start()
- if($capture){$stdout=$process.StandardOutput.ReadToEndAsync();$stderr=$process.StandardError.ReadToEndAsync()}
- if($Sql){$process.StandardInput.Write($Sql)};$process.StandardInput.Close()
- $finished=$process.WaitForExit($TimeoutMs)
- if(!$finished){$process.Kill($true);$process.WaitForExit()}
- $out='Local startup output is in postgres-server.log.';$err=''
- if($capture){if(!$stdout.Wait(5000)-or!$stderr.Wait(5000)){throw 'Bounded native output pipe did not close.'};$out=$stdout.GetAwaiter().GetResult();$err=$stderr.GetAwaiter().GetResult()}
- $result=[ordered]@{exit_code=$process.ExitCode;timed_out=(!$finished);stdout=$out;stderr=$err};$process.Dispose();return $result
+ $info.Environment['PGCLIENTENCODING']='UTF8';$info.Environment['PGOPTIONS']='-c statement_timeout=30000 -c lock_timeout=3000 -c timezone=UTC'
+ $process=[Diagnostics.Process]::new();$process.StartInfo=$info
+ $clock=[Diagnostics.Stopwatch]::StartNew();$started=$false;$timedOut=$false
+ try{
+  [void]$process.Start();$started=$true
+  if($capture){$stdout=$process.StandardOutput.ReadToEndAsync();$stderr=$process.StandardError.ReadToEndAsync()}
+  # One deadline covers writing the entire stdin document, its EOF and exit.
+  # A child that stops reading must not block before WaitForExit is reached.
+  if($Sql){
+   $write=$process.StandardInput.WriteAsync($Sql)
+   $remaining=[Math]::Max(0,$TimeoutMs-[int]$clock.ElapsedMilliseconds)
+   if(!$write.Wait($remaining)){$timedOut=$true}else{[void]$write.GetAwaiter().GetResult()}
+  }
+  if(!$timedOut){
+   $closed=$process.StandardInput.DisposeAsync().AsTask()
+   $remaining=[Math]::Max(0,$TimeoutMs-[int]$clock.ElapsedMilliseconds)
+   if(!$closed.Wait($remaining)){$timedOut=$true}else{[void]$closed.GetAwaiter().GetResult()}
+  }
+  if(!$timedOut){
+   $remaining=[Math]::Max(0,$TimeoutMs-[int]$clock.ElapsedMilliseconds)
+   if(!$process.WaitForExit($remaining)){$timedOut=$true}
+  }
+  if($timedOut){
+   if(!$process.HasExited){$process.Kill($true)}
+   if(!$process.WaitForExit(5000)){throw 'Timed-out native child did not stop.'}
+  }
+  $out='Local startup output is in postgres-server.log.';$err=''
+  if($capture){
+   $drained=[Threading.Tasks.Task]::WhenAll([Threading.Tasks.Task[]]@($stdout,$stderr))
+   if(!$drained.Wait(5000)){throw 'Bounded native output pipes did not close.'}
+   $out=$stdout.GetAwaiter().GetResult();$err=$stderr.GetAwaiter().GetResult()
+  }
+  return [ordered]@{exit_code=$process.ExitCode;timed_out=$timedOut;stdout=$out;stderr=$err}
+ }finally{
+  if($started-and!$process.HasExited){try{$process.Kill($true);[void]$process.WaitForExit(5000)}catch{}}
+  $process.Dispose();$clock.Stop()
+ }
 }
 function Invoke-Sql([string]$Sql){return Invoke-Tool 'psql.exe' @('-X','-q','-w','-h',$hostName,'-p',"$port",'-U','postgres','-d',$script:databaseName,'-v','ON_ERROR_STOP=1','-P','pager=off','-At') ('\set VERBOSITY verbose'+[Environment]::NewLine+$Sql)}
 function Save-Step([string]$Name,$Result){[IO.File]::WriteAllText((Join-Path $runDirectory "$Name.json"),($Result|ConvertTo-Json -Depth 12),[Text.UTF8Encoding]::new($false))}
@@ -83,6 +111,16 @@ GRANT USAGE ON SCHEMA auth TO anon,authenticated,service_role;
 '@
  $fixture=Invoke-Sql $auth;Save-Step '04_empty_simulated_auth_fixture' $fixture
  if($fixture.exit_code-ne0){throw 'Empty Auth compatibility fixture failed.'}
+ $roleQuery=@'
+SELECT json_build_object(
+ 'valid',count(*)=3 AND coalesce(bool_and(NOT rolsuper AND rolinherit AND NOT rolcanlogin AND rolbypassrls=(rolname='service_role')),false),
+ 'roles',json_agg(json_build_object('name',rolname,'inherit',rolinherit,'superuser',rolsuper,'bypass_rls',rolbypassrls,'can_login',rolcanlogin) ORDER BY rolname))
+FROM pg_roles WHERE rolname IN('anon','authenticated','service_role');
+'@
+ $roleSnapshot=Invoke-Sql $roleQuery;Save-Step '04b_local_role_attributes' $roleSnapshot
+ if($roleSnapshot.exit_code-ne0){throw 'Local role attributes could not be verified.'}
+ $localRoles=$roleSnapshot.stdout.Trim()|ConvertFrom-Json
+ if($localRoles.valid-ne$true){throw 'Unexpected local standard role attributes; no role repair is performed.'}
  if((Get-FileHash -LiteralPath $baseline -Algorithm SHA256).Hash.ToLowerInvariant()-ne$validated.baseline_sha256){throw 'Reviewed baseline changed before execution.'}
  $restored=Invoke-Sql ([IO.File]::ReadAllText($baseline));Save-Step '05_reviewed_actual_schema' $restored
  if($restored.exit_code-ne0){throw 'Actual reviewed DDL restore failed; no automatic repair or replay.'}
@@ -91,15 +129,17 @@ GRANT USAGE ON SCHEMA auth TO anon,authenticated,service_role;
 SELECT json_build_object(
  'core_anon_usage',has_schema_privilege('anon','core','USAGE'),
  'core_authenticated_usage',has_schema_privilege('authenticated','core','USAGE'),
+  'core_service_role_usage',has_schema_privilege('service_role','core','USAGE'),
+  'role_attributes',(SELECT json_agg(json_build_object('name',rolname,'inherit',rolinherit,'superuser',rolsuper,'bypass_rls',rolbypassrls) ORDER BY rolname) FROM pg_roles WHERE rolname IN('anon','authenticated','service_role')),
  'tables',(SELECT coalesce(json_agg(json_build_object('schema',n.nspname,'name',c.relname,'rls',c.relrowsecurity,'force_rls',c.relforcerowsecurity,'acl',c.relacl::text) ORDER BY n.nspname,c.relname),'[]') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN('core','public') AND c.relkind IN('r','p')),
- 'routines',(SELECT coalesce(json_agg(json_build_object('identity',p.oid::regprocedure::text,'security_definer',p.prosecdef,'settings',p.proconfig,'acl',p.proacl::text,'definition_md5',md5(pg_get_functiondef(p.oid))) ORDER BY p.oid::regprocedure::text),'[]') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN('core','public') AND p.prokind IN('f','p')),
+  'routines',(SELECT coalesce(json_agg(json_build_object('schema',n.nspname,'name',p.proname,'args',pg_get_function_identity_arguments(p.oid),'identity',p.oid::regprocedure::text,'execute_anon',has_function_privilege('anon',p.oid,'EXECUTE'),'execute_authenticated',has_function_privilege('authenticated',p.oid,'EXECUTE'),'execute_service_role',has_function_privilege('service_role',p.oid,'EXECUTE'),'security_definer',p.prosecdef,'settings',p.proconfig,'acl',p.proacl::text,'definition_md5',md5(pg_get_functiondef(p.oid))) ORDER BY n.nspname,p.proname,pg_get_function_identity_arguments(p.oid)),'[]') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN('core','public') AND p.prokind IN('f','p')),
  'policies',(SELECT coalesce(json_agg(to_jsonb(p) ORDER BY schemaname,tablename,policyname),'[]') FROM pg_policies p WHERE schemaname IN('core','public')),
  'default_acls',(SELECT coalesce(json_agg(json_build_object('schema',n.nspname,'role',a.defaclrole::regrole::text,'kind',a.defaclobjtype,'acl',a.defaclacl::text) ORDER BY n.nspname,a.defaclobjtype),'[]') FROM pg_default_acl a JOIN pg_namespace n ON n.oid=a.defaclnamespace WHERE n.nspname IN('core','public')));
 '@
  $snapshot=Invoke-Sql $inventory;Save-Step '06_private_security_inventory' $snapshot
  if($snapshot.exit_code-ne0){throw 'Local schema/security inventory failed.'}
  $security=$snapshot.stdout.Trim()|ConvertFrom-Json
- if($security.core_anon_usage-ne$false-or$security.core_authenticated_usage-ne$false){throw 'Reviewed private core access contract did not remain closed.'}
+ if($security.core_anon_usage-ne$false-or$security.core_authenticated_usage-ne$false-or$security.core_service_role_usage-ne$false){throw 'Reviewed private core access contract did not remain closed.'}
  $report.security_inventory_recorded=$true
 }catch{$report.error=$_.Exception.Message}
 finally{

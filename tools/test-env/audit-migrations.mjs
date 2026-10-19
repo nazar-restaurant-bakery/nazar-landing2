@@ -86,9 +86,9 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
  const blockers=[...(Array.isArray(manifest.blockers)?manifest.blockers:[]),{
   id:'INVENTORY_IS_NOT_EXECUTION_PROOF',detail:'No reviewed canonical migration replay or actual new Supabase test-project runtime validation is performed by this command.'
  }];
- return {audit:'K3 migration source inventory',mode:'read_only',baseline:manifest.baseline||null,
+ return {audit:'K3 historical migration source inventory',mode:'read_only',baseline:manifest.baseline||null,
   integrity:{ok:issues.length===0,issues,verified_sources:verified.length,database_sources:actual.length,historical_sources:foundation?1:0,pending_canonical_sources:canonical.length},
-  readiness:{ready:false,state:'BLOCKED',execution_performed:false,blockers},
+  readiness:{scope:'historical_chain_not_current_reviewed_dump',ready:false,state:'BLOCKED',execution_performed:false,blockers},
   proposed_order:order.map(id=>{const e=entries.find(entry=>entry?.id===id);return {id,path:e?.path||null,executable:false};}),
   excluded:sources.filter(entry=>entry?.classification==='emergency_excluded').map(entry=>({id:entry.id,path:entry.path,reason:entry.reason})),
   pending_canonical:canonical.map(entry=>({id:entry.id,path:entry.path,requires_reviewed_baseline:true,executable:false})),

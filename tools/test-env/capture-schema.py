@@ -374,6 +374,7 @@ def launch_gui():
         if password is not None:
             password.delete(0, 'end')
         scope = 'Yalnız schema; production data alınmaz.' if mode.get() == 'PRODUCTION' else 'Schema + tam 4 test order + 1 anonim staff kaydı; içerik review bekler.'
+        status.set(MODES[mode.get()] + ': capture henüz başlatılmadı. ' + scope)
         scope_label.set(scope)
         password_label.set('2. ' + MODES[mode.get()] + ' — mevcut database password')
         approval_label.set('Project ref / host’u kontrol ettim. ' + scope)

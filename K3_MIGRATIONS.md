@@ -1,8 +1,8 @@
-# K3 migration inventory — yeni Supabase test project
+# K3 historical migration inventory
 
-K3, Talip'in oluşturacağı ayrı Supabase test project üzerinde tek sentetik Nazar-test kurulumu için hazırlanır. Mevcut Nazar project/business ayarları değişmez ve bu paket tarafından test edilmez. Yeni uygulama kodu yalnız yeni test project ve test business için verilen environment değerlerini kullanmalıdır. PR #52 ve #53 kendi dallarında bekler; Ops migration bu baseline'a dahil değildir.
+Güncel karar, mevcut ayrı catering sandbox'ını tek synthetic Nazar-test ortamı olarak yeniden kullanmaktır. Kurulum kaynağı [reviewed production schema-only baseline](supabase/baselines/README.md) olup yerel restore ve effective privilege karşılaştırması geçmiştir. Production satırı kopyalanmaz; hosted kurulum, Auth/REST, Preview ve reset tekrar kanıtı henüz yoktur. PR #52 ve #53 kendi dallarında bekler; Ops migration bu baseline'a dahil değildir.
 
-Bu paket `origin/main` commit `aa53f6d5fb5c02f814cfbba13a1b57df08874e62` üzerindeki historical SQL kaynaklarını ve bağımlılıklarını kaydeder. SQL çalıştırmaz, database başlatmaz, bağlantı kurmaz veya secret okumaz. Canonical test migration zinciri henüz review edilmediği ve yeni test project runtime kontrolleri yapılmadığı için readiness **BLOCKED** durumundadır.
+Bu inventory `origin/main` commit `aa53f6d5fb5c02f814cfbba13a1b57df08874e62` üzerindeki historical SQL kaynaklarını ve bağımlılıklarını kaydeder. SQL çalıştırmaz, database başlatmaz, bağlantı kurmaz veya secret okumaz. Manifest'teki baseline-missing / exact-function-guard engelleri eski zincirin tarihsel hazırlık durumudur; güncel reviewed dump'ın yok olduğu anlamına gelmez. CLI readiness **BLOCKED** kapsamı historical zincirdir; inventory başarısı hiçbir ortamı kabul edilmiş saymaz. Eski 18 dosya yeniden oynatılmaz, değiştirilmez ve MD5 guard'ları atlanmaz.
 
 ## Kaynaklar ve kapsam
 
