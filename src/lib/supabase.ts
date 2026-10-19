@@ -15,6 +15,7 @@
 // bundle: it cannot write a signup after the database cutover.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { resolveBrowserEnvironment } from "./deploymentEnvironment";
 
 /* -------------------------------------------------------------------------- */
 /* Database types                                                             */
@@ -54,22 +55,19 @@ export type NazarSupabaseClient = SupabaseClient<Database>;
 /* Client                                                                     */
 /* -------------------------------------------------------------------------- */
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+export const browserDeployment = resolveBrowserEnvironment(import.meta.env, typeof window === "undefined" ? "" : window.location.hostname);
+const supabaseUrl = browserDeployment.url;
+const supabaseAnonKey = browserDeployment.key;
 
 /** `core.businesses.id` for Nazar — used for public offer lookup. */
-export const NAZAR_BUSINESS_ID = (import.meta.env.VITE_NAZAR_BUSINESS_ID ?? "") as string;
+export const NAZAR_BUSINESS_ID = browserDeployment.businessId;
 
 /**
  * True when every env var the signup form needs is present. Deploys that forget
  * `.env.local` should degrade to a friendly message, not a blank page, so the
  * client is null instead of throwing at import time.
  */
-export const isSupabaseConfigured = Boolean(
-  supabaseUrl === "https://khgczybubufouraqyrcj.supabase.co" &&
-  supabaseAnonKey?.startsWith("sb_publishable_") &&
-  NAZAR_BUSINESS_ID === "a358eba4-b197-4309-805b-46f43a718454"
-);
+export const isSupabaseConfigured = browserDeployment.configured;
 
 export const supabase: NazarSupabaseClient | null = isSupabaseConfigured
   ? createClient<Database>(supabaseUrl!, supabaseAnonKey!, {

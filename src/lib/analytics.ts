@@ -1,4 +1,5 @@
 import { PHONE_NUMBER_TEL } from "../data/menu.ts";
+import { isolatedBrowser } from "./deploymentEnvironment.ts";
 
 type EventTag = (command: "event", name: string, parameters: Record<string, string>) => void;
 
@@ -7,7 +8,7 @@ const handoffDocuments = new WeakSet<Document>();
 
 // Keep the opaque request ID on this device only. It is never an event parameter.
 function trackSavedSignup(name: string, form: string, requestId: string): void {
-  if (typeof window === "undefined" || !requestId) return;
+  if (typeof window === "undefined" || isolatedBrowser() || !requestId) return;
   const key = `nazar-measured-v1:${name}:${requestId}`;
   const sent = sentEvents.get(window) ?? new Set<string>();
   sentEvents.set(window, sent);
@@ -45,7 +46,7 @@ const publicPaths = new Set(["/", "/menu", "/specials", "/catering", "/gallery",
 // never proof of a phone conversation, a physical visit or a completed sale.
 // Keep the existing initializer name so initialization remains a single call.
 export function trackCloverOrderHandoffs(): void {
-  if (typeof document === "undefined") return;
+  if (typeof document === "undefined" || isolatedBrowser()) return;
   if (handoffDocuments.has(document)) return;
 
   document.addEventListener("click", (event) => {

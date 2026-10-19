@@ -1,0 +1,11 @@
+import { requiresIsolatedEnvironment } from "../../src/lib/deploymentEnvironment.ts";
+type Context = { request: Request; env: Record<string, string | undefined>; next(): Promise<Response> };
+// Existing staff routes contain production-specific provider/RPC targets. They
+// remain unavailable in Preview until explicitly adapted to a test environment.
+export async function onRequest(context: Context): Promise<Response> {
+  const url = new URL(context.request.url);
+  if (url.pathname.startsWith("/api/staff/") && requiresIsolatedEnvironment(url.hostname, context.env.APP_ENV)) {
+    return Response.json({ code: "isolated_provider_route_disabled" }, { status: 503, headers: { "Cache-Control": "private, no-store" } });
+  }
+  return context.next();
+}
