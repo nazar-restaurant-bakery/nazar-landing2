@@ -1,6 +1,6 @@
-# K3 — isolated Preview routing (preparation only)
+# K3 — isolated Preview routing
 
-No cloud project, branch, credential, database migration or Cloudflare setting is created by this change. Production uses the same fixed project/business guard and existing secret names. PR #52/#53 are untouched.
+This branch supplies the routing boundary and provisioning tools; cloud provisioning is a separate, verified operator action. K3 reuses the approved sandbox project. Production uses the same fixed project/business guard and existing secret names. PR #52/#53 remain unmerged and untouched.
 
 All `*.pages.dev` preview hosts and local hosts fail closed unless explicitly configured for the isolated test environment. The existing canonical `nazar-restaurant-website.pages.dev` production root keeps its production behavior; hash/branch preview hosts do not. The browser and server independently reject Nazar-production as a test project target. The test business UUID comes from configuration and may retain the existing UUID for legacy SQL/RPC compatibility: a different project and its separate credentials provide isolation. Do not copy production keys into Preview or reuse a production key under a test variable name.
 
@@ -10,7 +10,9 @@ Public Vite build variables (rebuild required): `VITE_APP_ENV=isolated-test`, `V
 
 Server-only Pages Preview bindings: `APP_ENV=isolated-test`, `TEST_SUPABASE_URL`, `TEST_BUSINESS_ID` (must match browser business), `TEST_SUPABASE_SECRET_KEY` (test project's `sb_secret_` key), `TEST_TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA`, `TEST_TURNSTILE_EXPECTED_HOSTNAME` (exact hostname returned by the public dummy Siteverify response). No `VITE_` secret values.
 
-Use only synthetic customer seed data in the isolated project. The separate [Auth / REST check](K3_AUTH_REST.md) reuses the existing preserved sandbox staff account with Talip's masked sign-in; it does not create a new Auth account or permission. That direct password-grant test does not require Auth Site URL or redirect changes. Any later Preview login/redirect setup is a separate test-project operation; production Auth settings remain unchanged.
+Remove the legacy generic `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` bindings from the **Preview** context. Do not duplicate the test publishable key into the generic key variable: the browser guard intentionally rejects identical generic/test keys. Leave Production bindings unchanged. Rebuild the selected test branch after saving; an older immutable deployment does not acquire the new environment. This branch's isolation guarantee does not apply retroactively to older PR #52/#53 deployments.
+
+Use only synthetic customer seed data in the isolated project. The separate [Auth / REST check](K3_AUTH_REST.md) reuses the existing preserved sandbox staff account; it does not create a new Auth account or permission. The password helper requires an account that already supports password sign-in. K3's actual acceptance used the existing account's ordinary email verification/sign-in route, with its existing redirect allowlist checked first, followed by real staff JWT/REST checks and local logout. No production Auth setting changed. Any later Preview staff-login/redirect setup is a separate test-project operation.
 
 ## Implemented boundary
 
@@ -26,4 +28,6 @@ The browser/server test URL and business bindings must be checked together befor
 
 `node --test tests/previewEnvironment.test.mjs` uses fake network responses only. It covers missing config, production target refusal, tenant override refusal, challenge failure/hostname rejection, test database failures without production logging/email, staff-route blocking, Klaviyo/analytics blocking and exact production Google-tag loading. No live account or customer data is used.
 
-Cloudflare test-key reference: https://developers.cloudflare.com/turnstile/troubleshooting/testing/ . An approved public dummy-key probe on 19 October 2026 returned `success:true, hostname:"example.com"`; this is an observation, not a permanent provider contract or automatic default. Provisioning must recheck the actual dummy Siteverify response and set `TEST_TURNSTILE_EXPECTED_HOSTNAME` to that exact hostname. This PR does not claim a live Preview form test.
+Cloudflare test-key reference: https://developers.cloudflare.com/turnstile/troubleshooting/testing/ . An approved public dummy-key probe on 19 October 2026 returned `success:true, hostname:"example.com"`; this is an observation, not a permanent provider contract or automatic default. Provisioning must recheck the actual dummy Siteverify response and set `TEST_TURNSTILE_EXPECTED_HOSTNAME` to that exact hostname.
+
+On 19 October 2026 one ordinary synthetic VIP form was submitted on the configured [immutable Preview](https://9c1d7257.nazar-restaurant-website.pages.dev/vip), code commit `16e7a87`. Independent read-only checks proved sandbox customers 3→3, signups 3→4 and request keys 0→1; the preseeded customer's signups became two. Production returned zero matches for the actual UI-generated request ID and synthetic identity. The UI reported `Internal test saved` and no marketing subscription/confirmation request. No retry form was submitted. Aggregate receipts and screenshots are retained in the local K3 delivery evidence, outside Git. This is form-routing evidence, not a Preview staff UI or provider-write acceptance.

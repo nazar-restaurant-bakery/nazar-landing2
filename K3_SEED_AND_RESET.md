@@ -123,3 +123,23 @@ and mock tests do not. The single Preview submission and production-zero proof
 described above remain separately required.
 
 Migration rule: **test first, production later**. Keep the reviewed SQL bytes/checksums in version control, apply to the isolated project, record the successful replay and Preview write, then use those same reviewed files in a separate Talip-controlled production release. Do not use emergency pause, test fixture SQL or an unmerged Ops migration as an ordinary deployment migration. Do not mark a baseline applied in production or run migration repair in K3.
+
+## SQL transport and exact definition checks
+
+Use the target-bound native operator for the ordinary repeat procedure. Do not
+paste the raw Windows dump into SQL Editor as an interchangeable transport.
+The K3 hosted repeat exposed a concrete difference: the native installation
+stored LF function bodies, while SQL Editor retained CRLF from the same dump.
+Independent read-only comparison proved that changing only those body line
+endings reproduced the original definition MD5 for all 32 functions. Effective
+permissions and application rows were unaffected by that transport difference.
+
+The reviewed dump and historical migration guards stay unchanged. Never relax
+an MD5 guard or declare a changed definition accepted by comparing only tokens.
+Reconcile the actual catalog first. Any explicitly reviewed function-only
+transport repair must bind the observed before-catalog and require the exact
+original after-catalog, preserve function identity/owner/configuration/ACL and
+staff/platform state in one transaction, and roll back on any mismatch. Keep
+its execution receipt and independent final readback separately from the
+original reset receipt. A local transport fixture alone cannot close hosted
+acceptance.

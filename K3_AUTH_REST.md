@@ -9,6 +9,21 @@ Auth session; cleanup targets that session with `logout?scope=local`.
 This document is a procedure, not evidence that hosted Auth / REST or the later
 Preview write has passed. Check the actual dated receipt for execution results.
 
+The password route is usable only when the existing account supports password
+sign-in. Do not keep retrying a rejected grant or substitute the database
+password. A separately authorized ordinary email verification/sign-in route may
+reuse the same existing account with `shouldCreateUser: false`, after the actual
+test-project redirect allowlist is verified. It must not fabricate an admin JWT,
+create a user, grant a role, or silently change Auth settings. Bound the send to
+one email, clear callback tokens immediately, keep the session in memory, and
+log out that local session after the real staff RPC/REST checks.
+
+K3's dated hosted acceptance on 19 October 2026 used that normal existing-account
+email route and passed 11/11 checks. One authentication email was requested by
+Codex on the user's behalf; no marketing email or new Auth user was created.
+The private helper, aggregate observations and token-free receipt are retained
+outside Git. This result does not make a failed password-grant attempt pass.
+
 ## Exact private configuration
 
 Keep one JSON object **outside Git**, with exactly these six string properties.
