@@ -11,6 +11,7 @@ import VipPage from "./pages/VipPage";
 import SpecialsPage from "./pages/SpecialsPage";
 import CateringPage from "./pages/CateringPage";
 import StaffPage from "./pages/StaffPage";
+import StaffOffersPage from "./pages/StaffOffersPage";
 import CrmPreviewPage from "./pages/CrmPreviewPage";
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
     <Routes>
       <Route path="/staff" element={<StaffPage />} />
       <Route path="/staff/crm" element={<StaffPage variant="crm" />} />
+      <Route path="/staff/offers" element={<StaffOffersPage />} />
       {import.meta.env.DEV && <Route path="/staff-preview" element={<CrmPreviewPage />} />}
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />

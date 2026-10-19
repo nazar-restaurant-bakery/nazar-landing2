@@ -13,12 +13,15 @@ const codes=result=>result.integrity.issues.map(issue=>issue.code);
 test('inventory verifies all 18 baseline SQL files and historical copy without claiming K3 readiness',async()=>{
  const result=await auditMigrations({root});
  assert.equal(result.integrity.ok,true,JSON.stringify(result.integrity.issues));
- assert.equal(result.integrity.database_sources,18);assert.equal(result.integrity.historical_sources,1);assert.equal(result.integrity.pending_canonical_sources,1);assert.equal(result.integrity.verified_sources,20);
+ assert.equal(result.integrity.database_sources,18);assert.equal(result.integrity.historical_sources,1);assert.equal(result.integrity.pending_canonical_sources,1);assert.equal(result.integrity.reviewed_additive_sources,1);assert.equal(result.integrity.verified_sources,21);
  assert.equal(result.readiness.ready,false);assert.equal(result.readiness.execution_performed,false);assert.equal(result.readiness.state,'BLOCKED');
  assert.ok(result.readiness.blockers.some(b=>b.id==='NEUTRAL_BASELINE_MISSING'));
  assert.ok(result.proposed_order.every(entry=>entry.executable===false));
  assert.deepEqual(result.excluded.map(entry=>entry.id),['intake_pause']);
  assert.deepEqual(result.pending_canonical.map(entry=>entry.id),['test_record_markers']);
+ assert.deepEqual(result.reviewed_additive.map(entry=>entry.id),['k4_suppression_consent_offers']);
+ assert.equal(result.reviewed_additive[0].included_in_k3_reset,false);
+ assert.equal(result.reviewed_additive[0].application_tool,'tools/test-env/k4-migrate.py');
 });
 
 test('checksum integrity accepts CRLF conversion only and detects changed content',()=>{
@@ -35,6 +38,25 @@ test('altered expected checksum fails closed',async()=>{
 test('omitting a baseline SQL file is detected rather than producing a smaller green inventory',async()=>{
  const manifest=clone();manifest.sources=manifest.sources.filter(entry=>entry.id!=='intake_pause');
  assert.ok(codes(await auditMigrations({root,manifest})).includes('UNINVENTORIED_SQL'));
+});
+
+test('K4 additive delivery must be inventoried separately and cannot become a K3 replay step',async()=>{
+ const missing=clone();missing.reviewed_additive=[];
+ assert.ok(codes(await auditMigrations({root,manifest:missing})).includes('UNINVENTORIED_CANONICAL_SQL'));
+ const replay=clone();replay.proposed_order.push('k4_suppression_consent_offers');
+ assert.ok(codes(await auditMigrations({root,manifest:replay})).includes('ADDITIVE_DELIVERY_CONTRACT'));
+ const executable=clone();executable.reviewed_additive[0].executable=true;
+ assert.ok(codes(await auditMigrations({root,manifest:executable})).includes('EXECUTABLE_SOURCE'));
+});
+
+test('K4 additive has an exact LF-only byte contract while legacy checksums still normalize CRLF',async()=>{
+ const file=await fs.readFile(new URL('../supabase/migrations/20261019000200_suppression_consent_offers.sql',import.meta.url));
+ assert.equal(file.includes(13),false);
+ assert.equal(sha256Lf(file.toString('utf8')),source.reviewed_additive[0].sha256_lf);
+ const wrong=clone();wrong.reviewed_additive[0].line_endings='CRLF';
+ assert.ok(codes(await auditMigrations({root,manifest:wrong})).includes('ADDITIVE_LF_BYTES_REQUIRED'));
+ const altered=clone();altered.reviewed_additive[0].sha256_bytes_at_capture='0'.repeat(64);
+ assert.ok(codes(await auditMigrations({root,manifest:altered})).includes('ADDITIVE_LF_BYTES_REQUIRED'));
 });
 
 test('emergency pause cannot become a normal replay step',async()=>{
