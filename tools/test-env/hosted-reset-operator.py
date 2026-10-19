@@ -200,6 +200,62 @@ def safe_status(cfg: dict, status: str, code=None, attempt=None):
     })
 
 
+def safe_inspection_error(stderr: bytes) -> str:
+    text = stderr.decode('utf8', errors='replace').lower()
+    categories = (
+        (('too many authentication', 'circuit breaker'), 'AUTH_TEMPORARILY_BLOCKED'),
+        (('password authentication failed', 'authentication failed', 'wrong password'), 'DATABASE_PASSWORD_REJECTED'),
+        (('tenant or user not found', 'tenant not found'), 'PROJECT_BINDING_NOT_FOUND'),
+        (('certificate verify failed', 'root certificate file', 'server certificate', 'ssl error'), 'TLS_VERIFY_FAILED'),
+        (('could not translate host', 'could not resolve', 'name or service not known', 'getaddrinfo'), 'DNS_FAILED'),
+        (('access is denied', 'permission denied to create socket', 'operation not permitted'), 'NETWORK_ACCESS_DENIED'),
+        (('timeout', 'timed out'), 'CONNECTION_TIMEOUT'),
+        (('connection refused', 'network is unreachable', 'no route to host'), 'CONNECTION_UNAVAILABLE'),
+        (('permission denied', 'must be owner', 'insufficient privilege'), 'READ_PERMISSION_DENIED'),
+    )
+    for phrases, category in categories:
+        if any(phrase in text for phrase in phrases):
+            return category
+    return 'READ_ONLY_INSPECTION_FAILED'
+
+
+def inspection_status(cfg: dict, state: str, *, attempt=None, code=None, connected=False):
+    if state not in ('starting', 'querying', 'completed', 'failed') \
+            or code is not None and not re.fullmatch('[A-Z_]+', code):
+        raise OperatorError('INSPECTION_STATUS_INVALID')
+    value = {'scope': 'K3_OPERATOR_READ_ONLY_INSPECTION_STATUS', 'state': state,
+             'error_code': code, 'updated_at': datetime.now(timezone.utc).isoformat(),
+             'sandbox_project_ref': cfg['SANDBOX_PROJECT_REF'],
+             'attempt_directory': str(attempt) if attempt else None,
+             'database_process_started': connected, 'application_write_performed': False,
+             'password_recorded': False, 'native_stderr_recorded': False}
+    private_json(cfg['private_root'] / 'operator-inspection-status.json', value)
+    if attempt is not None:
+        private_json(attempt / 'read-only-status.json', value)
+
+
+def gui_control_state(*, plan_ready: bool, inspected: bool, confirmed: bool,
+                      held_password: bool, entered_password: bool, busy: bool, attempted: bool) -> dict:
+    inspect_enabled = entered_password and not busy and not attempted
+    if attempted:
+        hint = 'Reset denendi; sonuç kontrol edilmeden yeniden başlatılmaz.'
+    elif busy:
+        hint = 'İşlem sürüyor; tamamlanmasını bekleyin.'
+    elif not inspected:
+        hint = 'Önce password alanını doldurup 1. Yalnız read-only kontrol düğmesine basın.'
+    elif not plan_ready:
+        hint = 'Read-only kontrol var; yerel plan/kanıt kontrolü henüz hazır değil.'
+    elif not held_password:
+        hint = 'Password oturumu sona erdi; 1. read-only kontrolü yeniden yapın.'
+    elif not confirmed:
+        hint = 'Read-only kontrol tamam; hedef ve kapsam onay kutusunu işaretleyin.'
+    else:
+        hint = '2. Sandbox application reset başlat düğmesi hazır.'
+    return {'inspect_enabled': inspect_enabled,
+            'reset_enabled': plan_ready and inspected and confirmed and held_password and not busy and not attempted,
+            'hint': hint}
+
+
 def parse_success(stdout: bytes, cfg: dict, plan: dict) -> dict:
     if len(stdout) > 65536:
         raise OperatorError('RESET_RESULT_REQUIRES_READ_ONLY_VERIFICATION')
@@ -248,13 +304,22 @@ def inspect_read_only(cfg: dict, password: str) -> dict:
     attempt = cfg['private_root'] / ('inspect_' + datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
                                      + '_' + uuid.uuid4().hex[:12])
     attempt.mkdir(exist_ok=False)
-    restrict_directory(attempt)
-    env = postgres_environment(cfg, password, read_only=True)
+    env = None
+    restricted = False
+    process_started = False
     try:
+        restrict_directory(attempt)
+        restricted = True
+        inspection_status(cfg, 'starting', attempt=attempt)
+        env = postgres_environment(cfg, password, read_only=True)
         args = [str(cfg['pg_bin'] / 'psql.exe'), '--no-password', '--no-psqlrc',
                 '--quiet', '--tuples-only', '--no-align', '--set=ON_ERROR_STOP=1', '--file=-']
+        inspection_status(cfg, 'querying', attempt=attempt)
+        process_started = True
         result = subprocess.run(args, input=sql, env=env, capture_output=True, timeout=180, check=False)
-        if result.returncode or len(result.stdout) > 8 * 1024 * 1024:
+        if result.returncode:
+            raise OperatorError(safe_inspection_error(result.stderr))
+        if len(result.stdout) > 8 * 1024 * 1024:
             raise OperatorError('READ_ONLY_INSPECTION_FAILED')
         try:
             value = json.loads(result.stdout)
@@ -275,11 +340,22 @@ def inspect_read_only(cfg: dict, password: str) -> dict:
                  'inspection_sql_sha256': cfg['inspection_sql_sha256'],
                  'password_recorded': False, 'application_write_performed': False}
         private_json(attempt / 'inspection-proof.json', proof, exclusive=True)
+        inspection_status(cfg, 'completed', attempt=attempt, connected=True)
         return proof
-    except (OSError, subprocess.TimeoutExpired):
-        raise OperatorError('READ_ONLY_INSPECTION_FAILED') from None
+    except OperatorError as error:
+        inspection_status(cfg, 'failed', attempt=attempt if restricted else None,
+                          code=str(error), connected=process_started)
+        raise
+    except (OSError, subprocess.TimeoutExpired) as error:
+        code = 'CONNECTION_TIMEOUT' if isinstance(error, subprocess.TimeoutExpired) else 'LOCAL_POSTGRES_START_FAILED'
+        if isinstance(error, OSError):
+            process_started = False
+        inspection_status(cfg, 'failed', attempt=attempt if restricted else None,
+                          code=code, connected=process_started)
+        raise OperatorError(code) from None
     finally:
-        env.pop('PGPASSWORD', None)
+        if env is not None:
+            env.pop('PGPASSWORD', None)
 
 
 def validate_inspection(cfg: dict, inspection: dict):
@@ -392,7 +468,7 @@ def launch_gui():
     cfg = config_for()
     window = tk.Tk()
     window.title('K3 — Sandbox application reset')
-    window.geometry('780x650')
+    window.geometry('780x710')
     panel = ttk.Frame(window, padding=20)
     panel.pack(fill='both', expand=True)
     ttk.Label(panel, text='Yalnız sandbox application reset', font=('Segoe UI', 16, 'bold')).pack(anchor='w')
@@ -401,7 +477,9 @@ def launch_gui():
     ttk.Label(panel, text=target, wraplength=730).pack(anchor='w', pady=12)
     ttk.Label(panel, text='Auth/storage korunur. Yalnız reviewed application nesneleri reset edilir. '
               'Bağlantı kaybolursa otomatik tekrar yapılmaz.', wraplength=730).pack(anchor='w', pady=6)
-    status = tk.StringVar(value='Yerel plan ve 1–4 kanıtları kontrol ediliyor; bağlantı açılmadı.')
+    plan_status = tk.StringVar(value='Yerel plan ve 1–4 kanıtları kontrol ediliyor.')
+    status = tk.StringVar(value='Read-only kontrol henüz başlatılmadı.')
+    next_action = tk.StringVar(value='')
     accepted = tk.BooleanVar(value=False)
     ttk.Label(panel, text='Sandbox database password (gizli)').pack(anchor='w', pady=(10, 0))
     password_entry = ttk.Entry(panel, show='●', width=65)
@@ -411,7 +489,9 @@ def launch_gui():
     checkbox = ttk.Checkbutton(panel, variable=accepted,
         text='Gösterilen sandbox hedefini, staff role ve application reset kapsamını kontrol ettim.')
     checkbox.pack(anchor='w', pady=12)
-    ttk.Label(panel, textvariable=status, wraplength=730).pack(anchor='w', pady=12)
+    ttk.Label(panel, textvariable=plan_status, wraplength=730).pack(anchor='w', pady=(10, 4))
+    ttk.Label(panel, textvariable=status, wraplength=730).pack(anchor='w', pady=4)
+    ttk.Label(panel, textvariable=next_action, wraplength=730).pack(anchor='w', pady=4)
     displayed = None
     inspection = None
     held_password = None
@@ -419,11 +499,12 @@ def launch_gui():
     attempted = False
 
     def update_button(*_):
-        enabled = displayed is not None and inspection is not None and accepted.get() \
-                  and bool(held_password) and not busy and not attempted
-        start_button.configure(state='normal' if enabled else 'disabled')
-        inspect_button.configure(state='normal' if bool(password_entry.get())
-                                 and not busy and not attempted else 'disabled')
+        controls = gui_control_state(plan_ready=displayed is not None, inspected=inspection is not None,
+                                     confirmed=accepted.get(), held_password=bool(held_password),
+                                     entered_password=bool(password_entry.get()), busy=busy, attempted=attempted)
+        start_button.configure(state='normal' if controls['reset_enabled'] else 'disabled')
+        inspect_button.configure(state='normal' if controls['inspect_enabled'] else 'disabled')
+        next_action.set(controls['hint'])
 
     def refresh():
         nonlocal displayed
@@ -431,11 +512,10 @@ def launch_gui():
             return
         try:
             displayed = validated_plan(cfg)
-            status.set('Plan ve 1–4 kanıtları doğrulandı. Bağlantı henüz açılmadı. SQL SHA256: '
-                       + displayed['sqlSha256'])
+            plan_status.set('Plan ve 1–4 kanıtları doğrulandı. SQL SHA256: ' + displayed['sqlSha256'])
         except OperatorError as error:
             displayed = None
-            status.set('Başlatılamaz: ' + str(error) + '. Bağlantı açılmadı.')
+            plan_status.set('Yerel plan hazır değil: ' + str(error) + '.')
         update_button()
 
     def finish(message):

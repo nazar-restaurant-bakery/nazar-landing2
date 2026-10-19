@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -193,6 +194,100 @@ class OperatorTests(unittest.TestCase):
             with self.assertRaisesRegex(operator.OperatorError, '^READ_ONLY_INSPECTION_FAILED$'):
                 operator.inspect_read_only(self.cfg, 'FAKE')
         self.assertFalse(any(self.private.rglob('read-only-metadata.json')))
+        diagnostic = json.loads((self.private/'operator-inspection-status.json').read_text())
+        self.assertEqual(diagnostic['state'], 'failed')
+        self.assertFalse(diagnostic['native_stderr_recorded'])
+        self.assertFalse(diagnostic['application_write_performed'])
+        self.assertNotIn('PASSWORD PRIVATE', json.dumps(diagnostic))
+
+    def test_native_read_only_failures_are_fixed_categories_only(self):
+        cases = [(b'could not translate host name: access is denied; PRIVATE', 'DNS_FAILED'),
+                 (b'could not connect: Access is denied PRIVATE', 'NETWORK_ACCESS_DENIED'),
+                 (b'password authentication failed PRIVATE', 'DATABASE_PASSWORD_REJECTED'),
+                 (b'server certificate verify failed PRIVATE', 'TLS_VERIFY_FAILED'),
+                 (b'permission denied for relation PRIVATE', 'READ_PERMISSION_DENIED'),
+                 (b'connection timed out PRIVATE', 'CONNECTION_TIMEOUT')]
+        for stderr, expected in cases:
+            with self.subTest(expected=expected):
+                self.assertEqual(operator.safe_inspection_error(stderr), expected)
+        failed = subprocess.CompletedProcess([], 1, b'', b'could not translate host name: PRIVATE')
+        with patch.object(operator, 'restrict_directory'), patch.object(operator.subprocess, 'run', return_value=failed):
+            with self.assertRaisesRegex(operator.OperatorError, '^DNS_FAILED$'):
+                operator.inspect_read_only(self.cfg, 'FAKE')
+        diagnostic = json.loads((self.private/'operator-inspection-status.json').read_text())
+        self.assertEqual(diagnostic['error_code'], 'DNS_FAILED')
+        self.assertNotIn('PRIVATE', json.dumps(diagnostic))
+
+    def test_control_reason_distinguishes_pending_inspection_and_unchecked_target(self):
+        state = dict(plan_ready=True, inspected=False, confirmed=False, held_password=False,
+                     entered_password=True, busy=False, attempted=False)
+        first = operator.gui_control_state(**state)
+        self.assertTrue(first['inspect_enabled'])
+        self.assertFalse(first['reset_enabled'])
+        self.assertIn('1.', first['hint'])
+        checked = operator.gui_control_state(**dict(state, inspected=True, held_password=True, entered_password=False))
+        self.assertFalse(checked['reset_enabled'])
+        self.assertIn('onay kutusunu', checked['hint'])
+        self.assertTrue(operator.gui_control_state(**dict(state, inspected=True, held_password=True,
+                                                        confirmed=True))['reset_enabled'])
+        for change in ({'busy': True}, {'attempted': True}, {'plan_ready': False}, {'held_password': False}):
+            candidate = dict(state, inspected=True, held_password=True, confirmed=True)
+            candidate.update(change)
+            self.assertFalse(operator.gui_control_state(**candidate)['reset_enabled'])
+
+    def test_headless_gui_preserves_success_across_refresh_and_explains_checkbox(self):
+        widgets, variables = [], []
+        class Variable:
+            def __init__(self, value=None):
+                self.initial = self.value = value
+                self.callbacks = []
+                variables.append(self)
+            def get(self): return self.value
+            def set(self, value):
+                self.value = value
+                for callback in self.callbacks: callback('', '', '')
+            def trace_add(self, _kind, callback): self.callbacks.append(callback)
+        class Widget:
+            def __init__(self, *_args, **kwargs):
+                self.options, self.value, self.callbacks = kwargs, '', {}
+                widgets.append(self)
+            def pack(self, **_kwargs): pass
+            def configure(self, **kwargs): self.options.update(kwargs)
+            def get(self): return self.value
+            def delete(self, *_args): self.value = ''
+            def bind(self, event, callback): self.callbacks[event] = callback
+        def exercise():
+            password = next(w for w in widgets if w.options.get('show'))
+            check = next(w for w in widgets if 'variable' in w.options)
+            inspect = next(w for w in widgets if w.options.get('text', '').startswith('1.'))
+            reset = next(w for w in widgets if w.options.get('text', '').startswith('2.'))
+            refresh = next(w for w in widgets if w.options.get('text') == 'Yerel kanıtları tekrar kontrol et')
+            password.value = 'FAKE-NOT-A-REAL-PASSWORD'
+            password.callbacks['<KeyRelease>']()
+            inspect.options['command']()
+            status = next(v for v in variables if v.initial == 'Read-only kontrol henüz başlatılmadı.')
+            self.assertIn('Read-only metadata kontrolü tamamlandı', status.get())
+            self.assertEqual(reset.options['state'], 'disabled')
+            refresh.options['command']()
+            self.assertIn('Read-only metadata kontrolü tamamlandı', status.get())
+            self.assertNotIn('Bağlantı henüz açılmadı', status.get())
+            check.options['variable'].set(True)
+            self.assertEqual(reset.options['state'], 'normal')
+        window = SimpleNamespace(title=lambda *_: None, geometry=lambda *_: None,
+                                 protocol=lambda *_: None, destroy=lambda: None,
+                                 after=lambda delay, callback: callback() if delay == 0 else None,
+                                 mainloop=exercise)
+        tkinter = SimpleNamespace(Tk=lambda: window, StringVar=Variable, BooleanVar=Variable)
+        ttk = SimpleNamespace(Frame=Widget, Label=Widget, Entry=Widget, Checkbutton=Widget, Button=Widget)
+        tkinter.ttk = ttk
+        with patch.dict('sys.modules', {'tkinter': tkinter, 'tkinter.ttk': ttk}), \
+             patch.object(operator, 'config_for', return_value=self.cfg), \
+             patch.object(operator, 'validated_plan', return_value=self.plan), \
+             patch.object(operator, 'inspect_read_only', return_value=self.inspection), \
+             patch.object(operator.threading, 'Thread', side_effect=lambda *, target, **_kwargs: SimpleNamespace(start=target)), \
+             patch.object(operator.subprocess, 'Popen') as native:
+            operator.launch_gui()
+            native.assert_not_called()
 
     def test_inspection_must_be_fresh_target_bound_and_unchanged(self):
         bad_cases = [dict(self.inspection, sandbox_project_ref='b' * 20),
