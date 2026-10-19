@@ -2,12 +2,15 @@
 
 ## Isolated test environment — K3 preparation
 
-The K3 branch is based on current `main`, independently of held CRM/Ops PRs #52/#53. It does not deploy or merge those PRs. Talip chose a separate Supabase test project and a single synthetic `Nazar-test` business. The new test project ref and business ID are environment configuration only.
+The K3 branch is based on current `main`, independently of held CRM/Ops PRs #52/#53. It does not deploy or merge those PRs. Talip chose to repurpose the existing separate catering sandbox for a single synthetic `Nazar-test` business. Target ref and business ID remain environment configuration only. Remote app reset is conditionally authorized only after health, verified recovery, Talip-operated disconnection and reviewed baseline evidence exist.
 
-- [Preview routing and exact variable/secret names](K3_PREVIEW.md): configure only Pages **Preview**, rebuild, and keep Production bindings unchanged. No real email, Klaviyo write or production GA4 event is sent from the isolated build.
+- [Preview routing and exact variable/secret names](K3_PREVIEW.md): configure only Pages **Preview**, rebuild, and keep live Nazar **Production** bindings unchanged. The old sandbox Pages project's separate Production intake is disconnected by Talip. No real email, Klaviyo write or production GA4 event is sent from the isolated build.
 - [Migration provenance and readiness](K3_MIGRATIONS.md): the legacy source inventory is verified, but a reviewed canonical full baseline and a successful full replay are still prerequisites. The held Ops migration is excluded. Do not treat inventory success as an installed database.
 - [Synthetic seed and reset](K3_SEED_AND_RESET.md): explicit test markers, reserved-domain contacts, inactive offer and a local-only reset guard. The local guard remains blocked while baseline/replay proof is missing; hosted reset is not claimed ready.
 - [Bounded native PostgreSQL compatibility probe](K3_LOCAL_TEST.md): its synthetic Auth/installation metadata is not a real Supabase/JWT or hosted staging acceptance test.
+- [Private schema capture and scoped sandbox recovery](K3_SCHEMA_CAPTURE.md): production `pg_dump --schema-only`, exact four sandbox test orders, anonymous staff and masked password handoff. Raw files remain outside Git; capture cannot apply or reset SQL.
+- [Actual schema baseline review](tools/test-env/SCHEMA_BASELINE_REVIEW.md): current production schema is the baseline source; historical SQL remains unchanged and is not replayed. Captured objects, grants and private-core boundaries require recorded review before rendering a baseline.
+- [Recovery validation](tools/test-env/RECOVERY_VALIDATION.md): exact source hashes and independent restored readback are distinct from capture success. Neither authorizes reset by itself.
 
 Run the requested change's unit tests with `node --test tests/*.test.mjs`. For provenance alone use `node tools/test-env/audit-migrations.mjs --integrity-only`; default readiness audit intentionally exits nonzero until actual environment setup is complete. **Migration order: first test, then a separate Talip-controlled production release using the same reviewed SQL.** No production migration, production secret or cloud project is changed by this preparation.
 
