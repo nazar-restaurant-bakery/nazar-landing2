@@ -4,7 +4,7 @@ This change adds `/staff/ops` to the existing **Sistem** tab. `/staff/system` re
 
 ## Release boundary
 
-- **Manual collection only**, following Talip's explicit decision. No 06:00 schedule, cron, n8n or automatic retry is installed.
+- **Manual collection first**, following Talip's explicit decision. Optional pg_cron + pg_net preparation is in `supabase/migrations/20261019_ops_schedule.sql`; it remains unapplied and creates an inactive job if separately applied. No Worker, n8n or automatic retry is added. Uzantıların projede açık olup olmadığını **Talip kontrol eder**.
 - This is a stacked PR on `feat/staff-crm-hubspot-layout` / PR #52. That CRM PR is still unmerged. Review the operations diff separately; after #52 merges, retarget this PR to `main` and check its diff again.
 - No migration, function, bucket or secrets were installed in production. No real CSV was uploaded, no campaign/offer/inventory state was changed, and no customer communication was sent.
 - A Cloudflare frontend preview cannot collect production data until Talip separately reviews/applies the SQL and deploys the function. It shows a truthful waiting state before that. Screenshots and browser tests use synthetic data and a local fake SDK.
@@ -22,7 +22,7 @@ This change adds `/staff/ops` to the existing **Sistem** tab. `/staff/system` re
 | Failed job retry | Once-only retry of a known failed manual collect from the last 24 hours | Never replays email or a customer notification |
 | Existing offer toggle | Existing test offer or trusted approval bound to exact current terms | Supported setter and verified target. No real offer is preapproved. |
 | Ads status / Clover inventory writes | Visible grey controls and `not_connected` intent receipt | **Write adapters and target approval are not implemented in this release. Adding a read key will not enable them.** |
-| Scheduled jobs | Grey tile and manual-only explanation | A future explicit scheduling decision |
+| Scheduled jobs | Grey until activation and a verified terminal scheduled snapshot | Optional pg_cron + pg_net SQL, deployed Edge path, reviewed credentials, explicit owner activation; fixed 10:00 UTC = 06:00 EDT / 05:00 EST |
 
 Missing measurements remain `—`, never fabricated zero. Selecting an old-month import does not relabel it as current-month sales. Ads conversions, website forms and paid orders stay separate. Unknown subscription status is not an active subscriber. The Ops panel never renders customer names, email addresses, phone numbers or message bodies, including in its legacy sections.
 
@@ -30,7 +30,7 @@ CSV input is either the verified **Sales Report** aggregate layout or the strict
 
 ## Differences resolved against the supplied specification
 
-1. The actual accepted scheduler record contains no periodic Worker or pg_cron. Talip selected manual collection for the first release.
+1. The actual accepted scheduler record contains no periodic Worker or pg_cron. Talip selected manual collection for the first release, then requested separate, unapplied pg_cron + pg_net preparation. The optional job is fixed at 10:00 UTC and is inactive by default; it does not adjust for New York DST.
 2. Nullable `period_start` cannot be a primary-key member: the migration uses a surrogate key and a null-safe unique snapshot index. Connections are business-scoped.
 3. The existing engine is `core.compute_commission(...)`; no public function of that name is invented. QICR already contains the baseline deduction. CSV net refunds and the baseline are not subtracted twice.
 4. Queue creation and execution acknowledgment are one authenticated Edge request. The Edge Function calls `ops_request_action` with the **user JWT**, claims once, then acknowledges. Lost replies never auto-enqueue or rerun work. An existing queued ID can only be resumed explicitly by its requesting account.
@@ -43,10 +43,10 @@ CSV input is either the verified **Sales Report** aggregate layout or the strict
 2. Review [the server README](../../supabase/functions/ops-collect/README.md) for exact secret **names**, provider scopes, action capabilities and explicit stale-action reconciliation. No secret values belong in this repository or Vite variables.
 3. Deploy `ops-collect` separately, with JWT verification and the existing staff authorization. Enable only reviewed provider reads. The shared external-call budget is 30 per New York day.
 4. Test access denial first, then manual collection, one synthetic qualified closed-month CSV, one verified test offer and the private report. Do not use live customer records or Weekday Lunch Special.
-5. Confirm grey source behavior, incomplete-file rejection, lost-reply recovery, test exclusion and 375px mobile layout. Merge remains Talip's decision.
+5. Confirm grey source behavior, incomplete-file rejection, lost-reply recovery, test exclusion and 375px mobile layout. The optional schedule is separately reviewed after manual collection works; extension readiness, secret entry and activation are Talip's steps. Merge remains Talip's decision.
 
 The server README documents raw CSV retention until finish/reconciliation and the privileged, non-replaying cleanup procedure. A stalled worker is not silently marked successful.
 
 ## Verification evidence
 
-See [verification.json](evidence/verification.json), [59 browser scenarios](evidence/browser/results.json), and [the final two visual checks](evidence/visual/results.json). Latest synthetic screenshots: [desktop](evidence/visual/staff-ops-desktop.png) / [375px mobile](evidence/visual/staff-ops-mobile.png). The private September source was validated locally against all 180 reference financial cells; only hashes and the comparison count are committed. No live amounts or source file are included.
+See [verification.json](evidence/verification.json) and [the latest 59 browser scenarios](evidence/schedule-browser/results.json). Latest synthetic screenshots: [desktop](evidence/schedule-browser/staff-ops-desktop.png) / [375px mobile](evidence/schedule-browser/staff-ops-mobile.png). Optional schedule SQL tests use isolated cron/pg_net/Vault stubs, not live extensions. The private September source was validated locally against all 180 reference financial cells; only hashes and the comparison count are committed. No live amounts or source file are included.

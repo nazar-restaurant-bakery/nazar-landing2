@@ -15,6 +15,7 @@ export type OpsConnection = {
 };
 export type OpsAction = {
   id: string; request_key: string; action: OpsActionName; requested_by: string | null; requested_at: string;
+  actor_kind?: "staff" | "scheduler";
   status: OpsActionStatus; result: { message?: string; code?: string; downloadPath?: string };
   finished_at: string | null;
 };
@@ -61,9 +62,14 @@ export function validOpsConnections(v: unknown): v is { items: OpsConnection[] }
 }
 export function validOpsAction(v: unknown): v is OpsAction {
   return object(v) && uuid(v.id) && uuid(v.request_key) && member(OPS_ACTIONS, v.action) && nullable(v.requested_by)
+    && (!("actor_kind" in v) || member(["staff", "scheduler"], v.actor_kind))
+    && (v.actor_kind === "scheduler" ? v.requested_by === null && v.action === "collect" : v.actor_kind !== "staff" || uuid(v.requested_by))
     && text(v.requested_at) && member(["queued", "running", "done", "failed", "not_connected"], v.status)
     && nullable(v.finished_at) && object(v.result)
     && [v.result.message, v.result.code, v.result.downloadPath].every(s => s === undefined || text(s));
+}
+export function opsCanResume(action: OpsAction, identity: string) {
+  return action.actor_kind !== "scheduler" && action.status === "queued" && uuid(identity) && action.requested_by === identity;
 }
 export function validOpsActions(v: unknown): v is { items: OpsAction[] } {
   return object(v) && list(v.items, 50) && (v.items as unknown[]).every(validOpsAction);

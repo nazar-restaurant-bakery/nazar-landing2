@@ -1,10 +1,10 @@
 {
-  "scope": "Local synthetic tests only. Database migration executed solely in isolated in-memory PGlite. No live source or customer records.",
-  "checkedAt": "2026-10-19T04:21:55.601Z",
+  "scope": "Local synthetic tests only. Base and optional schedule migrations executed solely in isolated in-memory PGlite; pg_cron, pg_net and Vault use test stubs, not live extensions. No live source or customer records.",
+  "checkedAt": "2026-10-19T04:42:30.153Z",
   "baseRevision": "65efdb769f90e65d8e211ad41786720cb81c71ce",
   "unitAndDatabaseTests": {
-    "tests": 172,
-    "passed": 172,
+    "tests": 184,
+    "passed": 184,
     "failed": 0,
     "skipped": 0
   },
@@ -37,25 +37,25 @@
     "after": {
       "files": [
         {
-          "name": "StaffPage-4iZcs09p.js",
-          "gzipBytes": 23906
-        },
-        {
           "name": "StaffPage-BpYwMRUX.css",
           "gzipBytes": 498
         },
         {
-          "name": "index-BefYpJZG.js",
-          "gzipBytes": 142186
+          "name": "StaffPage-LWtf1SBu.js",
+          "gzipBytes": 24021
+        },
+        {
+          "name": "index-B4iv4UkG.js",
+          "gzipBytes": 142279
         },
         {
           "name": "index-C2YY10cy.css",
           "gzipBytes": 6746
         }
       ],
-      "totalGzipBytes": 173336
+      "totalGzipBytes": 173544
     },
-    "increaseGzipBytes": 12896,
+    "increaseGzipBytes": 13104,
     "limitGzipBytes": 40000,
     "passed": true
   },
@@ -80,11 +80,18 @@
   "browserTests": {
     "passed": 59,
     "failed": 0,
-    "report": "browser/results.json"
+    "report": "schedule-browser/results.json"
   },
-  "finalVisualChecks": {
-    "passed": 2,
-    "failed": 0,
-    "report": "visual/results.json"
+  "schedulePreparation": {
+    "migration": "supabase/migrations/20261019_ops_schedule.sql",
+    "cron": "0 10 * * *",
+    "utcTime": "10:00",
+    "newYorkSummer": "06:00 EDT",
+    "newYorkWinter": "05:00 EST",
+    "initialJobActive": false,
+    "initialSettingsEnabled": false,
+    "workerAdded": false,
+    "liveExtensionsChecked": false,
+    "sqlTests": "isolated cron/net/Vault stubs"
   }
 }

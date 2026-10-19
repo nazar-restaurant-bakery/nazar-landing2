@@ -5,9 +5,9 @@ computing gzip size...
 dist/index.html                       4.04 kB │ gzip:   1.47 kB
 dist/assets/StaffPage-BpYwMRUX.css    1.28 kB │ gzip:   0.50 kB
 dist/assets/index-C2YY10cy.css       32.95 kB │ gzip:   6.79 kB
-dist/assets/StaffPage-4iZcs09p.js    98.36 kB │ gzip:  23.92 kB
-dist/assets/index-BefYpJZG.js       486.62 kB │ gzip: 143.27 kB
-✓ built in 7.07s
+dist/assets/StaffPage-LWtf1SBu.js    98.75 kB │ gzip:  24.03 kB
+dist/assets/index-B4iv4UkG.js       486.88 kB │ gzip: 143.36 kB
+✓ built in 2.91s
 Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
   npx update-browserslist-db@latest
   Why you should do it regularly: https://github.com/browserslist/update-db#readme

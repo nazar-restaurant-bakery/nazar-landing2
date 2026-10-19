@@ -39,7 +39,7 @@ function harness(options={}) {
   if(parsed.href==='https://www.nazarrestaurantandbakery.com/')return new Response('<html>synthetic public site</html>',{status:options.siteStatus||200});
   throw new Error('Unexpected external network target');
  };
- const invoke=async(action,payload={},overrides={})=>handleRequest(new Request('https://khgczybubufouraqyrcj.supabase.co/functions/v1/ops-collect',{method:'POST',headers:{'Content-Type':'application/json',Authorization:jwt,Origin:'https://preview.nazar-landing2.pages.dev',...overrides},body:JSON.stringify({action,payload:{clientRequestId:crypto.randomUUID(),...payload}})}),env,request);
+ const invoke=async(action,payload={},overrides={})=>handleRequest(new Request('https://khgczybubufouraqyrcj.supabase.co/functions/v1/ops-collect',{method:'POST',headers:{'Content-Type':'application/json',Authorization:jwt,Origin:'https://preview.nazar-restaurant-website.pages.dev',...overrides},body:JSON.stringify({action,payload:{clientRequestId:crypto.randomUUID(),...payload}})}),env,request);
  return {calls,actions,finishes,uploads,request,invoke,get claims(){return claims;}};
 }
 
