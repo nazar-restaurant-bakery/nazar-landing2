@@ -1,6 +1,6 @@
 #requires -Version 7.0
 [CmdletBinding()]
-param([switch]$ValidateOnly,[string]$DataDirectory='',[int]$Port=55473)
+param([switch]$ValidateOnly,[string]$DataDirectory='',[int]$Port=55473,[switch]$NormalizeLineEndings)
 $ErrorActionPreference='Stop'
 $repoRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $workspace=[IO.Path]::GetFullPath((Join-Path $repoRoot '../..'))
@@ -37,7 +37,7 @@ $order=@(
 foreach($name in @('postgres.exe','pg_ctl.exe','psql.exe','initdb.exe')){if(!(Test-Path -LiteralPath (Join-Path $pgBin $name) -PathType Leaf)){throw "Required native tool missing: $name"}}
 if(!(Test-Path -LiteralPath $foundation -PathType Leaf)){throw 'Historical foundation source missing.'}
 foreach($name in $order){if(!(Test-Path -LiteralPath (Join-Path $repoRoot "database/$name") -PathType Leaf)){throw "Incremental source missing: $name"}}
-$plan=[ordered]@{mode='single_tenant_local_legacy_compatibility_fixture';actual_host=$hostName;actual_port=$Port;data_directory=$DataDirectory;metadata_simulated=$true;real_jwt_validation=$false;production_or_staging_proof=$false;planned_incrementals=$order.Count;emergency_pause_excluded=$true;source_sql_modified=$false;starts_services=$false}
+$plan=[ordered]@{mode='single_tenant_local_legacy_compatibility_fixture';actual_host=$hostName;actual_port=$Port;data_directory=$DataDirectory;metadata_simulated=$true;real_jwt_validation=$false;production_or_staging_proof=$false;planned_incrementals=$order.Count;emergency_pause_excluded=$true;sql_line_endings=$(if($NormalizeLineEndings){'CRLF_to_LF'}else{'source_transport'});source_sql_modified=$false;starts_services=$false}
 if($ValidateOnly){$plan|ConvertTo-Json -Depth 5;exit 0}
 function Invoke-LocalTool([string]$Exe,[string[]]$Arguments,[string]$InputSql='',[int]$TimeoutMs=90000){
  $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$Exe
@@ -63,6 +63,7 @@ function Invoke-LocalTool([string]$Exe,[string[]]$Arguments,[string]$InputSql=''
  $process.Dispose();return $result
 }
 function Invoke-LocalSql([string]$Sql){
+ if($NormalizeLineEndings){$Sql=$Sql.Replace(([string][char]13+[char]10),([string][char]10))}
  $arguments=@('-X','-q','-w','-h',$hostName,'-p',"$Port",'-U','postgres','-d',$script:databaseName,'-v','ON_ERROR_STOP=1','-P','pager=off','-At')
  return Invoke-LocalTool (Join-Path $pgBin 'psql.exe') $arguments ('\set VERBOSITY verbose'+[Environment]::NewLine+$Sql)
 }
@@ -77,6 +78,7 @@ foreach($name in $order){$path=Join-Path $repoRoot "database/$name";$sourceHashe
 $report=[ordered]@{
  scope='Bounded native PostgreSQL SINGLE-TENANT LOCAL COMPATIBILITY FIXTURE; not real Supabase/Auth/JWT or staging acceptance.'
  checked_at_utc=(Get-Date).ToUniversalTime().ToString('o');metadata_simulated=$true
+ sql_line_endings=$(if($NormalizeLineEndings){'CRLF_to_LF'}else{'source_transport'})
  human_confirmation_supplied_in_memory_only=$true;actual_host=$hostName;actual_port=$Port;database=$script:databaseName
  planned_incrementals=$order.Count;applied_incrementals=@();first_failure=$null
  privilege_checks=[ordered]@{};source_hashes_before=$sourceHashes;source_sql_bytes_preserved=$false

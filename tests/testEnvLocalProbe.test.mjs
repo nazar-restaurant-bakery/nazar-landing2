@@ -29,3 +29,8 @@ test('source ownership, cleanup and stop-first-error safety contract is explicit
  assert.match(text,/if\(\$migration.exit_code-ne0\)[\s\S]*?;break\}/);
  assert.doesNotMatch(text,/Remove-Item|dropdb|DROP DATABASE|https:\/\/[^'"]+\/rest\/|supabase\s+(?:start|link|db)/i);
 });
+
+test('LF normalization is explicitly disclosed in the validation plan without starting a server',()=>{
+ const result=invoke(['-NormalizeLineEndings']);assert.equal(result.status,0,result.stderr);
+ const plan=JSON.parse(result.stdout);assert.equal(plan.sql_line_endings,'CRLF_to_LF');assert.equal(plan.source_sql_modified,false);assert.equal(plan.starts_services,false);
+});
