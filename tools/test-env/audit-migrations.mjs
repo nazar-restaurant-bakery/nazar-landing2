@@ -26,7 +26,9 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
  const foundation=manifest.foundation;
  if(!foundation||typeof foundation!=='object'||foundation.id!=='foundation')issue('FOUNDATION_UNDECLARED','Historical foundation must remain identified separately.');
  const canonical=Array.isArray(manifest.canonical_replay?.pending_additive)?manifest.canonical_replay.pending_additive:[];
- const entries=[...(foundation?[foundation]:[]),...sources,...canonical];const ids=new Set();const paths=new Set();
+ const additive=Array.isArray(manifest.reviewed_additive)?manifest.reviewed_additive:[];
+ if(additive.some(entry=>entry?.classification!=='reviewed_additive_delivery'))issue('ADDITIVE_DELIVERY_CONTRACT','Reviewed additive entries require their separate non-replay classification.');
+ const entries=[...(foundation?[foundation]:[]),...sources,...canonical,...additive];const ids=new Set();const paths=new Set();
  const order=Array.isArray(manifest.proposed_order)?manifest.proposed_order:[];
  const positions=new Map();
  for(const [index,id]of order.entries()){
@@ -52,6 +54,9 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
    if(relation.startsWith('..'+path.sep)||relation==='..'||path.isAbsolute(relation)){issue('SOURCE_PATH_ESCAPE',relative);continue;}
    const bytes=await fs.readFile(candidate);const canonical=sha256Lf(bytes.toString('utf8'));
    const raw=createHash('sha256').update(bytes).digest('hex');
+   if(entry.classification==='reviewed_additive_delivery'
+    &&(entry.line_endings!=='LF'||bytes.includes(13)||raw!==entry.sha256_lf||raw!==entry.sha256_bytes_at_capture))
+    issue('ADDITIVE_LF_BYTES_REQUIRED',relative);
    if(canonical!==entry.sha256_lf)issue('CHECKSUM_MISMATCH',relative);
    else verified.push(relative);
    capture.push({id:entry.id,path:relative,sha256_lf:canonical,raw_bytes_match_capture:raw===entry.sha256_bytes_at_capture});
@@ -60,6 +65,9 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
    if(positions.has(entry.id))issue('EMERGENCY_IN_REPLAY',relative);
   }else if(entry.classification==='pending_canonical_additive'){
    if(positions.has(entry.id)||entry.requires_reviewed_baseline!==true)issue('CANONICAL_BASELINE_REQUIRED',relative);
+  }else if(entry.classification==='reviewed_additive_delivery'){
+   if(positions.has(entry.id)||entry.requires_reviewed_baseline!==true
+     ||entry.application_tool!=='tools/test-env/k4-migrate.py')issue('ADDITIVE_DELIVERY_CONTRACT',relative);
   }else if(!positions.has(entry.id))issue('SOURCE_MISSING_FROM_ORDER',relative);
   if(entry.requires!==undefined&&!Array.isArray(entry.requires))issue('DEPENDENCY_INVALID',String(entry.id));
   if(positions.has(entry.id))for(const dependency of Array.isArray(entry.requires)?entry.requires:[]){
@@ -76,7 +84,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
  let actualCanonical=[];
  try{actualCanonical=(await fs.readdir(path.join(realRoot,'supabase/migrations'))).filter(name=>name.endsWith('.sql')).map(name=>'supabase/migrations/'+name).sort();}
  catch{/* A pending canonical directory may not exist before preparation. */}
- const declaredCanonical=canonical.map(entry=>entry?.path).filter(p=>typeof p==='string');
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string');
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');
@@ -87,11 +95,12 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   id:'INVENTORY_IS_NOT_EXECUTION_PROOF',detail:'No reviewed canonical migration replay or actual new Supabase test-project runtime validation is performed by this command.'
  }];
  return {audit:'K3 historical migration source inventory',mode:'read_only',baseline:manifest.baseline||null,
-  integrity:{ok:issues.length===0,issues,verified_sources:verified.length,database_sources:actual.length,historical_sources:foundation?1:0,pending_canonical_sources:canonical.length},
+  integrity:{ok:issues.length===0,issues,verified_sources:verified.length,database_sources:actual.length,historical_sources:foundation?1:0,pending_canonical_sources:canonical.length,reviewed_additive_sources:additive.length},
   readiness:{scope:'historical_chain_not_current_reviewed_dump',ready:false,state:'BLOCKED',execution_performed:false,blockers},
   proposed_order:order.map(id=>{const e=entries.find(entry=>entry?.id===id);return {id,path:e?.path||null,executable:false};}),
   excluded:sources.filter(entry=>entry?.classification==='emergency_excluded').map(entry=>({id:entry.id,path:entry.path,reason:entry.reason})),
   pending_canonical:canonical.map(entry=>({id:entry.id,path:entry.path,requires_reviewed_baseline:true,executable:false})),
+  reviewed_additive:additive.map(entry=>({id:entry.id,path:entry.path,requires_reviewed_baseline:true,executable:false,included_in_k3_reset:false,application_tool:entry.application_tool})),
   checksums:capture};
 }
 

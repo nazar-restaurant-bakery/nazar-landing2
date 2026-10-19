@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { createClient, type Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 import StaffFormErrors from "../components/StaffFormErrors";
 import StaffFollowUpQueue from "../components/StaffFollowUpQueue";
 import StaffEmailStatus from "../components/StaffEmailStatus";
 import CloverOrdersPanel from "../components/CloverOrdersPanel";
 import { safeCrmRequest, crmDisplayDate, crmNoteAuthor, crmLocalInput, crmTaskError, crmRequestError, validCrmOverview, validCrmTasks, validCrmDecisions } from "../lib/crmUi";
 import { browserDeployment } from "../lib/supabase";
+import { getStaffSupabase } from "../lib/staffSupabase";
 
 type Customer = {
   id: string; name: string | null; email: string | null; phone: string | null;
@@ -33,11 +34,9 @@ type DecisionQueue = { items: CateringDecision[] };
 type DecisionEmailDraft = { decisionId: string; to: string; cc: string; subject: string; body: string };
 type CateringNotification = { request_id: string; tracked: boolean; attempted_at: string | null; sent_at: string | null; error: string | null };
 
-const url = browserDeployment.url;
-const key = browserDeployment.key;
 // Existing staff features reach provider routes. Keep this client unavailable
 // in isolated Preview until their test-safe provider routing is enabled.
-const client = !browserDeployment.isolated && url && key ? createClient(url, key) : null;
+const client = !browserDeployment.isolated ? getStaffSupabase() : null;
 async function crmRpc(name: string, params?: Record<string, unknown>) {
   return safeCrmRequest(() => client ? client.rpc(name, params)
     : Promise.resolve({ data: null, error: { code: "MISSING_CONFIG" } }));
@@ -370,7 +369,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
       <header className="border-b border-[#dfe7df] bg-white px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#176b3a] text-xl font-black text-white">N</span><strong>NAZAR STAFF</strong><span className="text-[#64736a]">/ CRM</span></div>
-          <div className="flex items-center gap-3"><a href="/staff" className="text-sm font-medium text-[#176b3a] underline">Customer follow-up</a><button type="button" onClick={() => { void client?.auth.signOut(); setOverview(null); }} className="rounded-lg border border-[#dfe7df] px-3 py-2 text-sm">Sign out</button></div>
+          <div className="flex flex-wrap items-center gap-3"><a href="/staff" className="text-sm font-medium text-[#176b3a] underline">Customer follow-up</a><a href="/staff/offers" className="text-sm font-medium text-[#176b3a] underline">Teklifler</a><button type="button" onClick={() => { void client?.auth.signOut(); setOverview(null); }} className="rounded-lg border border-[#dfe7df] px-3 py-2 text-sm">Sign out</button></div>
         </div>
       </header>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -431,7 +430,7 @@ export default function StaffPage({ variant = "followup" }: { variant?: "followu
     <div className="mx-auto max-w-7xl">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div><p className="text-xs font-bold uppercase tracking-widest text-green-800">Nazar staff</p><h1 className="text-3xl font-bold">{variant === "crm" ? "CRM sign-in" : "Customer follow-up"}</h1></div>
-        {session && <a href="/staff/crm" className="rounded-lg border border-green-800 px-4 py-2 font-semibold text-green-800">Open CRM</a>}
+        {session && <nav aria-label="Personel sayfaları" className="flex flex-wrap gap-3"><a href="/staff/crm" className="rounded-lg border border-green-800 px-4 py-2 font-semibold text-green-800">Open CRM</a><a href="/staff/offers" className="rounded-lg border border-green-800 px-4 py-2 font-semibold text-green-800">Teklifler</a></nav>}
         {session && <button className="rounded-lg border px-4 py-2" onClick={() => { void client?.auth.signOut(); setOverview(null); }}>Sign out</button>}
       </header>
       {!client ? <p>Staff access is not configured.</p> : !session ?

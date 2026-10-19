@@ -1,0 +1,5 @@
+# Preserve the existing reviewed marker's LF bytes; its guarded hash is unchanged.
+/supabase/migrations/20261019000100_test_record_markers.sql text eol=lf
+# Historical reviewed baseline and MD5-guarded SQL files are untouched.
+/supabase/migrations/20261019000200_suppression_consent_offers.sql text eol=lf
+/tools/test-env/k4-*.sql text eol=lf

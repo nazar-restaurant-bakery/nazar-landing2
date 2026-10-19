@@ -97,3 +97,8 @@ export default defineConfig([
   },
 ])
 ```
+
+
+## K4 consent and staff offers
+
+See [K4_SUPPRESSION.md](K4_SUPPRESSION.md) for the LF migration, same-psql test/production procedure, human-only authentication and acceptance limits. Production application and merge are performed by Talip.
