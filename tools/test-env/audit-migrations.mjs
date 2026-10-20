@@ -134,7 +134,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
  }
  const k11Delivery=manifest.k11_delivery;
  const k11Path='supabase/migrations/20261021000300_loyalty_referrals_metrics.sql';
- const k11Sha='af4a2572fe17677d5dc9f64c1dc15c80ffc9076bd17c152c2c900aa6cc5eac20';
+ const k11Sha='b33ce7dfca27f354768d84c459bd29faaafb1af73c3afdcc7c3d99f5cbdda9ae';
  if(k11Delivery){
   if(typeof k11Delivery!=='object'||Object.keys(k11Delivery).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
    ||k11Delivery.path!==k11Path||k11Delivery.sha256_bytes!==k11Sha||k11Delivery.application_order!==9

@@ -9,7 +9,9 @@ DO $preflight$
 BEGIN
   IF pg_catalog.to_regclass('core.businesses') IS NULL
     OR pg_catalog.to_regclass('core.customers') IS NULL
-    OR pg_catalog.to_regclass('core.crm_staff') IS NULL
+    OR pg_catalog.to_regclass('core.business_staff') IS NULL
+    OR pg_catalog.to_regclass('core.platform_operators') IS NULL
+    OR pg_catalog.to_regprocedure('core.staff_authorized_v1(uuid,text)') IS NULL
     OR pg_catalog.to_regclass('core.offer_redemptions') IS NULL
     OR pg_catalog.to_regclass('core.message_log') IS NULL
     OR pg_catalog.to_regprocedure('core.clover_order_status_v1(uuid)') IS NULL THEN
@@ -71,24 +73,10 @@ CREATE TABLE core.referrals (
   CHECK((status='pending' AND referred_customer_id IS NULL AND first_order_id IS NULL AND completed_at IS NULL)
     OR (status='completed' AND referred_customer_id IS NOT NULL AND first_order_id IS NOT NULL AND completed_at IS NOT NULL))
 );
--- Existing role='owner' is not proof of platform authority. Both all-tenant
--- operators and tenant membership are explicit K11-only configuration.
-CREATE TABLE core.loyalty_platform_operators (
-  auth_user_id uuid PRIMARY KEY REFERENCES core.crm_staff(auth_user_id),
-  active boolean NOT NULL DEFAULT true
-);
-CREATE TABLE core.loyalty_staff_scopes (
-  auth_user_id uuid NOT NULL REFERENCES core.crm_staff(auth_user_id),
-  business_id uuid NOT NULL REFERENCES core.businesses(id),
-  active boolean NOT NULL DEFAULT true,
-  PRIMARY KEY(auth_user_id,business_id)
-);
 ALTER TABLE core.loyalty_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.loyalty_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.referrals ENABLE ROW LEVEL SECURITY;
-ALTER TABLE core.loyalty_staff_scopes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE core.loyalty_platform_operators ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON core.loyalty_rules,core.loyalty_ledger,core.referrals,core.loyalty_staff_scopes,core.loyalty_platform_operators
+REVOKE ALL ON core.loyalty_rules,core.loyalty_ledger,core.referrals
   FROM PUBLIC,anon,authenticated,service_role;
 
 CREATE FUNCTION core.loyalty_no_change_v1() RETURNS trigger
@@ -252,10 +240,8 @@ DECLARE v_tz text; v_start timestamptz; v_end timestamptz; v_now timestamptz:=st
   v_known boolean; v_new bigint; v_repeat bigint; v_campaigns jsonb; v_sent bigint; v_message_known boolean;
   v_attributed bigint; v_attribution_known boolean;
 BEGIN
-  IF auth.role() IS DISTINCT FROM 'authenticated' OR NOT EXISTS(SELECT 1 FROM core.crm_staff s
-    WHERE s.auth_user_id=auth.uid() AND s.active AND (EXISTS(
-      SELECT 1 FROM core.loyalty_platform_operators po WHERE po.auth_user_id=s.auth_user_id AND po.active) OR EXISTS(
-      SELECT 1 FROM core.loyalty_staff_scopes x WHERE x.auth_user_id=s.auth_user_id AND x.business_id=p_business_id AND x.active))) THEN
+  IF auth.role() IS DISTINCT FROM 'authenticated'
+    OR NOT core.staff_authorized_v1(p_business_id,'loyalty.read') THEN
     RAISE EXCEPTION 'Access denied' USING ERRCODE='42501';
   END IF;
   IF p_month IS NULL OR p_month<>date_trunc('month',p_month::timestamp)::date OR p_include_tests IS NULL THEN

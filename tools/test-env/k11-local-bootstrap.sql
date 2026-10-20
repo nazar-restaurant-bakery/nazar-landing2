@@ -7,6 +7,7 @@ DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role; END IF;
 END $$;
 CREATE SCHEMA auth;
+CREATE TABLE auth.users(id uuid PRIMARY KEY);
 CREATE SCHEMA core;
 REVOKE ALL ON SCHEMA core FROM PUBLIC,anon,authenticated,service_role;
 CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE
