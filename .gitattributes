@@ -25,3 +25,6 @@
 /tools/test-env/k9-*.sql text eol=lf
 /tests/campaignEngineDb.test.mjs text eol=lf
 /tests/fixtures/campaignEngineNative.mjs text eol=lf
+/docs/K9_STAFF_SCOPE_SETUP.sql text eol=lf
+/tests/businessStaffLegacyDb.test.mjs text eol=lf
+/tests/fixtures/businessStaffLegacy*.sql text eol=lf

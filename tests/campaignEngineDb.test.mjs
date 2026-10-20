@@ -218,10 +218,116 @@ check('refund without same-order successful payment association preserves quota'
 });
 check('staff mark requires actual authenticated active staff identity and note',()=>{
  const c=h.customer(),p=h.campaign(),o=h.order(c,{trace:false});assert.equal(h.evaluate(p,o,{source:'staff_mark',staffActor:randomUUID(),staffNote:'Synthetic evidence'}).applied,false);
- const actor=randomUUID();h.sql(`INSERT INTO core.crm_staff(auth_user_id,role,active) VALUES('${actor}','staff',true)`);
+ const actor=h.staff();
  for(const staffNote of ['  ','\t\n']){const blank=h.expression(p,o,{source:'staff_mark',staffActor:actor,staffNote});assert.equal(h.sql(`SET request.jwt.claim.sub='${actor}';SELECT ${blank}`,{service:true}).applied,false);}
  const expression=h.expression(p,o,{source:'staff_mark',staffActor:actor,staffNote:'Synthetic staff evidence'});
  assert.equal(h.sql(`SET request.jwt.claim.sub='${actor}';SELECT ${expression}`,{service:true}).applied,true);
+});
+check('common membership authorizes every declared role only in its target business',()=>{
+ const {users,businesses}=h.config.scopeFixture;
+ const read=['crm.read','orders.read','ops.read','loyalty.read'];
+ const write=['crm.write','consent.restore','orders.match','campaign.staff_mark','ops.write'];
+ for(const actor of [users.ownerA,users.managerA,users.staffA])for(const operation of [...read,...write]){
+  assert.equal(h.authorized(actor,businesses.a,operation),true,operation+' own business');
+  assert.equal(h.authorized(actor,businesses.b,operation),false,operation+' wrong business');
+ }
+ for(const operation of [...read,...write])assert.equal(h.authorized(users.staffB,businesses.b,operation),true);
+ assert.equal(h.authorized(users.ownerA,null,'platform.read'),false,'tenant owner must not become platform operator');
+});
+check('platform-only scope permits read but cannot write for a business',()=>{
+ const {users,businesses}=h.config.scopeFixture;
+ for(const business of [businesses.a,businesses.b]){
+  for(const operation of ['crm.read','orders.read','ops.read','loyalty.read'])assert.equal(h.authorized(users.platformOnly,business,operation),true);
+  for(const operation of ['crm.write','consent.restore','orders.match','campaign.staff_mark','ops.write'])assert.equal(h.authorized(users.platformOnly,business,operation),false);
+ }
+ assert.equal(h.authorized(users.platformOnly,null,'platform.read'),true);
+ assert.equal(h.authorized(users.platformMember,businesses.a,'ops.write'),true);
+ assert.equal(h.authorized(users.platformMember,businesses.b,'ops.write'),false);
+});
+check('inactive membership legacy staff and unknown actors fail without legacy fallback',()=>{
+ const {users,businesses}=h.config.scopeFixture;
+ for(const actor of [users.inactiveA,users.legacyOnly,users.inactivePlatform,randomUUID(),null]){
+  for(const operation of ['crm.read','crm.write','campaign.staff_mark','ops.write'])assert.equal(h.authorized(actor,businesses.a,operation),false);
+  assert.equal(h.authorized(actor,null,'platform.read'),false);
+ }
+ assert.equal(h.sql('SELECT public.crm_staff_authorized_v1()',{subject:users.legacyOnly,role:'authenticated'}),false);
+ // The legacy parameterless adapter has no unique target in this deliberately
+ // two-business fixture. It must not pick one or grant global tenant access.
+ assert.equal(h.sql('SELECT public.crm_staff_authorized_v1()',{subject:users.staffA,role:'authenticated'}),false);
+});
+check('helper denies null unknown and malformed operation scope rather than returning null',()=>{
+ const {users,businesses}=h.config.scopeFixture;
+ for(const operation of [null,'','unknown','CRM.READ','crm.read ','platform.write'])assert.equal(h.authorized(users.ownerA,businesses.a,operation),false);
+ for(const actor of [users.ownerA,users.platformOnly]){
+  assert.equal(h.authorized(actor,null,'crm.read'),false);
+  assert.equal(h.authorized(actor,randomUUID(),'crm.read'),false);
+ }
+ assert.equal(h.authorized(null,null,'platform.read'),false);
+});
+check('private scope tables and helper have no direct application-role privileges',()=>{
+ for(const role of ['anon','authenticated','service_role']){
+  for(const table of ['business_staff','platform_operators']){
+   assert.equal(h.sql(`SELECT has_table_privilege('${role}','core.${table}','SELECT,INSERT,UPDATE,DELETE')`),false);
+   const denied=h.raw(`\\set VERBOSITY verbose\nSELECT * FROM core.${table}`,{role});
+   assert.notEqual(denied.status,0);assert.match(denied.stderr,/42501/);
+  }
+  assert.equal(h.sql(`SELECT has_function_privilege('${role}','core.staff_authorized_v1(uuid,text)','EXECUTE')`),false);
+  const denied=h.raw(`\\set VERBOSITY verbose\nSELECT core.staff_authorized_v1('${h.config.businessId}','crm.read')`,{role,subject:h.config.scopeFixture.users.ownerA});
+  assert.notEqual(denied.status,0);assert.match(denied.stderr,/42501/);
+ }
+ assert.equal(h.sql("SELECT bool_and(relrowsecurity) FROM pg_class WHERE oid IN('core.business_staff'::regclass,'core.platform_operators'::regclass)"),true);
+});
+check('public business adapter returns false and protected order RPC raises SQLSTATE 42501',()=>{
+ const {users,businesses}=h.config.scopeFixture;
+ for(const actor of [users.legacyOnly,users.inactiveA,users.staffB,null]){
+  assert.equal(h.sql(`SELECT public.staff_business_authorized_v1('${businesses.a}','orders.read')`,{role:'authenticated',subject:actor??''}),false);
+  const denied=h.raw(`\\set VERBOSITY verbose\nSELECT public.clover_order_day_totals_v1('${businesses.a}','2026-10-15T00:00:00Z','2026-10-16T00:00:00Z')`,{role:'authenticated',subject:actor??''});
+  assert.notEqual(denied.status,0);assert.match(denied.stderr,/42501/);
+ }
+ assert.equal(h.sql(`SELECT public.staff_business_authorized_v1('${businesses.a}','orders.read')`,{role:'authenticated',subject:users.ownerA}),true);
+ const totals=h.sql(`SELECT public.clover_order_day_totals_v1('${businesses.a}','2026-10-15T00:00:00Z','2026-10-16T00:00:00Z')`,{role:'authenticated',subject:users.ownerA});
+ assert.equal(typeof totals.orderCount,'number');
+});
+check('membership foreign keys role constraints and restrictive actor deletion are enforced',()=>{
+ const {users,businesses}=h.config.scopeFixture;const missing=randomUUID();
+ const denied=(sql,state)=>{const result=h.raw('\\set VERBOSITY verbose\n'+sql);assert.notEqual(result.status,0);assert.match(result.stderr,new RegExp(state));};
+ denied(`INSERT INTO core.business_staff(business_id,staff_id,role) VALUES('${businesses.a}','${missing}','staff')`,'23503');
+ denied(`INSERT INTO core.business_staff(business_id,staff_id,role) VALUES('${missing}','${users.ownerA}','staff')`,'23503');
+ denied(`INSERT INTO core.platform_operators(staff_id) VALUES('${missing}')`,'23503');
+ denied(`INSERT INTO core.business_staff(business_id,staff_id,role) VALUES('${businesses.b}','${users.ownerA}','operator')`,'23514');
+ denied(`INSERT INTO core.business_staff(business_id,staff_id,role) VALUES('${businesses.a}','${users.ownerA}','staff')`,'23505');
+ denied(`DELETE FROM auth.users WHERE id='${users.ownerA}'`,'23503');
+ denied(`DELETE FROM auth.users WHERE id='${users.platformOnly}'`,'23503');
+ h.sql(`UPDATE core.business_staff SET active=false WHERE business_id='${businesses.a}' AND staff_id='${users.managerA}'`);
+ assert.equal(h.authorized(users.managerA,businesses.a,'crm.write'),false);
+ h.sql(`UPDATE core.business_staff SET active=true WHERE business_id='${businesses.a}' AND staff_id='${users.managerA}'`);
+});
+check('staff marking rejects legacy-only wrong-business inactive platform-only and spoofed actor',()=>{
+ const {users}=h.config.scopeFixture;
+ const attempt=(actor,claimedActor=actor)=>{
+  const c=h.customer(),p=h.campaign(),o=h.order(c,{trace:false});const expression=h.expression(p,o,{source:'staff_mark',staffActor:claimedActor,staffNote:'Synthetic membership evidence'});
+  return h.sql('SELECT '+expression,{service:true,subject:actor??''});
+ };
+ for(const actor of [users.legacyOnly,users.staffB,users.inactiveA,users.platformOnly,null])assert.equal(attempt(actor).applied,false);
+ assert.equal(attempt(users.ownerA,users.staffA).applied,false,'claimed actor differs from auth.uid');
+ for(const actor of [users.ownerA,users.managerA,users.staffA,users.platformMember])assert.equal(attempt(actor).applied,true);
+});
+check('revoked staff cannot inspect a prior redemption or mutate its refund outcome',()=>{
+ const actor=h.staff(),c=h.customer(),p=h.campaign({restore_on_full_refund:true}),o=h.order(c,{trace:false});
+ const expression=h.expression(p,o,{source:'staff_mark',staffActor:actor,staffNote:'Synthetic staff evidence before revocation'});
+ const invoke=()=>h.sql('SELECT '+expression,{service:true,subject:actor});
+ const applied=invoke();assert.equal(applied.applied,true);assert.equal(row(applied.redemptionId).quota_reserved,true);
+ h.sql(`UPDATE core.business_staff SET active=false WHERE business_id='${h.config.businessId}' AND staff_id='${actor}'`);
+ const retry=invoke();assert.equal(retry.applied,false);assert.equal(retry.code,'staff_evidence_required');
+ assert.equal(Object.hasOwn(retry,'redemptionId'),false,'revoked staff must not receive a prior redemption identifier');
+ assert.equal(row(applied.redemptionId).status,'applied');
+ h.refund(o,5000);const deniedRefund=invoke();
+ assert.equal(deniedRefund.code,'staff_evidence_required');assert.equal(Object.hasOwn(deniedRefund,'redemptionId'),false);
+ assert.equal(row(applied.redemptionId).status,'applied','unauthorized retry must not mutate the existing redemption');
+ assert.equal(row(applied.redemptionId).quota_reserved,true,'unauthorized retry must not release its reserved quota');
+ h.sql(`UPDATE core.business_staff SET active=true WHERE business_id='${h.config.businessId}' AND staff_id='${actor}'`);
+ const authorizedRefund=invoke();assert.equal(authorizedRefund.code,'voided');
+ assert.equal(row(applied.redemptionId).status,'voided');assert.equal(row(applied.redemptionId).quota_reserved,false);
 });
 check('evidence creation changes activation stopping and parameters are recorded immutably',()=>{
  const p=h.campaign({status:'draft'});const before=h.sql(`SELECT count(*) FROM core.campaign_events WHERE campaign_id='${p}'`);assert.ok(before>=1);

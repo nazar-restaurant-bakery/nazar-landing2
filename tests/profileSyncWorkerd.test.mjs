@@ -95,7 +95,7 @@ async function outbound(request) {
     assert.equal(request.method, 'POST');
     const name = url.pathname.slice('/rest/v1/rpc/'.length);
     if (scenario.kind === 'rpc-redirect') return redirectResponse(scenario.status);
-    if (name === 'crm_staff_authorized_v1') return WorkerResponse.json(true);
+    if (name === 'staff_business_authorized_v1') return WorkerResponse.json(true);
     if (name === 'crm_profile_sync_queue_v1') return WorkerResponse.json({items: [], counts});
     if (name === 'klaviyo_profile_sync_enqueue_v1') return WorkerResponse.json({enqueued: 0, unchanged: 0});
     if (name === 'klaviyo_profile_sync_claim_v1') return WorkerResponse.json(null);
@@ -159,7 +159,7 @@ test('actual GET queue reaches synthetic Supabase in workerd and returns an empt
   const body = await response.json();
   assert.equal(response.status, 200, JSON.stringify(body));
   assert.deepEqual(body, {code: 'ok', mode: 'mock', jobs: [], counts});
-  assert.deepEqual(names(), ['crm_staff_authorized_v1', 'crm_profile_sync_queue_v1']);
+  assert.deepEqual(names(), ['staff_business_authorized_v1', 'crm_profile_sync_queue_v1']);
   calls.forEach(assertStaffRequest);
 });
 
@@ -169,7 +169,7 @@ test('actual POST run reaches only synthetic auth/enqueue/claim and processes no
   const body = await response.json();
   assert.equal(response.status, 200, JSON.stringify(body));
   assert.deepEqual(body, {code: 'ok', mode: 'mock', processed: 0, succeeded: 0, blocked: 0, retry: 0, failed: 0});
-  assert.deepEqual(names(), ['crm_staff_authorized_v1', 'klaviyo_profile_sync_enqueue_v1', 'klaviyo_profile_sync_claim_v1']);
+  assert.deepEqual(names(), ['staff_business_authorized_v1', 'klaviyo_profile_sync_enqueue_v1', 'klaviyo_profile_sync_claim_v1']);
   assertStaffRequest(calls[0]);
   for (const call of calls.slice(1)) {
     assert.equal(call.apikey, serviceKey); assert.equal(call.authorization, null);

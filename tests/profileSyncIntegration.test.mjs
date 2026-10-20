@@ -14,6 +14,9 @@ const baseline=await read('../supabase/baselines/20261019_application_schema.sql
 const markers=await read('../supabase/migrations/20261019000100_test_record_markers.sql');
 const k4=await read('../supabase/migrations/20261019000200_suppression_consent_offers.sql');
 const k5=await read('../supabase/migrations/20261019000300_klaviyo_profile_sync.sql');
+const k9=await read('../supabase/migrations/20261021000200_campaign_engine.sql');
+const foundation=k9.slice(k9.indexOf('-- Shared staff contract v1.'),k9.indexOf('-- Additive parent keys'));
+assert.ok(foundation.includes('CREATE FUNCTION public.staff_business_authorized_v1'));
 const business=baseline.match(/CONSTRAINT businesses_id_check CHECK \(\(id = '([0-9a-f-]+)'::uuid\)\)/)[1];
 const target='https://abcdefghijklmnopqrst.supabase.co';
 const origin='https://fixture-preview.pages.dev';
@@ -23,7 +26,7 @@ const publicKey='sb_publishable_SYNTHETIC_LOCAL_ONLY';
 const serviceKey='sb_secret_SYNTHETIC_LOCAL_ONLY';
 const fakeProviderKey='pk_SYNTHETIC_LOCAL_ONLY_NOT_REAL';
 const rpcParameters={
- crm_staff_authorized_v1:[],crm_profile_sync_queue_v1:['p_business_id'],
+ staff_business_authorized_v1:['p_business_id','p_operation'],crm_profile_sync_queue_v1:['p_business_id'],
  klaviyo_profile_sync_enqueue_v1:['p_business_id','p_account','p_limit','p_customer_id'],
  klaviyo_profile_sync_claim_v1:['p_business_id','p_account','p_customer_id'],
  klaviyo_profile_sync_context_v1:['p_job_id','p_lease_id'],
@@ -39,11 +42,12 @@ async function setup(t){
  CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('request.jwt.claim.role',true),'')$$;
  GRANT USAGE ON SCHEMA auth TO anon,authenticated,service_role;`);
  await db.exec(baseline.replace(/^\\(?:un)?restrict\s+\S+\r?$/gm,''));
- await db.exec(markers);await db.exec(k4);await db.exec(k5);
+ await db.exec(markers);await db.exec(k4);await db.exec(k5);await db.exec(foundation);
  await db.query("INSERT INTO core.businesses(id,name,intake_enabled) VALUES($1,'Synthetic local fixture',true)",[business]);
  const staff=randomUUID(),foreign=randomUUID();
  await db.query('INSERT INTO auth.users(id) VALUES($1)',[staff]);
  await db.query("INSERT INTO core.crm_staff(auth_user_id,role) VALUES($1,'staff')",[staff]);
+ await db.query("INSERT INTO core.business_staff(business_id,staff_id,role) VALUES($1,$2,'staff')",[business,staff]);
  const h={db,staff,foreign,rpcCalls:[],providerCalls:[],profiles:new Map(),beforeRpc:null,providerReply:null};
  h.admin=async(callback)=>{await db.exec('RESET ROLE');return callback(db);};
  h.customer=async(fields={})=>h.admin(async()=>{
@@ -138,6 +142,20 @@ test('actual SQL excludes marked test and unsubscribed customers before the prov
  assert.equal(h.providerCalls.length,0);await h.admin(async db=>assert.equal((await db.query('SELECT count(*)::int AS n FROM core.klaviyo_profile_sync_jobs')).rows[0].n,0));
 });
 
+test('legacy staff alone and an inactive business membership cannot reach queue or provider',async t=>{
+ const h=await setup(t);const id=await h.customer();
+ await h.admin(async db=>{
+  await db.query('INSERT INTO auth.users(id) VALUES($1)',[h.foreign]);
+  await db.query("INSERT INTO core.crm_staff(auth_user_id,role) VALUES($1,'owner')",[h.foreign]);
+  await db.query('UPDATE core.business_staff SET active=false WHERE business_id=$1 AND staff_id=$2',[business,h.staff]);
+ });
+ for(const token of [staffToken,foreignToken])for(const method of ['GET','POST']){
+  const result=await h.request(method,h.env(id),token);assert.equal(result.status,403);
+ }
+ assert.equal(h.providerCalls.length,0);
+ assert.ok(h.rpcCalls.every(call=>call.name==='staff_business_authorized_v1'));
+});
+
 test('negative local state at first context atomically invalidates lease; API acknowledges blocked rather than double-finishing',async t=>{
  const h=await setup(t);const id=await h.customer();let changed=false;
  h.beforeRpc=async(name,_args,state)=>{if(name==='klaviyo_profile_sync_context_v1'&&!changed){changed=true;
@@ -180,7 +198,7 @@ test('existing staff authorization is actual SQL; unknown/nonstaff tokens cannot
  const h=await setup(t);const id=await h.customer();const env=h.env(id);
  const foreign=await h.request('POST',env,foreignToken);assert.equal(foreign.status,403);
  const unknown=await h.request('GET',env,'synthetic.unknown.staff.token');assert.equal(unknown.status,401);
- assert.equal(h.providerCalls.length,0);assert.ok(h.rpcCalls.every(c=>c.name==='crm_staff_authorized_v1'));
+ assert.equal(h.providerCalls.length,0);assert.ok(h.rpcCalls.every(c=>c.name==='staff_business_authorized_v1'));
  await h.admin(async db=>assert.equal((await db.query('SELECT count(*)::int AS n FROM core.klaviyo_profile_sync_jobs')).rows[0].n,0));
 });
 

@@ -24,7 +24,7 @@ async function dispatch({ path = '/api/staff/profile-sync', method = 'GET', env 
     const url = new URL(String(input));
     const name = url.pathname.split('/').at(-1);
     calls.push({ url, name });
-    if (name === 'crm_staff_authorized_v1') return Response.json(true);
+    if (name === 'staff_business_authorized_v1') return Response.json(true);
     if (name === 'crm_profile_sync_queue_v1') return Response.json({ items: [], counts: { total: 0, queued: 0 } });
     if (name === 'klaviyo_profile_sync_enqueue_v1') return Response.json({ enqueued: 0 });
     if (name === 'klaviyo_profile_sync_claim_v1') return Response.json(null);
@@ -44,10 +44,10 @@ async function dispatch({ path = '/api/staff/profile-sync', method = 'GET', env 
 test('exact configured mock route passes actual middleware into authorized read and manual handler', async () => {
   const read = await dispatch();
   assert.equal(read.nextCalls, 1); assert.equal(read.response.status, 200); assert.equal(read.body.mode, 'mock');
-  assert.deepEqual(read.calls.map(call => call.name), ['crm_staff_authorized_v1', 'crm_profile_sync_queue_v1']);
+  assert.deepEqual(read.calls.map(call => call.name), ['staff_business_authorized_v1', 'crm_profile_sync_queue_v1']);
   const run = await dispatch({ method: 'POST' });
   assert.equal(run.response.status, 200); assert.equal(run.body.mode, 'mock'); assert.equal(run.body.processed, 0);
-  assert.deepEqual(run.calls.map(call => call.name), ['crm_staff_authorized_v1', 'klaviyo_profile_sync_enqueue_v1', 'klaviyo_profile_sync_claim_v1']);
+  assert.deepEqual(run.calls.map(call => call.name), ['staff_business_authorized_v1', 'klaviyo_profile_sync_enqueue_v1', 'klaviyo_profile_sync_claim_v1']);
 });
 
 test('exact route still requires staff bearer and complete isolated target configuration', async () => {
@@ -64,7 +64,7 @@ test('default disabled mode is readable but cannot enqueue, claim or call a prov
   assert.equal(read.response.status, 200); assert.equal(read.body.mode, 'disabled');
   const run = await dispatch({ method: 'POST', env });
   assert.equal(run.response.status, 503);
-  assert.deepEqual(run.calls.map(call => call.name), ['crm_staff_authorized_v1']);
+  assert.deepEqual(run.calls.map(call => call.name), ['staff_business_authorized_v1']);
 });
 
 test('unknown, trailing and existing provider routes remain blocked before any handler', async () => {

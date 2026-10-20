@@ -34,8 +34,9 @@ export async function fixture(){
  await writeFile(join(run,'startup.txt'),start);
  const args=['-X','-q','-w','-h','127.0.0.1','-p',String(port),'-U','postgres','-d',database,'-v','ON_ERROR_STOP=1','-At'];
  const history=[];
- function raw(text,{service=false,role=null,application=''}={}){
-  const prefix=(service?"SET request.jwt.claim.role='service_role';SET ROLE service_role;":role?`SET ROLE ${role};`:'');
+ function raw(text,{service=false,role=null,subject=null,application=''}={}){
+  const prefix=(subject===null?'':`SET request.jwt.claim.sub=${literal(subject)};`)+
+   (service?"SET request.jwt.claim.role='service_role';SET ROLE service_role;":role?`SET request.jwt.claim.role=${literal(role)};SET ROLE ${role};`:'');
   const result=spawnSync(exe('psql'),args,{...options,input:prefix+text,
    env:{...options.env,PGOPTIONS:options.env.PGOPTIONS+(application?' -c application_name='+application:'')}});
   history.push({ok:result.status===0,application,sqlSha256:digest(prefix+text)});
@@ -55,7 +56,7 @@ export async function fixture(){
   const sourceFiles=[];for(const path of ['tests/campaignEngineDb.test.mjs','tests/fixtures/campaignEngineNative.mjs']){
    const bytes=await readFile(join(repo,path));sourceFiles.push({path,sha256:digest(bytes)});await mkdir(join(run,'test-source'),{recursive:true});await writeFile(join(run,'test-source',path.split('/').at(-1)),bytes);}
   const functions=oids=>sql(`SELECT COALESCE(json_agg(json_build_object('oid',p.oid::text,'schema',n.nspname,'name',p.proname,
-   'arguments',pg_get_function_identity_arguments(p.oid),'definition',pg_get_functiondef(p.oid),'acl',p.proacl,
+   'arguments',pg_get_function_identity_arguments(p.oid),'argumentTypes',pg_catalog.oidvectortypes(p.proargtypes),'definition',pg_get_functiondef(p.oid),'acl',p.proacl,
    'securityDefiner',p.prosecdef,'config',p.proconfig) ORDER BY n.nspname,p.proname,pg_get_function_identity_arguments(p.oid)),'[]'::json)
    FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN('core','public','auth')${oids?' AND p.oid IN('+oids.join(',')+')':''}`);
   let beforeFunctions=null,existingRpcProof=null;
@@ -78,13 +79,41 @@ export async function fixture(){
    if(isK9){const afterFunctions=functions(beforeFunctions.map(f=>f.oid));const beforeSha256=digest(JSON.stringify(beforeFunctions)),afterSha256=digest(JSON.stringify(afterFunctions));
     await writeFile(join(run,'existing-functions-after.json'),JSON.stringify(afterFunctions,null,2)+'\n');
     const dayTotals=beforeFunctions.find(f=>f.schema==='public'&&f.name==='clover_order_day_totals_v1');
+    // This exact allowlist covers only the intentional forward authorization
+    // transition. Every old function's ACL/SECURITY DEFINER/search_path remains
+    // byte-for-byte compared; unrelated definition drift still fails setup.
+    const intentionalDefinitions=new Set(['public.crm_staff_authorized_v1()',
+     'public.clover_order_match_queue_v1(uuid)',
+     'public.clover_order_day_totals_v1(uuid,timestamp with time zone,timestamp with time zone)',
+     'public.clover_order_match_resolve_v1(uuid,uuid,uuid)']);
+    const key=f=>`${f.schema}.${f.name}(${f.argumentTypes.replaceAll(', ', ',')})`;
+    const changedFunctions=[],unexpectedChanges=[];
+    for(const before of beforeFunctions){const after=afterFunctions.find(f=>f.oid===before.oid);
+     if(!after){unexpectedChanges.push({function:key(before),reason:'missing existing function'});continue;}
+     const changed=Object.keys(before).filter(property=>JSON.stringify(before[property])!==JSON.stringify(after[property]));
+     if(changed.length)changedFunctions.push({function:key(before),properties:changed,intentional:intentionalDefinitions.has(key(before))&&changed.every(property=>property==='definition')});
+     if(changed.some(property=>property!=='definition')||(changed.includes('definition')&&!intentionalDefinitions.has(key(before))))unexpectedChanges.push({function:key(before),properties:changed});
+    }
+    const missingExpected=[...intentionalDefinitions].filter(name=>!changedFunctions.some(f=>f.function===name));
     existingRpcProof={scope:'K9_EXISTING_FUNCTION_DEFINITION_ACL_PARITY',count:beforeFunctions.length,beforeSha256,afterSha256,
      requiredK7DayTotals:{name:'public.clover_order_day_totals_v1',definitionSha256:digest(dayTotals.definition),scopeFields:['refundUnverifiedCount','customerAccessDeniedCount','reconciliationConfirmed']},
-     unchanged:beforeSha256===afterSha256,properties:['pg_get_functiondef','proacl','prosecdef','proconfig'],fixture_subset_only:true};
+     unchanged:beforeSha256===afterSha256,intentionalDefinitionAllowlist:[...intentionalDefinitions],changedFunctions,unexpectedChanges,missingExpected,
+     accepted:unexpectedChanges.length===0&&missingExpected.length===0,properties:['pg_get_functiondef','proacl','prosecdef','proconfig'],fixture_subset_only:true};
     await writeFile(join(run,'existing-rpc-parity.json'),JSON.stringify(existingRpcProof,null,2)+'\n');
-    if(!existingRpcProof.unchanged)throw Error('K9 altered an existing fixture RPC definition or grant');}
+    if(!existingRpcProof.accepted)throw Error('K9 unexpected existing fixture RPC drift: '+JSON.stringify({unexpectedChanges,missingExpected}));}
   }
   sql(`INSERT INTO core.businesses(id,name,is_test) VALUES('${config.businessId}','Synthetic Restaurant A',true),('${config.secondBusinessId}','Synthetic Restaurant B',true)`);
+  config.scopeFixture={businesses:{a:config.businessId,b:config.secondBusinessId},users:Object.fromEntries(
+   ['platformOnly','platformMember','ownerA','managerA','staffA','inactiveA','staffB','legacyOnly','inactivePlatform'].map(name=>[name,randomUUID()]))};
+  const users=config.scopeFixture.users;
+  sql(`INSERT INTO auth.users(id) VALUES ${Object.values(users).map(id=>`('${id}')`).join(',')};
+   INSERT INTO core.business_staff(business_id,staff_id,role,active) VALUES
+   ('${config.businessId}','${users.platformMember}','owner',true),('${config.businessId}','${users.ownerA}','owner',true),
+   ('${config.businessId}','${users.managerA}','manager',true),('${config.businessId}','${users.staffA}','staff',true),
+   ('${config.businessId}','${users.inactiveA}','owner',false),('${config.secondBusinessId}','${users.staffB}','staff',true);
+   INSERT INTO core.platform_operators(staff_id,active) VALUES('${users.platformOnly}',true),('${users.platformMember}',true),('${users.inactivePlatform}',false);
+   INSERT INTO core.crm_staff(auth_user_id,role,active) VALUES('${users.legacyOnly}','owner',true)`);
+  await writeFile(join(run,'scope-fixture.json'),JSON.stringify({...config.scopeFixture,synthetic:true,auth_login:false,hosted_identity:false},null,2)+'\n');
   await writeFile(join(run,'setup.json'),JSON.stringify({...config,postgresVersion:version.trim(),identity,files:hashes,sourceFiles,existingRpcProof,
    hosted_connection:false,hosted_migration:false,real_customer_data:false,fixture_not_hosted_multitenancy_proof:true},null,2)+'\n');
  }catch(error){await writeFile(join(run,'setup-failure.json'),JSON.stringify({error:String(error.message),hosted_connection:false,passed:false},null,2)+'\n');await stop();throw error;}
@@ -92,6 +121,13 @@ export async function fixture(){
   const id=randomUUID();sql(`INSERT INTO core.customers(id,business_id,identity_key,name,email,email_status,email_suppressed_at,is_test) VALUES(
    '${id}','${businessId}','email:${id}@synthetic.invalid','Synthetic K9','${id}@synthetic.invalid',${literal(status)},${suppressed?'clock_timestamp()':'NULL'},true)`);return id;
  }
+ function staff({businessId=config.businessId,role='staff',active=true,platform=false,legacy=false}={}){
+  const id=randomUUID();sql(`INSERT INTO auth.users(id) VALUES('${id}');`+
+   (businessId===null?'':`INSERT INTO core.business_staff(business_id,staff_id,role,active) VALUES('${businessId}','${id}',${literal(role)},${active?'true':'false'});`)+
+   (platform?`INSERT INTO core.platform_operators(staff_id,active) VALUES('${id}',${active?'true':'false'});`:'')+
+   (legacy?`INSERT INTO core.crm_staff(auth_user_id,role,active) VALUES('${id}','staff',true);`:''));return id;
+ }
+ const authorized=(actor,businessId,operation)=>sql(`SELECT core.staff_authorized_v1(${literal(businessId)}::uuid,${literal(operation)})`,{subject:actor??''});
  function offer({businessId=config.businessId}={}){const id=randomUUID();sql(`INSERT INTO core.offers(id,business_id,name,starts_at,ends_at,active,is_test) VALUES('${id}','${businessId}','Synthetic K9',DATE '2020-01-01',DATE '2040-01-01',true,true)`);return id;}
  function campaign(overrides={}){
   const base={id:randomUUID(),business_id:config.businessId,offer_id:null,name:'Synthetic campaign',benefit_type:'item',target_clover_item_id:'PRODUCT0001',
@@ -121,5 +157,5 @@ export async function fixture(){
  function session(text,application){const child=spawn(exe('psql'),args,{env:{...options.env,PGOPTIONS:options.env.PGOPTIONS+' -c application_name='+application},windowsHide:true,stdio:['pipe','pipe','pipe']});
   let stdout='',stderr='';child.stdout.setEncoding('utf8');child.stderr.setEncoding('utf8');child.stdout.on('data',s=>stdout+=s);child.stderr.on('data',s=>stderr+=s);
   const timer=setTimeout(()=>child.kill(),25000);const promise=new Promise((accept,reject)=>{child.on('error',reject);child.on('close',code=>{clearTimeout(timer);if(code!==0)reject(Error(stderr||'K9 parallel session failed'));else accept({stdout,stderr,pid:child.pid});});});child.stdin.end(text);return{child,promise};}
- return{config,repo,raw,sql,customer,offer,campaign,order,refund,evaluate,expression,session,literal,stop};
+ return{config,repo,raw,sql,customer,staff,authorized,offer,campaign,order,refund,evaluate,expression,session,literal,stop};
 }

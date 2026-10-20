@@ -8,6 +8,8 @@ DO $$ BEGIN
 END $$;
 CREATE SCHEMA auth;
 CREATE SCHEMA core;
+-- Auth UUID existence only: no login/session/provider fixture is manufactured.
+CREATE TABLE auth.users(id uuid PRIMARY KEY);
 REVOKE ALL ON SCHEMA core FROM PUBLIC,anon,authenticated,service_role;
 CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE
  AS $$SELECT COALESCE(NULLIF(current_setting('request.jwt.claim.role',true),''),NULLIF(current_setting('test.jwt_role',true),''))$$;

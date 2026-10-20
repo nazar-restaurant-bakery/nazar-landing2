@@ -135,11 +135,12 @@ test('RPC transport uses exact allowlisted target, staff bearer/public key and m
   const fake = recorder(() => new Response('true', {status: 200}));
   const config = profileSyncConfig(previewEnv(), previewHost);
   const bearer = 'Bearer synthetic_staff_token';
-  assert.equal(await profileSyncRpc(config, 'crm_staff_authorized_v1', {}, bearer, fake.fetch), true);
+  const scope = { p_business_id: testBusiness, p_operation: 'crm.read' };
+  assert.equal(await profileSyncRpc(config, 'staff_business_authorized_v1', scope, bearer, fake.fetch), true);
   const sent = fake.calls[0];
-  assert.equal(sent.url, `${testUrl}/rest/v1/rpc/crm_staff_authorized_v1`);
+  assert.equal(sent.url, `${testUrl}/rest/v1/rpc/staff_business_authorized_v1`);
   assert.equal(sent.init.method, 'POST'); assert.equal(sent.init.redirect, 'manual');
-  assert.equal(sent.init.body, '{}'); assert.ok(sent.init.signal instanceof AbortSignal);
+  assert.equal(sent.init.body, JSON.stringify(scope)); assert.ok(sent.init.signal instanceof AbortSignal);
   assert.deepEqual(sent.init.headers, {apikey: config.publicKey, Authorization: bearer, 'Content-Type': 'application/json'});
   assert.doesNotMatch(JSON.stringify(sent), /sb_secret_/);
 });
@@ -150,7 +151,7 @@ test('service RPCs use the TEST service key only and cannot reach arbitrary name
   await profileSyncRpc(config, 'klaviyo_profile_sync_context_v1', {p_job_id: customerId}, null, fake.fetch);
   assert.deepEqual(fake.calls[0].init.headers, {apikey: 'sb_secret_synthetic_test', 'Content-Type': 'application/json'});
   for (const [candidate, name] of [
-    [config, 'submit_signup_once'], [config, '../auth/v1/admin/users'],
+    [config, 'submit_signup_once'], [config, 'crm_staff_authorized_v1'], [config, '../auth/v1/admin/users'],
     [{...config, readable: false}, 'klaviyo_profile_sync_context_v1'],
     [{...config, serviceKey: ''}, 'klaviyo_profile_sync_context_v1'],
   ]) await assert.rejects(profileSyncRpc(candidate, name, {}, null, fake.fetch), RpcUnavailable);
@@ -161,14 +162,14 @@ test('RPC error bodies and malformed successes are never returned or echoed', as
   for (const status of [301, 302, 303, 307, 308, 401, 403, 429, 503]) {
     let bodyReads = 0;
     const fake = recorder(() => ({ok: false, status, json: async () => {bodyReads++; return {private: email};}}));
-    await assert.rejects(profileSyncRpc(profileSyncConfig(previewEnv(), previewHost), 'crm_staff_authorized_v1', {}, 'Bearer synthetic', fake.fetch),
+    await assert.rejects(profileSyncRpc(profileSyncConfig(previewEnv(), previewHost), 'staff_business_authorized_v1', {}, 'Bearer synthetic', fake.fetch),
       error => error instanceof RpcUnavailable && error.status === status && error.message === 'database_unavailable');
     assert.equal(bodyReads, 0);
     assert.equal(fake.calls.length, 1);
     assert.equal(fake.calls[0].init.redirect, 'manual');
   }
   const malformed = recorder(() => new Response('raw private data', {status: 200}));
-  await assert.rejects(profileSyncRpc(profileSyncConfig(previewEnv(), previewHost), 'crm_staff_authorized_v1', {}, 'Bearer synthetic', malformed.fetch),
+  await assert.rejects(profileSyncRpc(profileSyncConfig(previewEnv(), previewHost), 'staff_business_authorized_v1', {}, 'Bearer synthetic', malformed.fetch),
     error => error instanceof RpcUnavailable && error.message === 'database_unavailable');
 });
 

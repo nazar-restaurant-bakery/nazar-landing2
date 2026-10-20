@@ -124,7 +124,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
  // execution or insert the new engine into historical K3 reset/replay.
  const k9Delivery=manifest.k9_delivery;
  const k9Path='supabase/migrations/20261021000200_campaign_engine.sql';
- const k9Sha='b942539191d10f6a385064e062ddbec66ec748e2a36ee93907ab93d89edf4737';
+ const k9Sha='a8b48363414e134f58379a03f848f4195141bd8c11047a75066d0feb66faba7d';
  if(k9Delivery){
   if(typeof k9Delivery!=='object'||Object.keys(k9Delivery).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
    ||k9Delivery.path!==k9Path||k9Delivery.sha256_bytes!==k9Sha||k9Delivery.application_order!==8

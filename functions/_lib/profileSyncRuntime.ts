@@ -47,7 +47,7 @@ export class RpcUnavailable extends Error {
 export type Fetcher = typeof fetch;
 export async function profileSyncRpc(config: ProfileSyncConfig, name: string,
   args: Record<string, unknown>, bearer: string | null, fetcher: Fetcher): Promise<unknown> {
-  const allowed = ["crm_staff_authorized_v1", "crm_profile_sync_queue_v1", "klaviyo_profile_sync_enqueue_v1",
+  const allowed = ["staff_business_authorized_v1", "crm_profile_sync_queue_v1", "klaviyo_profile_sync_enqueue_v1",
     "klaviyo_profile_sync_claim_v1", "klaviyo_profile_sync_context_v1", "klaviyo_profile_sync_finish_v1"];
   if (!allowed.includes(name) || !config.readable || (!bearer && !config.serviceKey.startsWith("sb_secret_"))) throw new RpcUnavailable();
   const result = await fetcher(`${config.url}/rest/v1/rpc/${name}`, {

@@ -176,6 +176,43 @@ allows only one redemption per order. It does not mean unlimited units.
 
 ## Delivery / operations
 
+### Unified staff scope (Talip decision, 20 October 2026)
+
+Migration 8 installs the common `core.business_staff` and
+`core.platform_operators` tables with private RLS and no membership seeds.
+`core.staff_authorized_v1(uuid,text)` obtains its actor only from `auth.uid()`.
+Unknown operations, missing subjects, inactive memberships and foreign targets
+fail closed. The roles are `owner`, `manager`, `staff`; an active platform
+operator may read but needs an explicit target-business membership to write.
+The shared contract is `Personel_Kapsam_Sozlesme.md` in the delivery folder.
+
+The campaign `staff_mark` path uses `campaign.staff_mark` on the campaign's
+business and still requires the same JWT actor and nonblank note. The evaluator
+stays service-only; a service key alone does not establish a staff subject.
+No live staff adapter is added to manufacture that subject.
+
+Forward replacements migrate existing CRM/K4/K5/Ops/K7 authorization without
+editing historical SQL. Lists filter by the record's business; record writes
+resolve and authorize the target before modifying it. Existing consent evidence
+and decision-maker workflow rules are retained. Legacy `crm_staff` is not an
+alternate permission source. Tenantless legacy error/notification/provider
+prechecks require exactly one installation business; ambiguous scope is denied.
+The authenticated business-check wrapper is used before configurable provider
+operations. A persisted Ops service job checks its stored requester and active
+business membership again; it cannot acquire permission from a caller UUID alone.
+
+Apply the reviewed migration and membership setup **before publishing code that
+calls the new wrapper**. Otherwise those private routes safely report unavailable.
+Immediately after SQL 8, Talip runs `docs/K9_STAFF_SCOPE_SETUP.sql` separately:
+verified target business and Auth UUIDs, Talip platform+membership, Yücel `owner`.
+Talip explicitly selects his own tenant role. The setup is not part of migration
+replay; no password, email or Auth UUID is printed in its aggregate receipt.
+Prove sandbox mappings/acceptance first, then repeat the same LF migration and
+reviewed setup in Production. Keep a short access-maintenance window between
+migration commit and setup; before mapping, existing staff access is denied.
+No backout to `crm_staff OR business_staff` is permitted. If acceptance fails,
+do not publish; review a forward correction without broadening access.
+
 No hosted migration is run by this PR. Review source SHA and synthetic results,
 then apply identical LF bytes using the existing reviewed psql method in the
 reserved K8→K9 order, sandbox before production. No secret is printed or stored.

@@ -38,9 +38,9 @@ function harness(overrides = {}) {
     const name = url.pathname.split('/').at(-1);
     const body = JSON.parse(options.body);
     h.calls.push({ url, name, body, options });
-    if (name === 'crm_staff_authorized_v1') {
+    if (name === 'staff_business_authorized_v1') {
       if (h.authStatus) return new Response(JSON.stringify({ code: 'forbidden' }), { status: h.authStatus });
-      return Response.json(h.auth);
+      return Response.json(typeof h.auth === 'function' ? h.auth(body) : h.auth);
     }
     if (name === 'crm_profile_sync_queue_v1') {
       if (h.queueThrow) throw Error('synthetic private queue detail');
@@ -72,11 +72,11 @@ function harness(overrides = {}) {
     // the production handler; validate the complete request trace afterwards.
     for (const call of h.calls) {
       assert.equal(call.url.origin, database, 'No external/provider or Production request is allowed.');
-      assert.ok(['crm_staff_authorized_v1', 'crm_profile_sync_queue_v1', 'klaviyo_profile_sync_enqueue_v1',
+      assert.ok(['staff_business_authorized_v1', 'crm_profile_sync_queue_v1', 'klaviyo_profile_sync_enqueue_v1',
         'klaviyo_profile_sync_claim_v1', 'klaviyo_profile_sync_context_v1', 'klaviyo_profile_sync_finish_v1'].includes(call.name));
       assert.equal(call.options.method, 'POST');
       assert.equal(call.options.redirect, 'manual');
-      const staff = call.name.startsWith('crm_');
+      const staff = call.name.startsWith('crm_') || call.name === 'staff_business_authorized_v1';
       assert.equal(call.options.headers.apikey, staff ? h.env.VITE_TEST_SUPABASE_ANON_KEY : h.env.TEST_SUPABASE_SECRET_KEY);
       assert.equal(call.options.headers.Authorization, staff ? auth : undefined);
     }
@@ -108,7 +108,7 @@ test('POST missing or foreign Origin, and foreign GET Origin, stop before author
 test('unauthorized staff and rejected staff session never read queue or enqueue jobs', async () => {
   for (const method of ['GET', 'POST']) {
     const h = harness({ auth: false }); const result = await h.run({ method });
-    assert.equal(result.response.status, 403); assert.deepEqual(h.calls.map(call => call.name), ['crm_staff_authorized_v1']);
+    assert.equal(result.response.status, 403); assert.deepEqual(h.calls.map(call => call.name), ['staff_business_authorized_v1']);
   }
   for (const authStatus of [401, 403]) {
     const h = harness({ authStatus }); assert.equal((await h.run()).response.status, authStatus);
@@ -121,6 +121,19 @@ test('Preview with incomplete test config cannot fall back to Production variabl
   Object.assign(h.env, { KLAVIYO_PROFILE_SYNC_MODE: 'live', KLAVIYO_PROFILE_SYNC_ACCOUNT_ID: 'production_account',
     KLAVIYO_PROFILE_SYNC_KEY: 'pk_synthetic_production_only', KLAVIYO_PROFILE_SYNC_LIVE_APPROVAL_ID: 'production_approval' });
   assert.equal((await h.run()).response.status, 503); assert.equal(h.calls.length, 0);
+});
+
+test('configured business and read/write operation are checked before queue or provider work', async () => {
+  const h = harness({ auth: args => args.p_business_id === businessId && args.p_operation === 'crm.read' });
+  assert.equal((await h.run()).response.status, 200);
+  assert.deepEqual(h.calls[0].body, { p_business_id: businessId, p_operation: 'crm.read' });
+  h.calls.length = 0;
+  assert.equal((await h.run({ method: 'POST' })).response.status, 403);
+  assert.equal(h.calls.length, 1);
+  assert.deepEqual(h.calls[0].body, { p_business_id: businessId, p_operation: 'crm.write' });
+  const wrong = harness({ auth: args => args.p_business_id === 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
+  assert.equal((await wrong.run()).response.status, 403);
+  assert.equal(wrong.calls.length, 1);
 });
 
 test('disabled is an explicit connection state and refuses commands without acquiring a job', async () => {
@@ -137,7 +150,7 @@ test('queue returns safe uppercase error code and short UI contract without cust
     updatedAt: '2026-10-19T14:05:00Z', nextAttemptAt: '2026-10-20T14:00:00Z',
     lastErrorCode: 'PROVIDER_RATE_LIMITED', profileId: null });
   assert.equal(body.jobs[0].customerId, undefined); assert.equal(body.jobs[0].account, undefined);
-  assert.deepEqual(h.calls.map(call => call.name), ['crm_staff_authorized_v1', 'crm_profile_sync_queue_v1']);
+  assert.deepEqual(h.calls.map(call => call.name), ['staff_business_authorized_v1', 'crm_profile_sync_queue_v1']);
   assert.deepEqual(h.calls[1].body, { p_business_id: businessId });
 });
 
@@ -153,7 +166,7 @@ test('POST rejects extra run parameters; browser cannot choose account, customer
   for (const body of [{ action: 'run', accountId: 'other' }, { action: 'run', customerId },
     { action: 'run', businessId }, { action: 'retry' }, {}, [], 'not JSON']) {
     const h = harness(); const result = await h.run({ method: 'POST', body });
-    assert.equal(result.response.status, 400); assert.deepEqual(h.calls.map(call => call.name), ['crm_staff_authorized_v1']);
+    assert.equal(result.response.status, 400); assert.deepEqual(h.calls.map(call => call.name), ['staff_business_authorized_v1']);
   }
   for (const headers of [{ 'Content-Type': 'text/plain' }, { 'Content-Length': '257' }]) {
     const h = harness(); const result = await h.run({ method: 'POST', headers });
