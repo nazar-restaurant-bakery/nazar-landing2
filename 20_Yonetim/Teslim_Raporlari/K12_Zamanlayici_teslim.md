@@ -1,6 +1,6 @@
 # K12 — günlük zamanlayıcı kod teslimi
 
-20 Ekim 2026 · [Draft PR #73](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/73) / kurulum yapılmadı. Dal: `feat/daily-ops-scheduler`; taban main `55806db`. Birleşme **K7 mutabakatı ve K12 kapanışından sonra**, Talip'te. Ortak personel sözleşmesi (#65) migration önkoşuludur; sıra 12 korunur.
+20 Ekim 2026 · [Draft PR #73](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/73) / kurulum yapılmadı. Dal: `feat/daily-ops-scheduler`; taban main `55806db`. Birleşme **K7 mutabakatı ve K12 kapanışından sonra**, Talip'te. Ortak personel sözleşmesi (#65) migration önkoşuludur; sıra 13 korunur.
 
 ## Sonuç ve kapsam
 
@@ -16,7 +16,7 @@ Tenant ayarı varsayılan kapalıdır; panel plan, son koşu/Clover/Ops sonuçla
 
 ## Dosyalar
 
-- `supabase/migrations/20261021000600_daily_scheduler.sql`: tenant ayarı, koşu, ortak kota; private tick ve service RPC'leri.
+- `supabase/migrations/20261021000700_daily_scheduler.sql`: tenant ayarı, koşu, ortak kota; private tick ve service RPC'leri.
 - `supabase/functions/daily-ops-run/index.ts`, `functions/api/internal/daily-clover-pull.ts`, `functions/_lib/dailySchedulerAuth.ts`: imzalı dar makine yolu.
 - K7 yardımcı/manuel handler: kapalı gün penceresi ve ortak kota. Ops `collectSources` ayrı dosyaya çıkarıldı; mevcut personel handler'ı aynı okuyucuyu kullanır. Klaviyo `links.next` string tür daraltması API davranışını değiştirmez.
 - `DailySchedulerStatus.tsx`, OpsView/StatusStrip/opsCopy: gerçek zamanlayıcı durumu ve açıklaması.
@@ -39,7 +39,7 @@ Yerel PostgreSQL gerçek motordur; pg_net/Vault için sentetik sözleşme fixtur
 
 ## Migration ve gelecekte Talip kurulum sırası
 
-Sıra **12**: `20261021000600_daily_scheduler.sql` (LF), SHA256 **b54b4a5b5786133d63e2567c6a9724125f230948a794b8cfa509f6673edb6793**. Koordinasyon'a sıra kaydı için bildirilir; K7/Finalize dosyaları ve ortak sıra dosyası değiştirilmez.
+Sıra **13**: `20261021000700_daily_scheduler.sql` (LF), SHA256 **b54b4a5b5786133d63e2567c6a9724125f230948a794b8cfa509f6673edb6793**. Koordinasyon'a sıra kaydı için bildirilir; K7/Finalize dosyaları ve ortak sıra dosyası değiştirilmez.
 
 Bu liste kurulum planıdır; bugün uygulanmaz:
 
@@ -55,3 +55,9 @@ Kurulum ekranları: [Production Extensions](https://supabase.com/dashboard/proje
 ## Açık kabul kapısı
 
 Draft teslimdir; etkinleştirme ve birleşme Talip'te, K7 + K12 kapanışı sonrası. Hosted sandbox kabulü ve tek işletmeli mevcut Ops adaptörü sınırı raporlandı. Gerçek sağlayıcı yazımı, K15, yeni dış okuma anahtarı ve mevcut secret değerlerine dokunulmadı.
+
+## Migration sürüm düzeltmesi
+
+K10 hak kontrolü (#72) sıra 12 / 20261021000600 olarak kalır. Zamanlayıcı sıra **13**, dosya **20261021000700_daily_scheduler.sql** oldu. İçerik byte düzeyinde değişmedi; SHA256 bu nedenle aynı. Yeni adla Node + panel yeniden testi **91/91** geçti. Önceki Production parity geçerlidir; uygulama kodu değişmedi. Draft #73 ve birleşme önkoşulları korunur.
+
+Yeni adla PostgreSQL 18.6 testi de geçti (Mart/Kasım DST, eşzamanlı claim/kota, iki tenant).

@@ -40,6 +40,6 @@
 /tools/test-env/k13-*.sql text eol=lf
 
 # Daily scheduler: preserve migration and operator SQL delivery bytes.
-/supabase/migrations/20261021000600_daily_scheduler.sql text eol=lf
+/supabase/migrations/20261021000700_daily_scheduler.sql text eol=lf
 /tools/test-env/daily-scheduler-install.sql text eol=lf
 /tests/daily-scheduler.sql text eol=lf

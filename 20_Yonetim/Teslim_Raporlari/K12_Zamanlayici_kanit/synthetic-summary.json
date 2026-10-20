@@ -9,5 +9,9 @@
   "migration_sha256": "b54b4a5b5786133d63e2567c6a9724125f230948a794b8cfa509f6673edb6793",
   "migration_lf": true,
   "provider_calls": 0,
-  "hosted_changes": false
+  "hosted_changes": false,
+  "migration_file": "20261021000700_daily_scheduler.sql",
+  "migration_order": 13,
+  "rename_content_unchanged": true,
+  "rename_retest_passed": 91
 }
