@@ -1,0 +1,179 @@
+{
+  "scope": "Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.",
+  "startedAt": "2026-10-19T03:09:14.894Z",
+  "finishedAt": "2026-10-19T03:10:08.155Z",
+  "browserExecutable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "passed": 41,
+  "failed": 0,
+  "checks": [
+    {
+      "case": "01 Whitespace note blocked without write",
+      "passed": true
+    },
+    {
+      "case": "02 Whitespace task blocked without write",
+      "passed": true
+    },
+    {
+      "case": "03 Task saves with exact params and reloads",
+      "passed": true
+    },
+    {
+      "case": "04 Note saves and survives refresh",
+      "passed": true
+    },
+    {
+      "case": "05 Empty response is a real empty state",
+      "passed": true
+    },
+    {
+      "case": "06 Malformed response is unavailable rather than zero records",
+      "passed": true
+    },
+    {
+      "case": "07 Denied response reveals no private records",
+      "passed": true
+    },
+    {
+      "case": "08 Network rejection stays recoverable",
+      "passed": true
+    },
+    {
+      "case": "09 Unavailable tasks are not shown as zero",
+      "passed": true
+    },
+    {
+      "case": "10 Malformed stored date does not crash rendering",
+      "passed": true
+    },
+    {
+      "case": "11 Missing or whitespace request owner is blocked",
+      "passed": true
+    },
+    {
+      "case": "12 Open request missing follow-up blocked before write",
+      "passed": true
+    },
+    {
+      "case": "13 Closed request accepts no follow-up per existing rule",
+      "passed": true
+    },
+    {
+      "case": "14 Failed save preserves draft and releases busy state",
+      "passed": true
+    },
+    {
+      "case": "15 Pending save prevents duplicate submission",
+      "passed": true
+    },
+    {
+      "case": "16 Released pending save produces exactly one note",
+      "passed": true
+    },
+    {
+      "case": "17 Sign-out clears private view",
+      "passed": true
+    },
+    {
+      "case": "18 Sign-in network error is recoverable",
+      "passed": true
+    },
+    {
+      "case": "19 Refresh retries tasks after connection recovery",
+      "passed": true
+    },
+    {
+      "case": "20 Retry after refresh saves only one note",
+      "passed": true
+    },
+    {
+      "case": "21 Lost write response refreshes committed note without automatic retry",
+      "passed": true
+    },
+    {
+      "case": "22 Logout clears drafts before next session",
+      "passed": true
+    },
+    {
+      "case": "23 Default staff route opens Tasks",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/customers",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/crm",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/catering",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/tasks",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/offers",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/system",
+      "passed": true
+    },
+    {
+      "case": "25 Internal tests hidden across all five tabs; can be deliberately included",
+      "passed": true
+    },
+    {
+      "case": "26 Kanban drag writes exact existing RPC params",
+      "passed": true
+    },
+    {
+      "case": "27 Invalid kanban move does not write and asks for missing fields",
+      "passed": true
+    },
+    {
+      "case": "28 Late read after sign-out cannot restore private data",
+      "passed": true
+    },
+    {
+      "case": "29 Late write after sign-out cannot restore draft/private data",
+      "passed": true
+    },
+    {
+      "case": "30 New York display and saved due time are independent of device timezone",
+      "passed": true
+    },
+    {
+      "case": "31 Decision question is validated and only one pending question is offered",
+      "passed": true
+    },
+    {
+      "case": "32 System resolves mocked form error without any email action",
+      "passed": true
+    },
+    {
+      "case": "33 Desktop synthetic three-column screenshot",
+      "passed": true
+    },
+    {
+      "case": "34 Mobile 375px is usable without whole-page overflow",
+      "passed": true
+    },
+    {
+      "case": "35 Unsaved note, task and catering drafts survive tab changes",
+      "passed": true
+    },
+    {
+      "case": "36 Unknown task write stays blocked until the task source itself reads successfully",
+      "passed": true
+    }
+  ],
+  "screenshots": [
+    "staff-customers-desktop.png",
+    "staff-customers-mobile-list.png",
+    "staff-customers-mobile-record.png"
+  ]
+}

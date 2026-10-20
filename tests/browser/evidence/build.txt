@@ -1,0 +1,14 @@
+rolldown-vite v7.2.5 building client environment for production...
+
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+transforming...✓ 120 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                       4.04 kB │ gzip:   1.47 kB
+dist/assets/StaffPage-BpYwMRUX.css    1.28 kB │ gzip:   0.50 kB
+dist/assets/index-nbe0-V4M.css       32.26 kB │ gzip:   6.68 kB
+dist/assets/StaffPage-CDlJD3BG.js    58.35 kB │ gzip:  13.88 kB
+dist/assets/index-DNBE24yO.js       479.29 kB │ gzip: 140.49 kB
+✓ built in 4.14s
