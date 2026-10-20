@@ -21,7 +21,12 @@
   },
   "reviewed_additive": [
     {"id":"k4_suppression_consent_offers","path":"supabase/migrations/20261019000200_suppression_consent_offers.sql","classification":"reviewed_additive_delivery","executable":false,"requires_reviewed_baseline":true,"line_endings":"LF","sha256_lf":"a80a4ef10a81e86237f5cf208036e5ec84b8b230db6d48dd90b47014e04b712e","sha256_bytes_at_capture":"a80a4ef10a81e86237f5cf208036e5ec84b8b230db6d48dd90b47014e04b712e","scope":"K4 test-first delivery; not included in K3 reset or historical replay","application_tool":"tools/test-env/k4-migrate.py"},
-    {"id":"k5_klaviyo_profile_sync","path":"supabase/migrations/20261019000300_klaviyo_profile_sync.sql","classification":"reviewed_additive_delivery","executable":false,"requires_reviewed_baseline":true,"line_endings":"LF","sha256_lf":"d28672a87149839c71e44c72116ebbf3b96b2e76c7ec42a2a79c1f7b9f4fabc2","sha256_bytes_at_capture":"d28672a87149839c71e44c72116ebbf3b96b2e76c7ec42a2a79c1f7b9f4fabc2","scope":"K5 local reviewed profile-only sync preparation; not applied hosted and not included in K3 reset or historical replay","application_tool":"tools/test-env/k5-migrate.py"}
+    {"id":"k5_klaviyo_profile_sync","path":"supabase/migrations/20261019000300_klaviyo_profile_sync.sql","classification":"reviewed_additive_delivery","executable":false,"requires_reviewed_baseline":true,"line_endings":"LF","sha256_lf":"d28672a87149839c71e44c72116ebbf3b96b2e76c7ec42a2a79c1f7b9f4fabc2","sha256_bytes_at_capture":"d28672a87149839c71e44c72116ebbf3b96b2e76c7ec42a2a79c1f7b9f4fabc2","scope":"K5 local reviewed profile-only sync preparation; not applied hosted and not included in K3 reset or historical replay","application_tool":"tools/test-env/k5-migrate.py"},
+    {"id":"k6_message_send_gate","path":"supabase/migrations/20261020000800_message_send_gate.sql","classification":"reviewed_additive_delivery","executable":false,"requires_reviewed_baseline":true,"line_endings":"LF","sha256_lf":"a772efa90eed339e298c373af43e8090952da7f0cea8f8ecb06c68cbec11663c","sha256_bytes_at_capture":"a772efa90eed339e298c373af43e8090952da7f0cea8f8ecb06c68cbec11663c","scope":"K6 shared campaign/flow send-gate local test-first delivery only; Ops3 and reviewed K7/order4 required; no hosted apply, real send or K3 reset inclusion","application_tool":"tools/test-env/k6-migrate.py"}
+  ],
+  "reviewed_delivery_order": [
+    {"order":4,"path":"supabase/migrations/20261020000700_clover_order_core.sql","sha256_bytes":"5f68772059d9cd1e1d7a6a290aa31ee32d10ff5a367201577c4058861aada4a8"},
+    {"order":5,"path":"supabase/migrations/20261020000800_message_send_gate.sql","sha256_bytes":"a772efa90eed339e298c373af43e8090952da7f0cea8f8ecb06c68cbec11663c"}
   ],
   "foundation": {
     "id": "foundation",
@@ -61,5 +66,6 @@
     {"id":"NATIVE_SUPABASE_RUNTIME_UNVERIFIED","detail":"A manifest and existing PGlite/SDK fixtures do not prove actual Auth, PostgREST schema exposure, Storage or role behavior on an isolated Supabase stack.","evidence":["tests/crmQueueDb.mjs:13","tests/crmNoteAuthorsDb.mjs:17","src/lib/supabase.ts:5"]}
   ]
 ,
+  "k7_delivery": {"path":"supabase/migrations/20261020000700_clover_order_core.sql","sha256_bytes":"5f68772059d9cd1e1d7a6a290aa31ee32d10ff5a367201577c4058861aada4a8","included_in_k3_reset":false,"execution_enabled":false},
   "ops_delivery": {"path": "supabase/migrations/20261020000100_ops_panel.sql", "sha256_bytes": "3204eab72b8b0a9dc64eefc2f02d05ff0fde7a96489e010eb125896347007fa4", "included_in_k3_reset": false, "execution_enabled": false}
 }

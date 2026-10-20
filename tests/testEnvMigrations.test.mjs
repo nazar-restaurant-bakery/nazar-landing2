@@ -13,17 +13,38 @@ const codes=result=>result.integrity.issues.map(issue=>issue.code);
 test('inventory verifies all 18 baseline SQL files and historical copy without claiming K3 readiness',async()=>{
  const result=await auditMigrations({root});
  assert.equal(result.integrity.ok,true,JSON.stringify(result.integrity.issues));
- assert.equal(result.integrity.database_sources,18);assert.equal(result.integrity.historical_sources,1);assert.equal(result.integrity.pending_canonical_sources,1);assert.equal(result.integrity.reviewed_additive_sources,2);assert.equal(result.integrity.verified_sources,22);
+ assert.equal(result.integrity.database_sources,18);assert.equal(result.integrity.historical_sources,1);assert.equal(result.integrity.pending_canonical_sources,1);assert.equal(result.integrity.reviewed_additive_sources,3);assert.equal(result.integrity.verified_sources,23);
  assert.equal(result.readiness.ready,false);assert.equal(result.readiness.execution_performed,false);assert.equal(result.readiness.state,'BLOCKED');
  assert.ok(result.readiness.blockers.some(b=>b.id==='NEUTRAL_BASELINE_MISSING'));
  assert.ok(result.proposed_order.every(entry=>entry.executable===false));
  assert.deepEqual(result.excluded.map(entry=>entry.id),['intake_pause']);
  assert.deepEqual(result.pending_canonical.map(entry=>entry.id),['test_record_markers']);
- assert.deepEqual(result.reviewed_additive.map(entry=>entry.id),['k4_suppression_consent_offers','k5_klaviyo_profile_sync']);
+ assert.deepEqual(result.reviewed_additive.map(entry=>entry.id),['k4_suppression_consent_offers','k5_klaviyo_profile_sync','k6_message_send_gate']);
  assert.equal(result.reviewed_additive[0].included_in_k3_reset,false);
  assert.equal(result.reviewed_additive[0].application_tool,'tools/test-env/k4-migrate.py');
  assert.equal(result.reviewed_additive[1].included_in_k3_reset,false);
  assert.equal(result.reviewed_additive[1].application_tool,'tools/test-env/k5-migrate.py');
+ assert.equal(result.reviewed_additive[2].included_in_k3_reset,false);
+ assert.equal(result.reviewed_additive[2].application_tool,'tools/test-env/k6-migrate.py');
+});
+
+test('current-main K7 delivery is exact-pinned, non-executable and never enters K3 replay',async()=>{
+ const entry=source.k7_delivery;assert.ok(entry);
+ const bytes=await fs.readFile(new URL('../'+entry.path,import.meta.url));
+ assert.equal(bytes.includes(13),false);
+ assert.equal(sha256Lf(bytes.toString('utf8')),'5f68772059d9cd1e1d7a6a290aa31ee32d10ff5a367201577c4058861aada4a8');
+ assert.equal(entry.sha256_bytes,sha256Lf(bytes.toString('utf8')));
+ assert.equal(entry.execution_enabled,false);assert.equal(entry.included_in_k3_reset,false);
+ const missing=clone();delete missing.k7_delivery;
+ assert.ok(codes(await auditMigrations({root,manifest:missing})).includes('UNINVENTORIED_CANONICAL_SQL'));
+ for(const mutate of [
+  m=>{m.k7_delivery.sha256_bytes='f'.repeat(64);},
+  m=>{m.k7_delivery.execution_enabled=true;},
+  m=>{m.k7_delivery.included_in_k3_reset=true;},
+  m=>{m.k7_delivery.path='../unreviewed.sql';},
+  m=>{m.k7_delivery.application_tool='arbitrary-executable.py';},
+ ]){const manifest=clone();mutate(manifest);assert.ok(codes(await auditMigrations({root,manifest})).includes('K7_DELIVERY_CONTRACT'));}
+ assert.equal((await auditMigrations({root})).readiness.ready,false);
 });
 
 test('checksum integrity accepts CRLF conversion only and detects changed content',()=>{
