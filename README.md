@@ -106,3 +106,7 @@ See [K4_SUPPRESSION.md](K4_SUPPRESSION.md) for the LF migration, same-psql test/
 ## K5 profile attributes and error queue — controlled test completed
 
 See [K5_PROFILE_SYNC.md](K5_PROFILE_SYNC.md) for the disabled-by-default adapter, exact Preview/Production secret names, profile-only scope and manual queue/retry limits. The TEST migration and hosted checks passed. A separately approved controlled test demonstrated one mock retry, one real profile success, an unchanged second command processing zero jobs, and scoped cleanup. The temporary provider key is revoked and removed from Preview; the final keyless Preview is disabled. Talip applied the identical Production DB migration with the same reviewed tool on 20 October at 00:00 EDT; the independent receipt audit passed 20/20 and the read-only post-install DB check passed 23/23 with zero jobs. No Production provider key, sync enablement or PR merge was performed. [Controlled acceptance and cleanup](docs/k5/controlled-acceptance.md) separates observations from inference. **Formal Talip acceptance remains separate; K5 is not declared closed here.**
+
+## Optional Ops Ads account configuration
+
+`GOOGLE_ADS_CUSTOMER_ID` is the optional Google Ads customer ID override used by the Ops collector. Configure it in the Edge Function environment; it is not a browser variable.

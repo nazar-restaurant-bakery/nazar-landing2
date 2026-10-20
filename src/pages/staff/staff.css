@@ -1,0 +1,12 @@
+.staff-workspace { color: theme('colors.brand.ink'); background: theme('colors.brand.bg'); min-height: 100vh; }
+.staff-workspace .staff-input { width: 100%; min-width: 0; border: 1px solid theme('colors.brand.border'); border-radius: 8px; background: white; padding: 0.6rem 0.7rem; font-size: 0.875rem; color: theme('colors.brand.ink'); }
+.staff-workspace .staff-input:focus-visible { outline: 2px solid theme('colors.brand.DEFAULT'); outline-offset: 2px; }
+.staff-workspace .staff-label { display: block; margin-bottom: 0.35rem; font-size: 0.75rem; font-weight: 600; }
+.staff-workspace .staff-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 38px; border-radius: 8px; border: 1px solid theme('colors.brand.DEFAULT'); background: theme('colors.brand.DEFAULT'); color: white; font-size: 0.875rem; font-weight: 600; padding: 0.5rem 0.85rem; }
+.staff-workspace .staff-secondary { background: white; border-color: theme('colors.brand.border'); color: theme('colors.brand.ink'); }
+.staff-workspace button:disabled { opacity: 0.5; cursor: not-allowed; }
+.staff-workspace button:focus-visible, .staff-workspace a:focus-visible { outline: 2px solid theme('colors.brand.DEFAULT'); outline-offset: 3px; }
+.staff-workspace .staff-panel { min-width: 0; border: 1px solid theme('colors.brand.border'); border-radius: 8px; background: white; }
+.staff-workspace .staff-skeleton { height: 50px; border-radius: 8px; background: theme('colors.brand.primarySoft'); animation: staff-pulse 1.5s ease-in-out infinite; }
+@keyframes staff-pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .staff-workspace .staff-skeleton { animation: none; } }
