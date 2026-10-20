@@ -1,0 +1,11 @@
+# K7 — Clover order core operator notes
+
+Apply `supabase/migrations/20261020000700_clover_order_core.sql` with **psql 18.6** and `ON_ERROR_STOP=1`, first to Nazar-catering-sandbox and later to production only after Talip's approval and successful test. Use the identical LF file and record its SHA-256. The file adds only private `core` tables and narrow RPCs; it never changes marketing consent.
+
+The pull is manual: an authenticated CRM staff session sends `POST /api/staff/clover-order-pull` with JSON `{"days":1}` and the same-origin `Origin` header. Days must be 1–30. There is no scheduler or browser-supplied business/merchant identity. Preview requires its **own** isolated `TEST_` Clover merchant ID, Orders Read token, online order type IDs, and existing sandbox Supabase settings. It cannot fall back to production credentials. Production uses existing `CLOVER_MERCHANT_ID`, `CLOVER_ORDERS_ACCESS_TOKEN`, and `CLOVER_ONLINE_ORDER_TYPE_IDS` settings. Talip manages all keys and account actions.
+
+For each order, Clover must return line items, payments, refunds, customers and order type. A missing collection stops the pull rather than treating a missing payment or refund as zero. A partial database failure returns `pull_unconfirmed`; rerun the same window because Clover IDs are unique and upserted. The handler returns aggregate counts only, never customer data.
+
+Read the review queue through `clover_order_match_queue_v1(business_id)` as authenticated CRM staff. Resolve a row with `clover_order_match_resolve_v1(business_id,review_id,customer_id)`; pass a null customer ID to leave it unlinked. The closed-day reconciliation RPC `clover_order_day_totals_v1(business_id,start,end)` returns order count, paid order count, paid, refunded and net cents. Choose start/end to match Clover's exact report time zone and population; a disagreement blocks acceptance. `core.clover_order_status_v1` derives status only from the stored payment/refund rows and cancelled state.
+
+Local synthetic run: bootstrap `tools/test-env/k7-local-bootstrap.sql` in a **new local-only database**, apply the exact migration, then run `tools/test-env/k7-order-core-test.sql` with psql 18.6 and `ON_ERROR_STOP=1`. The test transaction rolls back. Also run `node --test tools/test-env/k7-clover-pull.test.mjs`.
