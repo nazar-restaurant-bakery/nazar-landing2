@@ -1,6 +1,6 @@
 # K5 controlled profile acceptance and cleanup
 
-Controlled execution and cleanup are complete. Formal Talip acceptance, a Production migration and PR merge are separate decisions; this record does not declare K5 closed. The runtime source and reviewed migration bytes were unchanged during this execution. Private receipts contain exact comparisons; this document contains no contact values, customer/profile identifiers, project/business identifiers or secret values.
+Controlled execution and cleanup are complete. Talip subsequently applied the identical Production database migration through a separate handoff; its 20/20 receipt audit and 23/23 read-only post-install DB checks passed. No Production provider key, sync enablement or PR merge was performed. Formal Talip acceptance remains separate; this record does not declare K5 closed. The runtime source and reviewed migration bytes were unchanged during this execution. Private receipts contain exact comparisons; this document contains no contact values, customer/profile identifiers, project/business identifiers or secret values.
 
 ## Approved boundary and preflight
 
@@ -38,4 +38,10 @@ Scoped SQL cleanup committed only the approved synthetic fixture and its two job
 
 Preview remains **disabled** without the temporary key binding. No scheduled run, additional provider operation, Production migration or merge is authorized by this completed controlled method.
 
-The earlier [runtime and empty-mock validation](runtime-validation.md) is preserved as historical evidence. [K5 operational and release instructions](../../K5_PROFILE_SYNC.md) describe the remaining separate acceptance and Production gates. Historical validation JSON and test outputs were not rewritten to incorporate these later observations.
+## Subsequent Production database stage
+
+Under a separate human-operated handoff, Talip applied the migration at **2026-10-20T04:00:35.944397Z (20 October, 00:00 EDT)**. A 20/20 independent receipt audit matched the successful TEST proof and the exact same LF migration, psql 18.6 binary, TLS CA, frozen sources and reviewed operator. Production executed a read-only target preflight and the migration, without running the synthetic acceptance fixture SQL.
+
+The independent read-only post-install database check at **04:04:25.386294Z** passed **23/23**, with zero failed or missing checks and zero jobs. It verified all seven function bodies against the exact reviewed LF migration, closed-core/RLS/grants, the K4 suppression guard, four immutable-evidence ALWAYS guards and two existing staff grants. This is separate database evidence, beyond the commit receipt and file hashes. No provider key was added to Production, sync was not enabled, and no PR was merged by this database stage. Formal acceptance remains Talip's decision.
+
+The earlier [runtime and empty-mock validation](runtime-validation.md) is preserved as historical evidence. [K5 operational and release instructions](../../K5_PROFILE_SYNC.md) describe the remaining separate acceptance and enablement gates. Historical validation JSON and test outputs were not rewritten to incorporate these later observations.
