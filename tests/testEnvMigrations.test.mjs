@@ -53,6 +53,28 @@ test('checksum integrity accepts CRLF conversion only and detects changed conten
  assert.notEqual(sha256Lf('a\nb\n'),sha256Lf('a\n b\n'),'SQL whitespace is not silently rewritten');
 });
 
+test('held K9 delivery keeps exact reviewed bytes and waits for K8 without entering K3 replay',async()=>{
+ const entry=source.k9_delivery;assert.ok(entry);
+ assert.equal(entry.path,'supabase/migrations/20261021000200_campaign_engine.sql');
+ const bytes=await fs.readFile(new URL('../'+entry.path,import.meta.url));
+ assert.equal(bytes.includes(13),false);
+ assert.equal(sha256Lf(bytes.toString('utf8')),entry.sha256_bytes);
+ assert.equal(entry.application_order,7);assert.equal(entry.requires_previous_order,6);
+ assert.equal(entry.execution_enabled,false);assert.equal(entry.included_in_k3_reset,false);
+ const missing=clone();delete missing.k9_delivery;
+ assert.ok(codes(await auditMigrations({root,manifest:missing})).includes('UNINVENTORIED_CANONICAL_SQL'));
+ for(const mutate of [
+  m=>{m.k9_delivery.sha256_bytes='f'.repeat(64);},
+  m=>{m.k9_delivery.execution_enabled=true;},
+  m=>{m.k9_delivery.included_in_k3_reset=true;},
+  m=>{m.k9_delivery.path='../unreviewed.sql';},
+  m=>{m.k9_delivery.application_order=6;},
+  m=>{m.k9_delivery.requires_previous_order=5;},
+  m=>{m.k9_delivery.application_tool='arbitrary-executable.py';},
+ ]){const manifest=clone();mutate(manifest);assert.ok(codes(await auditMigrations({root,manifest})).includes('K9_DELIVERY_CONTRACT'));}
+ assert.equal((await auditMigrations({root})).readiness.ready,false);
+});
+
 test('altered expected checksum fails closed',async()=>{
  const manifest=clone();manifest.sources[0].sha256_lf='0'.repeat(64);
  const result=await auditMigrations({root,manifest});assert.equal(result.integrity.ok,false);assert.ok(codes(result).includes('CHECKSUM_MISMATCH'));
