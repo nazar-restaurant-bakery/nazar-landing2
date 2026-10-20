@@ -98,7 +98,7 @@ export function cloverWebhookHandler(env: Values, fetcher: Fetcher = fetch) {
   return async (request: Request): Promise<Response> => {
     if (request.method !== "POST") return result(405, "method_not_allowed");
     if (!env.SUPABASE_URL || !/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(env.SUPABASE_URL)
-      || !env.SUPABASE_SERVICE_ROLE_KEY || !env.CLOVER_WEBHOOK_SECRET
+      || !env.SUPABASE_SERVICE_ROLE_KEY
       || !id(env.CLOVER_WEBHOOK_APP_ID) || !["sandbox", "production"].includes(env.CLOVER_WEBHOOK_ENV || ""))
       return result(503, "configuration_unavailable");
     if (Number(request.headers.get("Content-Length") || 0) > 16384) return result(413, "too_large");
@@ -115,6 +115,7 @@ export function cloverWebhookHandler(env: Values, fetcher: Fetcher = fetch) {
         return result(200, "verification_received"); }
       catch { return result(503, "verification_unavailable"); }
     }
+    if (!env.CLOVER_WEBHOOK_SECRET) return result(503, "configuration_unavailable");
     if (!await constantTimeAuth(request.headers.get("X-Clover-Auth"), env.CLOVER_WEBHOOK_SECRET))
       return result(401, "invalid_auth");
     const events = parseEvents(payload, env.CLOVER_WEBHOOK_APP_ID);

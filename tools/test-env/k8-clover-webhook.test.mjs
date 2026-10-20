@@ -62,7 +62,8 @@ test('verification challenge is accepted only during temporary setup window', as
   const h = harness(); const challenge = { verificationCode: '5220ecf5-7dea-4396-b0ba-a1659c182887' };
   assert.equal((await h.handler(request(challenge, ''))).status, 401);
   assert.equal(h.calls.length, 0);
-  const setup = cloverWebhookHandler({ ...env, CLOVER_WEBHOOK_SETUP_ENABLED: 'true' }, async (input) => {
+  const setup = cloverWebhookHandler({ ...env, CLOVER_WEBHOOK_SECRET: undefined,
+    CLOVER_WEBHOOK_SETUP_ENABLED: 'true' }, async (input) => {
     assert.ok(String(input).endsWith('/rpc/clover_webhook_verification_v1'));
     return Response.json(true);
   });
