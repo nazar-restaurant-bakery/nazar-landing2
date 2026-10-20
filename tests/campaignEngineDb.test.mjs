@@ -145,6 +145,11 @@ check('net threshold uses explicit payment tax/tip rather than order total',()=>
 check('missing or malformed money evidence denies rather than assuming zero',()=>{
  const c=h.customer(),p=h.campaign({include_tax:false,include_tip:false});for(const raw of [{},{taxAmount:0},{taxAmount:'unknown',tipAmount:0}]){
   const o=h.order(c);h.sql(`UPDATE core.payments SET raw_response=${h.literal(JSON.stringify(raw))}::jsonb WHERE order_id='${o}'`);assert.equal(h.evaluate(p,o).code,'amount_evidence_missing');}
+ for(const marker of [false,null,'true']){
+  const o=h.order(c,{raw:{refundsVerified:marker}});assert.equal(h.evaluate(p,o).code,'amount_evidence_missing');
+ }
+ const missing=h.order(c);h.sql(`UPDATE core.orders SET raw_response=raw_response-'refundsVerified' WHERE id='${missing}'`);
+ assert.equal(h.evaluate(p,missing).code,'amount_evidence_missing');
  assert.equal(count(`campaign_id='${p}'`),0);
 });
 check('pending cancelled failed payments and already refunded orders cannot initially apply',()=>{
@@ -152,8 +157,22 @@ check('pending cancelled failed payments and already refunded orders cannot init
  const o=h.order(c);h.refund(o,5000);assert.equal(h.evaluate(p,o).applied,false);assert.equal(count(`campaign_id='${p}'`),0);
 });
 check('full refund restore=true retains voided row and permits another order',()=>{
- const c=h.customer(),p=h.campaign({restore_on_full_refund:true,max_total_units:1}),o=h.order(c),r=h.evaluate(p,o);h.refund(o,5000);
+ const c=h.customer(),p=h.campaign({restore_on_full_refund:true,max_total_units:1}),o=h.order(c),r=h.evaluate(p,o);
+ const ledger=()=>h.sql(`SELECT json_build_object('redemption',to_jsonb(r),'usage',to_jsonb(u),'eventCount',
+  (SELECT count(*) FROM core.campaign_events WHERE campaign_id='${p}')) FROM core.offer_redemptions r
+  JOIN core.campaign_usage u ON u.campaign_id=r.campaign_id WHERE r.id='${r.redemptionId}'`);
+ const original=ledger();h.sql(`UPDATE core.orders SET raw_response=jsonb_set(raw_response,'{refundsVerified}','false'::jsonb) WHERE id='${o}'`);
+ assert.equal(h.evaluate(p,o).code,'refund_amount_evidence_missing');assert.deepEqual(ledger(),original);
+ h.refund(o,5000);
+ for(const marker of [false,null,'true']){
+  h.sql(`UPDATE core.orders SET raw_response=jsonb_set(raw_response,'{refundsVerified}',${h.literal(JSON.stringify(marker))}::jsonb) WHERE id='${o}'`);
+  assert.equal(h.evaluate(p,o).code,'refund_amount_evidence_missing');assert.deepEqual(ledger(),original);
+ }
+ h.sql(`UPDATE core.orders SET raw_response=raw_response-'refundsVerified' WHERE id='${o}'`);
+ assert.equal(h.evaluate(p,o).code,'refund_amount_evidence_missing');assert.deepEqual(ledger(),original);
+ h.sql(`UPDATE core.orders SET raw_response=jsonb_set(raw_response,'{refundsVerified}','true'::jsonb) WHERE id='${o}'`);
  const result=h.evaluate(p,o);assert.equal(result.code,'voided');assert.equal(row(r.redemptionId).status,'voided');assert.equal(row(r.redemptionId).quota_reserved,false);
+ assert.equal(ledger().usage.reserved_units,0);assert.equal(ledger().eventCount,original.eventCount+1);
  assert.equal(h.evaluate(p,h.order(c)).applied,true);assert.equal(count(`campaign_id='${p}'`),2);assert.equal(h.evaluate(p,o).applied,false);
 });
 check('full refund with nonzero tip uses gross captured evidence without double subtracting',()=>{

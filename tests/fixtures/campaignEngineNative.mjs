@@ -50,7 +50,7 @@ export async function fixture(){
   command('createdb',['-h','127.0.0.1','-p',String(port),'-U','postgres','-w',database]);
   const identity=sql("SELECT json_build_object('host',host(inet_server_addr()),'port',inet_server_port(),'database',current_database(),'dataDirectory',current_setting('data_directory'),'serverVersion',current_setting('server_version'))");
   if(identity.host!==config.host||identity.port!==port||identity.database!==database||resolve(identity.dataDirectory)!==resolve(data))throw Error('K9 actual local target mismatch');
-  const files=['tools/test-env/k9-local-bootstrap.sql','supabase/migrations/20261019000100_test_record_markers.sql','supabase/migrations/20261020000700_clover_order_core.sql','supabase/migrations/20261021000200_campaign_engine.sql'];
+  const files=['tools/test-env/k9-local-bootstrap.sql','supabase/migrations/20261019000100_test_record_markers.sql','supabase/migrations/20261020000700_clover_order_core.sql','supabase/migrations/20261020000900_clover_optional_scope_status.sql','supabase/migrations/20261021000200_campaign_engine.sql'];
   if(!/^18\.6\b/.test(identity.serverVersion))throw Error('K9 actual server version must be18.6');
   const sourceFiles=[];for(const path of ['tests/campaignEngineDb.test.mjs','tests/fixtures/campaignEngineNative.mjs']){
    const bytes=await readFile(join(repo,path));sourceFiles.push({path,sha256:digest(bytes)});await mkdir(join(run,'test-source'),{recursive:true});await writeFile(join(run,'test-source',path.split('/').at(-1)),bytes);}
@@ -60,19 +60,26 @@ export async function fixture(){
    FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN('core','public','auth')${oids?' AND p.oid IN('+oids.join(',')+')':''}`);
   let beforeFunctions=null,existingRpcProof=null;
   const hashes=[];for(const path of files){const checkout=await readFile(join(repo,path));
-   const canonicalK7=path==='supabase/migrations/20261020000700_clover_order_core.sql';
+   const canonicalK7Hashes={
+    'supabase/migrations/20261020000700_clover_order_core.sql':'5f68772059d9cd1e1d7a6a290aa31ee32d10ff5a367201577c4058861aada4a8',
+    'supabase/migrations/20261020000900_clover_optional_scope_status.sql':'a3778d0b933c4ce1a56dba04bcadc31b3f6d1c8f214d56af8203a88d6bcc826e'};
+   const canonicalK7=Object.hasOwn(canonicalK7Hashes,path);
    const bytes=canonicalK7?Buffer.from(checkout.toString('utf8').replaceAll('\r\n','\n')):checkout;
    if(bytes.includes(13))throw Error('K9 SQL must have LF bytes: '+path);
-   if(canonicalK7&&digest(bytes)!=='5f68772059d9cd1e1d7a6a290aa31ee32d10ff5a367201577c4058861aada4a8')throw Error('Exact canonical historical K7 SHA required');
+   if(canonicalK7&&digest(bytes)!==canonicalK7Hashes[path])throw Error('Exact canonical historical K7 SHA required: '+path);
    hashes.push({path,sha256:digest(bytes),checkoutSha256:digest(checkout),canonicalLfOnly:canonicalK7});await mkdir(join(run,'applied-sql'),{recursive:true});
    await writeFile(join(run,'applied-sql',path.split('/').at(-1)),bytes);
    await writeFile(join(run,'applied-sql','manifest.json'),JSON.stringify(hashes,null,2)+'\n');
    const isK9=path==='supabase/migrations/20261021000200_campaign_engine.sql';
-   if(isK9){beforeFunctions=functions();await writeFile(join(run,'existing-functions-before.json'),JSON.stringify(beforeFunctions,null,2)+'\n');}
+   if(isK9){beforeFunctions=functions();const dayTotals=beforeFunctions.find(f=>f.schema==='public'&&f.name==='clover_order_day_totals_v1');
+    if(!dayTotals||!['refundUnverifiedCount','customerAccessDeniedCount','reconciliationConfirmed'].every(field=>dayTotals.definition.includes(field)))throw Error('K9 parity requires the exact main K7 optional-scope day totals function');
+    await writeFile(join(run,'existing-functions-before.json'),JSON.stringify(beforeFunctions,null,2)+'\n');}
    const r=raw(bytes.toString('utf8'));if(r.status!==0)throw Error(path+': '+r.stderr);
    if(isK9){const afterFunctions=functions(beforeFunctions.map(f=>f.oid));const beforeSha256=digest(JSON.stringify(beforeFunctions)),afterSha256=digest(JSON.stringify(afterFunctions));
     await writeFile(join(run,'existing-functions-after.json'),JSON.stringify(afterFunctions,null,2)+'\n');
+    const dayTotals=beforeFunctions.find(f=>f.schema==='public'&&f.name==='clover_order_day_totals_v1');
     existingRpcProof={scope:'K9_EXISTING_FUNCTION_DEFINITION_ACL_PARITY',count:beforeFunctions.length,beforeSha256,afterSha256,
+     requiredK7DayTotals:{name:'public.clover_order_day_totals_v1',definitionSha256:digest(dayTotals.definition),scopeFields:['refundUnverifiedCount','customerAccessDeniedCount','reconciliationConfirmed']},
      unchanged:beforeSha256===afterSha256,properties:['pg_get_functiondef','proacl','prosecdef','proconfig'],fixture_subset_only:true};
     await writeFile(join(run,'existing-rpc-parity.json'),JSON.stringify(existingRpcProof,null,2)+'\n');
     if(!existingRpcProof.unchanged)throw Error('K9 altered an existing fixture RPC definition or grant');}
@@ -98,7 +105,7 @@ export async function fixture(){
   product='PRODUCT0001',quantity=1,trace=true,tracePercent=100,paymentRaw={},raw={},online=true,matchStatus='exact'}={}){
   const id=randomUUID(),paymentId=randomUUID();const key=()=>randomUUID().replaceAll('-','').slice(0,20);
   const discounts=trace?[{id:'DISCOUNT01',name:'K9SYNTHETIC',code:'K9SYNTHETIC',percentage:tracePercent,discount:{id:'DISCOUNT01'}}]:[];
-  const rawOrder={raw:{discounts:{elements:discounts}},...raw};
+  const rawOrder={refundsVerified:true,raw:{discounts:{elements:discounts}},...raw};
   sql(`INSERT INTO core.orders(id,business_id,clover_order_id,clover_merchant_id,clover_order_type_id,online_order,created_at,clover_state,order_total_cents,customer_id,match_status,raw_response)
    VALUES('${id}','${businessId}','${key()}','MERCHANT0001',${literal(type)},${online?'true':'false'},${literal(date)},${literal(state)},${amount??'NULL'},${literal(customerId)},${literal(matchStatus)},${literal(JSON.stringify(rawOrder))}::jsonb);
    INSERT INTO core.order_items(business_id,order_id,clover_item_id,name,quantity,price_cents,raw_response) VALUES('${businessId}','${id}','${key()}','Synthetic',${quantity??'NULL'},5000,${literal(JSON.stringify({item:{id:product},discounts:{elements:discounts}}))}::jsonb);`);

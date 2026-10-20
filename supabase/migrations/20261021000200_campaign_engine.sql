@@ -272,6 +272,11 @@ DECLARE s record; p record; r record; v_tax numeric:=0; v_tip numeric:=0;
 BEGIN
   SELECT * INTO s FROM core.clover_order_status_v1(p_order_id);
   IF NOT FOUND THEN RETURN QUERY SELECT false,NULL::bigint,jsonb_build_object('reason','order_missing'); RETURN; END IF;
+  -- K7 optional-scope reads can retain an empty array when refunds could not
+  -- be read. Only an explicit JSON boolean true certifies that empty is zero.
+  IF (SELECT o_.raw_response->'refundsVerified' FROM core.orders o_ WHERE o_.id=p_order_id)
+    IS DISTINCT FROM 'true'::jsonb THEN
+    RETURN QUERY SELECT false,NULL::bigint,jsonb_build_object('reason','refunds_unverified'); RETURN; END IF;
   FOR p IN SELECT pay_.amount_cents,pay_.raw_response FROM core.payments pay_ WHERE pay_.order_id=p_order_id
     AND upper(COALESCE(pay_.payment_status,''))='SUCCESS' LOOP
     IF COALESCE(p.raw_response->>'taxAmount','') !~ '^[0-9]{1,12}$'
@@ -355,6 +360,9 @@ BEGIN
   IF FOUND THEN
     IF red.status='voided' THEN
       RETURN jsonb_build_object('applied',false,'code','already_voided','redemptionId',red.id,'status',red.status); END IF;
+    IF o.raw_response->'refundsVerified' IS DISTINCT FROM 'true'::jsonb THEN
+      RETURN jsonb_build_object('applied',false,'code','refund_amount_evidence_missing',
+        'redemptionId',red.id,'status',red.status); END IF;
     IF s.status='refunded' AND s.paid_cents>0 THEN
       SELECT * INTO a FROM core.campaign_amount_v1(o.id,
         (red.snapshot#>>'{campaign,include_tax}')::boolean,(red.snapshot#>>'{campaign,include_tip}')::boolean);

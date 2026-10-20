@@ -3,7 +3,10 @@
 This PR prepares database code and synthetic tests. It does not deploy a
 migration, activate a campaign, call Clover/Klaviyo, send a message, or add a
 staff tab. K9 PR merge remains blocked until K7 day reconciliation closes.
-Operational migration order is **K8 `20261021000100` → K9 `20261021000200`**.
+Operational migration order is **K7 optional-scope report patch `20261020000900`
+(6) → K8 `20261021000100` (7) → K9 `20261021000200` (8)**. The K7 patch
+is registered from main PR #66; its sandbox/production application is not
+claimed by this delivery. It remains separate from historical K3 reset/replay.
 K8 is a separate work item; this migration does not claim to install/test it.
 
 ## Objects and trust boundary
@@ -80,6 +83,12 @@ sum(payment.amount − payment.taxAmount)
 paid tips less refunded tips. Payment tips are never subtracted twice.
 K7 `net_cents = payment.amount − refund.amount` is retained as evidence, but
 is not silently treated as tax-free merchandise sales.
+
+The K7 snapshot must also carry `orders.raw_response.refundsVerified` as the
+JSON boolean `true`. Boolean `false`, a missing value, JSON `null`, and the
+string `"true"` all deny evaluation and reconciliation. An empty local refund
+array is insufficient evidence of zero refunds. These denials do not create or
+void ledger rows and do not release existing person/period or total quota.
 
 All successful payments and nonvoid refunds must contain explicit integral
 nonnegative `taxAmount` and `tipAmount` values (explicit zero is valid). Each
