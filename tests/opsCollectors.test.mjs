@@ -3,6 +3,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { collect as klaviyo } from '../supabase/functions/ops-collect/klaviyo.ts';
+import { placeIdForBusiness } from '../supabase/functions/ops-collect/tenant-settings.ts';
+import { NAZAR_BUSINESS } from '../supabase/functions/ops-collect/contracts.ts';
 import { collect as places } from '../supabase/functions/ops-collect/places.ts';
 import { collect as site } from '../supabase/functions/ops-collect/site_ping.ts';
 import { collect as ga4 } from '../supabase/functions/ops-collect/ga4.ts';
@@ -14,7 +16,7 @@ import { allowedUrl, metric, sanitizeText } from '../supabase/functions/ops-coll
 const now = new Date('2026-10-19T14:00:00Z');
 const make = (env = {}, router = () => { throw new Error('Unexpected provider request'); }, remaining = 30) => {
   const calls = [];
-  return { env, now, budget: { remaining }, calls, fetch: async (input, init) => {
+  return { env, businessId: NAZAR_BUSINESS, now, budget: { remaining }, calls, fetch: async (input, init) => {
     assert.equal(init.redirect, 'error'); assert.ok(init.signal instanceof AbortSignal);
     const url = new URL(input); calls.push({ url: url.href, init });
     return router(url, init);
@@ -56,21 +58,38 @@ test('site ping uses fixed canonical GET, records HTTP status and distinguishes 
 });
 test('Places requests only rating/count and labels negative delta as NET snapshot difference', async () => {
   const ctx = make({ GOOGLE_PLACES_API_KEY: 'synthetic-key' }, (url, init) => {
-    assert.equal(url.hostname, 'places.googleapis.com'); assert.equal(init.headers['X-Goog-FieldMask'], 'id,rating,userRatingCount');
-    return json({ id: 'ChIJKTmeJADZ54kRvLZoaDaB9J4', rating: 4.5, userRatingCount: 20 });
+    assert.equal(url.hostname, 'places.googleapis.com'); assert.equal(init.headers['X-Goog-FieldMask'], 'rating,userRatingCount');
+    assert.equal(url.pathname, '/v1/places/' + placeIdForBusiness(NAZAR_BUSINESS));
+    return json({ rating: 4.5, userRatingCount: 20 });
   });
   ctx.previous = [previous('reviews', 'total_reviews', 22)]; const result = await places(ctx);
   assert.equal(val(result, 'rating'), 4.5); assert.equal(val(result, 'new_reviews_7d'), -2); assert.match(text(result, 'new_reviews_7d'), /NET/);
 });
 test('Places missing/stale baseline stays unknown; no actual new-review claim', async () => {
-  const ctx = make({ GOOGLE_PLACES_API_KEY: 'synthetic' }, () => json({ id: 'ChIJKTmeJADZ54kRvLZoaDaB9J4', userRatingCount: 0 }));
+  const ctx = make({ GOOGLE_PLACES_API_KEY: 'synthetic' }, () => json({ userRatingCount: 0 }));
   ctx.previous = [previous('reviews', 'total_reviews', 4, '2026-10-01T14:00:00Z')]; const result = await places(ctx);
   assert.equal(val(result, 'new_reviews_7d'), null); assert.equal(val(result, 'rating'), null); assert.equal(val(result, 'total_reviews'), 0);
 });
-test('Places rejects malformed count and unknown place identity', async () => {
-  for (const data of [{ id: 'OTHER', rating: 4, userRatingCount: 1 }, { id: 'ChIJKTmeJADZ54kRvLZoaDaB9J4', userRatingCount: -1 }]) {
+test('Places rejects malformed or missing count', async () => {
+  for (const data of [{ rating: 4 }, { userRatingCount: -1 }]) {
     const result = await places(make({ GOOGLE_PLACES_API_KEY: 'synthetic' }, () => json(data))); assert.equal(result.status, 'error'); assert.deepEqual(result.metrics, []);
   }
+});
+
+test('Places selects only the trusted business setting and fails closed for absent/malformed settings', async () => {
+  const other = '11111111-1111-4111-8111-111111111111';
+  assert.equal(placeIdForBusiness(NAZAR_BUSINESS), 'ChIJKTmeJADZ54kRvLZoaDaB9J4');
+  for (const id of [undefined, other, '__proto__']) {
+    const ctx = make({ GOOGLE_PLACES_API_KEY: 'synthetic' }); ctx.businessId = id;
+    assert.equal((await places(ctx)).status, 'not_connected'); assert.equal(ctx.calls.length, 0);
+  }
+  for (const config of [null, {}, { businesses: {} }, { businesses: { [NAZAR_BUSINESS]: {} } },
+    { businesses: { [NAZAR_BUSINESS]: { google_places: { place_id: '../escape?key=private' } } } }]) {
+    assert.equal(placeIdForBusiness(NAZAR_BUSINESS, config), null);
+  }
+  const config = { businesses: { [NAZAR_BUSINESS]: { google_places: { place_id: 'SyntheticPlaceForTenantA123' } }, [other]: { google_places: { place_id: 'SyntheticPlaceForTenantB123' } } } };
+  assert.equal(placeIdForBusiness(NAZAR_BUSINESS, config), 'SyntheticPlaceForTenantA123');
+  assert.equal(placeIdForBusiness(other, config), 'SyntheticPlaceForTenantB123');
 });
 
 const ga4Report = visits => ({ metricHeaders: [{ name: 'sessions', type: 'TYPE_INTEGER' }], rows: [{ metricValues: [{ value: String(visits) }] }], rowCount: 1, metadata: { timeZone: 'America/New_York' } });

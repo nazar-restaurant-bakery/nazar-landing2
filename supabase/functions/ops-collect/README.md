@@ -93,3 +93,7 @@ node node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module 
 The database test creates an in-memory isolated PostgreSQL fixture and loads the migration there only. The included commission fixture is the existing historical engine; tests verify the actual formula call and absence of a second refund deduction. It is not a production migration.
 
 K1c deploy order and hosted JWT acceptance: [runbook](../../../docs/staff-ops/K1C_DEPLOY.md). Optional `OPS_PROJECT_REF` is deployment configuration, not request input. Leave it unset for Production default or set to that project explicitly; sandbox must set its own ref. No provider credential is required for initial Supabase count and site ping.
+
+### Places tenant settings
+
+`GOOGLE_PLACES_API_KEY` is the platform-owned server secret, read at request time. Non-secret place IDs live in the deployed server-only `tenant-settings.json`, under `businesses[business_id].google_places.place_id`. The authenticated manual server path supplies its trusted business identity; browser payloads cannot choose it. Missing/invalid/unmapped settings cause no Places request. Only `rating,userRatingCount` is requested; no place ID, review text or reviewer data is requested in the response. The request URL selects the configured place. No schema migration or additional secret is needed; settings changes require deploying the function bundle. CLI deploy includes the statically imported JSON file; dashboard deployments must include the new TS and JSON files as well as changed files.

@@ -37,9 +37,14 @@ function harness(options={}) {
    throw new Error('Unexpected local RPC: '+name);
   }
   if(parsed.href==='https://www.nazarrestaurantandbakery.com/')return new Response('<html>synthetic public site</html>',{status:options.siteStatus||200});
+  if(parsed.hostname==='places.googleapis.com'){
+   assert.equal(parsed.pathname,'/v1/places/ChIJKTmeJADZ54kRvLZoaDaB9J4');
+   assert.equal(init.headers['X-Goog-FieldMask'],'rating,userRatingCount');
+   return send({rating:4.6,userRatingCount:123});
+  }
   throw new Error('Unexpected external network target');
  };
- const invoke=async(action,payload={},overrides={})=>handleRequest(new Request('https://khgczybubufouraqyrcj.supabase.co/functions/v1/ops-collect',{method:'POST',headers:{'Content-Type':'application/json',Authorization:jwt,Origin:'https://preview.nazar-restaurant-website.pages.dev',...overrides},body:JSON.stringify({action,payload:{clientRequestId:crypto.randomUUID(),...payload}})}),env,request);
+ const invoke=async(action,payload={},overrides={})=>handleRequest(new Request('https://khgczybubufouraqyrcj.supabase.co/functions/v1/ops-collect',{method:'POST',headers:{'Content-Type':'application/json',Authorization:jwt,Origin:'https://preview.nazar-restaurant-website.pages.dev',...overrides},body:JSON.stringify({action,payload:{clientRequestId:crypto.randomUUID(),...payload}})}),{...env,...options.env},request);
  return {calls,actions,finishes,uploads,request,invoke,get claims(){return claims;}};
 }
 
@@ -98,4 +103,15 @@ test('manual-only release rejects scheduled request bodies and accepts only the 
  }
  for(const origin of ['https://nazar-restaurant-website.pages.dev','https://preview.nazar-restaurant-website.pages.dev'])assert.equal(allowedOrigin(origin,{}),true);
  for(const origin of ['https://nazar-landing2.pages.dev','https://x.nazar-restaurant-website.pages.dev.evil.example'])assert.equal(allowedOrigin(origin,{}),false);
+});
+
+test('Places server path uses its trusted business setting despite browser target overrides',async()=>{
+ const h=harness({env:{GOOGLE_PLACES_API_KEY:'SYNTHETIC_PLATFORM_PLACES'}});
+ const result=await h.invoke('collect',{business_id:'99999999-9999-4999-8999-999999999999',place_id:'OtherTenantPlace1234567890'});
+ assert.equal(result.status,202);
+ const receipt=h.finishes[0];assert.equal(receipt.p_status,'done');
+ assert.ok(receipt.p_metrics.some(m=>m.source==='reviews'&&m.metric==='rating'&&m.value_num===4.6));
+ assert.ok(receipt.p_metrics.some(m=>m.source==='reviews'&&m.metric==='total_reviews'&&m.value_num===123));
+ assert.equal(h.calls.filter(c=>c.host==='places.googleapis.com').length,1);
+ assert.doesNotMatch(JSON.stringify(receipt),/SYNTHETIC_PLATFORM_PLACES|OtherTenantPlace/);
 });
