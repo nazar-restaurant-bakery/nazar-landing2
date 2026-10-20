@@ -149,7 +149,7 @@ test('GET fetch failure, malformed queue and unsafe raw error never become an em
   }
 });
 
-test('POST accepts only action run; browser cannot choose account, customer or business', async () => {
+test('POST rejects extra run parameters; browser cannot choose account, customer or business', async () => {
   for (const body of [{ action: 'run', accountId: 'other' }, { action: 'run', customerId },
     { action: 'run', businessId }, { action: 'retry' }, {}, [], 'not JSON']) {
     const h = harness(); const result = await h.run({ method: 'POST', body });
