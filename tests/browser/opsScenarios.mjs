@@ -48,6 +48,9 @@ export async function runOpsScenarios({ run, visible, screenshot, exact, snapsho
   },'/staff/ops');
   await run('42 Collect confirmation can cancel and a double click cannot enqueue twice','normal',async page=>{
     await ready(page);await page.getByTestId('ops-action-collect').click();
+    assert.equal(await page.getByRole('region',{name:o.statusTitle}).getByTestId('ops-action-confirmation').count(),1);
+    assert.equal(await page.getByRole('region',{name:o.actions,exact:true}).getByTestId('ops-action-confirmation').count(),0);
+    await screenshot(page,'staff-ops-collect-confirmation-desktop');
     await confirm(page).getByRole('button',exact(o.cancel)).click();
     assert.equal((await calls(page,'ops_request_action')).length,0);
     await page.getByTestId('ops-action-collect').click();
@@ -129,7 +132,9 @@ export async function runOpsScenarios({ run, visible, screenshot, exact, snapsho
     assert.equal((await snapshot(page)).calls.filter(call=>/setup-test|send|email-draft/.test(call.name)).length,0);
   },'/staff/ops');
   await run('51 Ops mobile 375px has a single metric column and no horizontal overflow','normal',async page=>{
-    await ready(page);await screenshot(page,'staff-ops-mobile');
+    await ready(page);await page.getByTestId('ops-action-collect').click();
+    assert.equal(await page.getByRole('region',{name:o.statusTitle}).getByTestId('ops-action-confirmation').count(),1);
+    await screenshot(page,'staff-ops-mobile');
     const sizes=await page.getByTestId('ops-metric-grid').evaluate(element=>({columns:getComputedStyle(element).gridTemplateColumns,scroll:document.documentElement.scrollWidth,width:innerWidth}));
     assert.equal(sizes.columns.trim().split(/\s+/).length,1);assert.ok(sizes.scroll<=sizes.width+1,JSON.stringify(sizes));
   },'/staff/ops',{viewport:{width:375,height:812},isMobile:true,hasTouch:true});
