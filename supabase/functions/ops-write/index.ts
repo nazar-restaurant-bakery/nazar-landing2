@@ -19,7 +19,7 @@ export async function handleWrite(req:Request,env:Env,request:typeof fetch=fetch
  if(!bearer?.startsWith("Bearer "))return reply(401,{code:"unauthorized"});
  try {
   const url=env.SUPABASE_URL;
-  if(!url||!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(url)||!env.SUPABASE_ANON_KEY||!env.SUPABASE_SERVICE_ROLE_KEY)throw new GateError(503,"configuration_missing");
+  if(!url||!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(url)||!env.SUPABASE_ANON_KEY)throw new GateError(503,"configuration_missing");
   if(Number(req.headers.get("content-length"))>2048)throw new GateError(400,"invalid_request");
   const raw=await req.text();if(raw.length>2048)throw new GateError(400,"invalid_request");
   let body:Record<string,unknown>;try{body=JSON.parse(raw);}catch{throw new GateError(400,"invalid_request");}
@@ -28,9 +28,9 @@ export async function handleWrite(req:Request,env:Env,request:typeof fetch=fetch
   const auth=await request(url+"/auth/v1/user",{headers:{apikey:env.SUPABASE_ANON_KEY,Authorization:bearer},redirect:"error",signal:AbortSignal.timeout(8000)});
   if(!auth.ok)throw new GateError(401,"unauthorized");
   const user=await auth.json();if(!uuid(user?.id))throw new GateError(401,"unauthorized");
-  async function rpc(name:string,args:Record<string,unknown>,service=false):Promise<Receipt|null> {
-   const key=service?env.SUPABASE_SERVICE_ROLE_KEY!:env.SUPABASE_ANON_KEY!;
-   const response=await request(url+"/rest/v1/rpc/"+name,{method:"POST",headers:{apikey:key,Authorization:service?"Bearer "+key:bearer!,"Content-Type":"application/json"},body:JSON.stringify(args),redirect:"error",signal:AbortSignal.timeout(10000)});
+  async function rpc(name:string,args:Record<string,unknown>):Promise<Receipt|null> {
+   const key=env.SUPABASE_ANON_KEY!;
+   const response=await request(url+"/rest/v1/rpc/"+name,{method:"POST",headers:{apikey:key,Authorization:bearer!,"Content-Type":"application/json"},body:JSON.stringify(args),redirect:"error",signal:AbortSignal.timeout(10000)});
    if(!response.ok){const error=await response.json().catch(()=>({}));throw new GateError(error.code==="42501"||response.status===403?403:error.code==="55000"||error.code==="22023"?409:503,error.code==="42501"||response.status===403?"forbidden":error.code==="55000"?"disabled":error.code==="22023"?"repreview_required":"gate_unavailable");}
    return await response.json();
   }
@@ -49,14 +49,11 @@ export async function handleWrite(req:Request,env:Env,request:typeof fetch=fetch
   if(!uuid(body.action_id)||body.preview_hash!==hash)throw new GateError(409,"repreview_required");
   const args={p_business_id:business,p_action_id:body.action_id,p_target_id:body.target_id,p_preview_hash:hash};
   if(body.operation==="approve")return reply(200,{action:await rpc("ops_write_approve",args)});
-  // Authorization as caller is checked before the service-role-only atomic claim.
-  await rpc("ops_write_status",{p_business_id:business,p_action_id:body.action_id});
-  const claimed=await rpc("ops_write_claim",{...args,p_staff_id:user.id},true);
-  if(!claimed)return reply(409,{code:"approval_not_claimable"});
-  if(!uuid(claimed.claim_token))throw new GateError(503,"unknown_result");
-  // Dry-run is intentionally only this local result; no network adapter exists.
-  const action=await rpc("ops_write_finalize",{p_business_id:business,p_action_id:body.action_id,p_staff_id:user.id,p_claim_token:claimed.claim_token,p_success:true},true);
-  if(!action)throw new GateError(503,"unknown_result");
+  // Keep the verified user's JWT on the PostgREST request. The narrow DB
+  // dry-run wrapper calls service-only claim/finalize with the same auth.uid().
+  // A service key + supplied p_staff_id would lose this identity chain.
+  const action=await rpc("ops_write_execute_dry_run",args);
+  if(!action)return reply(409,{code:"approval_not_claimable"});
   return reply(200,{action});
  }catch(error){return reply(error instanceof GateError?error.status:503,{code:error instanceof GateError?error.code:"unknown_result"});}
 }

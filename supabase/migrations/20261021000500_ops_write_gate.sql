@@ -2,15 +2,14 @@
 BEGIN;
 SET LOCAL lock_timeout='5s';
 SET LOCAL statement_timeout='30s';
+DO $$ BEGIN
+ IF to_regclass('core.business_staff') IS NULL OR to_regprocedure('core.staff_authorized_v1(uuid,text)') IS NULL THEN
+  RAISE EXCEPTION 'K15_SHARED_STAFF_CONTRACT_V1_REQUIRED';
+ END IF;
+END; $$;
 CREATE TABLE core.ops_write_settings (
  business_id uuid PRIMARY KEY REFERENCES core.businesses(id),
  kill_switch boolean NOT NULL DEFAULT true
-);
-CREATE TABLE core.ops_write_staff (
- business_id uuid NOT NULL REFERENCES core.businesses(id),
- staff_id uuid NOT NULL REFERENCES auth.users(id),
- active boolean NOT NULL DEFAULT true,
- PRIMARY KEY(business_id,staff_id)
 );
 CREATE TABLE core.ops_write_actions (
  business_id uuid NOT NULL REFERENCES core.businesses(id),
@@ -27,22 +26,15 @@ CREATE TABLE core.ops_write_actions (
  claim_token uuid, finished_at timestamptz,
  safe_result_code text NOT NULL DEFAULT 'preview_ready' CHECK(safe_result_code IN('preview_ready','approved','executing','dry_run_succeeded','dry_run_failed','expired','disabled')),
  PRIMARY KEY(business_id,id), UNIQUE(business_id,idempotency_key),
- FOREIGN KEY(business_id,created_by) REFERENCES core.ops_write_staff(business_id,staff_id),
- FOREIGN KEY(business_id,approved_by) REFERENCES core.ops_write_staff(business_id,staff_id),
+ FOREIGN KEY(business_id,created_by) REFERENCES core.business_staff(business_id,staff_id),
+ FOREIGN KEY(business_id,approved_by) REFERENCES core.business_staff(business_id,staff_id),
  CHECK((approved_by IS NULL)=(approved_at IS NULL)),
  CHECK(expires_at>created_at)
 );
 ALTER TABLE core.ops_write_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE core.ops_write_staff ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.ops_write_actions ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON core.ops_write_settings,core.ops_write_staff,core.ops_write_actions FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON core.ops_write_settings,core.ops_write_actions FROM PUBLIC,anon,authenticated,service_role;
 
-CREATE FUNCTION core.ops_write_authorized(p_business_id uuid,p_staff_id uuid) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
- SELECT p_staff_id IS NOT NULL AND EXISTS(
-  SELECT 1 FROM core.ops_write_staff w JOIN core.crm_staff s ON s.auth_user_id=w.staff_id
-  WHERE w.business_id=p_business_id AND w.staff_id=p_staff_id AND w.active AND s.active);
-$$;
 CREATE FUNCTION core.ops_write_receipt(p_row core.ops_write_actions) RETURNS jsonb
 LANGUAGE sql IMMUTABLE SET search_path='' AS $$
  SELECT jsonb_build_object('business_id',p_row.business_id,'id',p_row.id,'action_type',p_row.action_type,
@@ -53,7 +45,8 @@ $$;
 CREATE FUNCTION core.ops_write_check(p_business_id uuid,p_staff_id uuid) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 BEGIN
- IF NOT core.ops_write_authorized(p_business_id,p_staff_id) THEN RAISE EXCEPTION 'forbidden' USING ERRCODE='42501'; END IF;
+ IF auth.uid() IS NULL OR p_staff_id IS DISTINCT FROM auth.uid() OR auth.role() IS DISTINCT FROM 'authenticated'
+  OR NOT core.staff_authorized_v1(p_business_id,'ops.write') THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
  -- Shared row lock serializes claim with an operator kill-switch change.
  PERFORM 1 FROM core.ops_write_settings WHERE business_id=p_business_id AND NOT kill_switch FOR SHARE;
  IF NOT FOUND THEN RAISE EXCEPTION 'disabled' USING ERRCODE='55000'; END IF;
@@ -76,7 +69,7 @@ DECLARE r core.ops_write_actions;
 BEGIN
  PERFORM core.ops_write_check(p_business_id,auth.uid());
  SELECT * INTO r FROM core.ops_write_actions WHERE business_id=p_business_id AND id=p_action_id AND created_by=auth.uid() FOR UPDATE;
- IF NOT FOUND THEN RAISE EXCEPTION 'forbidden' USING ERRCODE='42501'; END IF;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
  IF r.target_id<>p_target_id OR r.preview_hash<>p_preview_hash THEN RAISE EXCEPTION 'repreview_required' USING ERRCODE='22023'; END IF;
  IF r.status IN('previewed','approved') AND r.expires_at<=clock_timestamp() THEN
   UPDATE core.ops_write_actions SET status='expired',safe_result_code='expired' WHERE business_id=p_business_id AND id=p_action_id RETURNING * INTO r;
@@ -91,9 +84,9 @@ CREATE FUNCTION public.ops_write_status(p_business_id uuid,p_action_id uuid) RET
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE r core.ops_write_actions;
 BEGIN
- IF NOT core.ops_write_authorized(p_business_id,auth.uid()) THEN RAISE EXCEPTION 'forbidden' USING ERRCODE='42501'; END IF;
+ IF auth.uid() IS NULL OR auth.role() IS DISTINCT FROM 'authenticated' OR NOT core.staff_authorized_v1(p_business_id,'ops.write') THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
  SELECT * INTO r FROM core.ops_write_actions WHERE business_id=p_business_id AND id=p_action_id AND created_by=auth.uid();
- IF NOT FOUND THEN RAISE EXCEPTION 'forbidden' USING ERRCODE='42501'; END IF;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
  RETURN core.ops_write_receipt(r);
 END; $$;
 CREATE FUNCTION public.ops_write_claim(p_business_id uuid,p_action_id uuid,p_staff_id uuid,p_target_id uuid,p_preview_hash text) RETURNS jsonb
@@ -102,7 +95,7 @@ DECLARE r core.ops_write_actions;
 BEGIN
  PERFORM core.ops_write_check(p_business_id,p_staff_id);
  SELECT * INTO r FROM core.ops_write_actions WHERE business_id=p_business_id AND id=p_action_id AND approved_by=p_staff_id FOR UPDATE;
- IF NOT FOUND THEN RAISE EXCEPTION 'forbidden' USING ERRCODE='42501'; END IF;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
  IF r.target_id<>p_target_id OR r.preview_hash<>p_preview_hash THEN RAISE EXCEPTION 'repreview_required' USING ERRCODE='22023'; END IF;
  IF r.status<>'approved' THEN RETURN NULL; END IF;
  IF r.expires_at<=clock_timestamp() THEN
@@ -117,7 +110,8 @@ CREATE FUNCTION public.ops_write_finalize(p_business_id uuid,p_action_id uuid,p_
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE r core.ops_write_actions; enabled boolean;
 BEGIN
- IF NOT core.ops_write_authorized(p_business_id,p_staff_id) THEN RAISE EXCEPTION 'forbidden' USING ERRCODE='42501'; END IF;
+ IF auth.uid() IS NULL OR p_staff_id IS DISTINCT FROM auth.uid() OR auth.role() IS DISTINCT FROM 'authenticated'
+  OR NOT core.staff_authorized_v1(p_business_id,'ops.write') THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
  SELECT NOT kill_switch INTO enabled FROM core.ops_write_settings WHERE business_id=p_business_id FOR SHARE;
  UPDATE core.ops_write_actions SET status=CASE WHEN p_success AND coalesce(enabled,false) THEN 'succeeded' ELSE 'failed' END,
  safe_result_code=CASE WHEN NOT coalesce(enabled,false) THEN 'disabled' WHEN p_success THEN 'dry_run_succeeded' ELSE 'dry_run_failed' END,finished_at=clock_timestamp(),claim_token=NULL
@@ -125,7 +119,22 @@ BEGIN
  IF NOT FOUND THEN RETURN NULL; END IF;
  RETURN core.ops_write_receipt(r);
 END; $$;
-REVOKE ALL ON FUNCTION core.ops_write_authorized(uuid,uuid),core.ops_write_receipt(core.ops_write_actions),core.ops_write_check(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+-- Only this authenticated dry-run wrapper orchestrates service-only helpers.
+-- PostgREST verifies the original user JWT; auth.uid()/auth.role() survive the
+-- SECURITY DEFINER boundary. Never synthesize a sub from a supplied actor UUID.
+CREATE FUNCTION public.ops_write_execute_dry_run(p_business_id uuid,p_action_id uuid,p_target_id uuid,p_preview_hash text) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE c jsonb;
+BEGIN
+ PERFORM core.ops_write_check(p_business_id,auth.uid());
+ c:=public.ops_write_claim(p_business_id,p_action_id,auth.uid(),p_target_id,p_preview_hash);
+ IF c IS NULL THEN RETURN NULL; END IF;
+ -- Sole adapter: local dry-run result; no provider call or extensible action input.
+ RETURN public.ops_write_finalize(p_business_id,p_action_id,auth.uid(),(c->>'claim_token')::uuid,true);
+END; $$;
+REVOKE ALL ON FUNCTION public.ops_write_execute_dry_run(uuid,uuid,uuid,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.ops_write_execute_dry_run(uuid,uuid,uuid,text) TO authenticated;
+REVOKE ALL ON FUNCTION core.ops_write_receipt(core.ops_write_actions),core.ops_write_check(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.ops_write_preview(uuid,uuid,text,uuid),public.ops_write_approve(uuid,uuid,uuid,text),public.ops_write_status(uuid,uuid),public.ops_write_claim(uuid,uuid,uuid,uuid,text),public.ops_write_finalize(uuid,uuid,uuid,uuid,boolean) FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.ops_write_preview(uuid,uuid,text,uuid),public.ops_write_approve(uuid,uuid,uuid,text),public.ops_write_status(uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ops_write_claim(uuid,uuid,uuid,uuid,text),public.ops_write_finalize(uuid,uuid,uuid,uuid,boolean) TO service_role;
