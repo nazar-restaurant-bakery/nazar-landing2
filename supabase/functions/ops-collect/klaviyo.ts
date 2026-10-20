@@ -28,9 +28,10 @@ export async function collect(ctx: CollectorContext): Promise<CollectorResult> {
   const key = ctx.env.KLAVIYO_OPS_READ_KEY;
   if (!key) return notConnected("klaviyo", "Nazar Klaviyo read-only API key bekleniyor.");
   const start = budget(ctx).remaining;
-  const headers = { Authorization: "Klaviyo-API-Key " + key, accept: "application/vnd.api+json", revision: "2026-10-15" };
+  // The supported July revision matches the existing status/send_time campaign reader.
+  const headers = { Authorization: "Klaviyo-API-Key " + key, accept: "application/vnd.api+json", revision: "2026-07-15" };
   try {
-    const identity = await providerJson(ctx, "https://a.klaviyo.com/api/accounts/?fields[account]=timezone,currency", host, { headers }, "/api/accounts");
+    const identity = await providerJson(ctx, "https://a.klaviyo.com/api/accounts/?fields[account]=timezone,preferred_currency", host, { headers }, "/api/accounts");
     if (!object(identity) || !Array.isArray(identity.data) || identity.data.length !== 1 || !object(identity.data[0]) || identity.data[0].id !== accountId) throw new CollectorError("klaviyo_account_mismatch");
     async function all(url: string): Promise<unknown[]> {
       const expected = new URL(url).pathname.replace(/\/$/, ""); const rows: unknown[] = []; const visited = new Set<string>();
@@ -54,7 +55,7 @@ export async function collect(ctx: CollectorContext): Promise<CollectorResult> {
       unique.set(profile.id, profile);
     }
     const subscribers = [...unique.values()].filter(eligible).length;
-    const campaigns = await all("https://a.klaviyo.com/api/campaigns/?fields[campaign]=name,status,send_time,created_at&page[size]=100&filter=equals(archived,false)");
+    const campaigns = await all("https://a.klaviyo.com/api/campaigns/?fields[campaign]=name,status,send_time,created_at&page[size]=100&filter=and(equals(messages.channel,%22email%22),equals(archived,false))");
     const sent = campaigns.filter(campaign => object(campaign) && typeof campaign.id === "string" && object(campaign.attributes)
       && typeof campaign.attributes.name === "string" && !testName.test(campaign.attributes.name) && !/technical|authentication test|delivery and unsubscribe/i.test(campaign.attributes.name)
       && String(campaign.attributes.status).toLowerCase() === "sent" && typeof campaign.attributes.send_time === "string" && Number.isFinite(Date.parse(campaign.attributes.send_time)))
