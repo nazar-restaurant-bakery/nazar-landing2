@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import tempfile
 import unittest
@@ -267,10 +268,170 @@ class K6OperatorTests(unittest.TestCase):
         self.assertEqual(operator.safe_code(Exception('RAW '+DUMMY)),'K6_STOP_RESULT_REVIEW_REQUIRED')
 
 
+    def transition_fixture(self):
+        cfg = self.valid(); self.mock.side_effect = self.fake(); operator.execute(cfg, 'test', DUMMY)
+        proof = self.receipts / 'test-success.json'
+        legacy = json.loads(proof.read_text(encoding='utf8'))
+        legacy.update(python_sha256=operator.TRANSITION_OLD_PYTHON_SHA256,
+                      operator_sha256=operator.TRANSITION_OLD_OPERATOR_SHA256)
+        proof.write_text(json.dumps(legacy), encoding='utf8')
+        production = self.root / 'transition-production'; production.mkdir()
+        self.config.update(receipt_directory=str(production), test_success_path=str(proof),
+                           test_success_sha256=operator.sha(proof))
+        # Inert fixture has its own exact anchor; real code pins the one actual
+        # historical sandbox receipt and approved installed Python identity.
+        for name, value in [('TRANSITION_TEST_SUCCESS_SHA256', operator.sha(proof)),
+                            ('TRANSITION_NEW_PYTHON_SHA256', operator.sha(sys.executable)),
+                            ('TRANSITION_NEW_PYTHON_VERSION', tuple(sys.version_info[:3]))]:
+            mock = patch.object(operator, name, value); mock.start(); self.addCleanup(mock.stop)
+        certificate = {
+            'scope': operator.RUNTIME_TRANSITION_SCOPE, 'reviewed': True,
+            'purpose': 'python_runtime_only', 'target': 'production',
+            'test_ref': self.config['targets']['test']['ref'],
+            'test_business_id': self.config['targets']['test']['business_id'],
+            'production_ref': self.config['targets']['production']['ref'],
+            'production_business_id': self.config['targets']['production']['business_id'],
+            'test_success_sha256': operator.sha(proof),
+            'old_python_sha256': operator.TRANSITION_OLD_PYTHON_SHA256,
+            'new_python_sha256': operator.sha(sys.executable),
+            'new_python_version': '.'.join(str(value) for value in sys.version_info[:3]),
+            'old_operator_sha256': operator.TRANSITION_OLD_OPERATOR_SHA256,
+            'new_operator_sha256': operator.sha(SOURCE),
+            'migration_sha256': self.config['migration_sha256'],
+            'acceptance_sha256': self.config['acceptance_sha256'],
+            'psql_binary_sha256': self.config['psql_binary_sha256'], 'ca_sha256': self.config['ca_sha256'],
+            'launcher_sha256': operator.sha(operator.LAUNCHER), 'support_sha256': operator.K5_SUPPORT_SHA256,
+            'receipt_mutated': False, 'database_operations': 0,
+        }
+        file = self.root / 'reviewed-runtime-transition.json'
+        file.write_text(json.dumps(certificate), encoding='utf8')
+        self.config.update(runtime_transition_path=str(file), runtime_transition_sha256=operator.sha(file))
+        self.write_config(); self.mock.side_effect = self.version; self.calls.clear(); self.mock.reset_mock()
+        return proof, file, certificate
+
+    def test_runtime_transition_is_explicit_and_keeps_old_receipt_bytes_unchanged(self):
+        proof, file, certificate = self.transition_fixture(); before = proof.read_bytes()
+        cfg = self.valid('production', True); plan = operator.plan(cfg, 'production')
+        self.assertEqual(plan['runtime_transition_sha256'], operator.sha(file))
+        self.assertEqual(plan['test_success_sha256'], operator.sha(proof))
+        self.assertEqual(proof.read_bytes(), before); self.assertEqual(self.calls, [])
+        self.assertFalse(plan['connection_started']); self.assertEqual(self.mock.call_count, 1)
+        self.assertEqual(certificate['database_operations'], 0)
+
+    def test_legacy_runtime_mismatch_without_certificate_is_still_rejected(self):
+        proof, file, certificate = self.transition_fixture()
+        self.config.pop('runtime_transition_path'); self.config.pop('runtime_transition_sha256'); self.write_config()
+        with self.assertRaisesRegex(ValueError, 'K6_TEST_SUCCESS_REQUIRED'): self.valid('production', True)
+        self.mock.assert_not_called()
+
+    def test_runtime_certificate_rejects_tampering_missing_extra_and_false_attestation(self):
+        proof, file, certificate = self.transition_fixture()
+        patches = [{'scope': 'OTHER'}, {'reviewed': False}, {'reviewed': 1},
+            {'target': 'test'}, {'purpose': 'ignore_all_pins'}, {'receipt_mutated': True},
+            {'test_ref': 'c'*20}, {'test_business_id': '99999999-9999-4999-8999-999999999999'},
+            {'production_ref': 'c'*20}, {'production_business_id': '99999999-9999-4999-8999-999999999999'},
+            {'database_operations': 1}, {'database_operations': False}, {'extra_bypass': True},
+            {'test_success_sha256': 'f'*64}, {'old_python_sha256': 'f'*64},
+            {'new_python_sha256': 'f'*64}, {'new_python_version': '99.0.0'},
+            {'old_operator_sha256': 'f'*64}, {'new_operator_sha256': 'f'*64},
+            {'migration_sha256': 'f'*64}, {'acceptance_sha256': 'f'*64},
+            {'psql_binary_sha256': 'f'*64}, {'ca_sha256': 'f'*64},
+            {'launcher_sha256': 'f'*64}, {'support_sha256': 'f'*64}]
+        for change in patches:
+            file.write_text(json.dumps({**certificate, **change}), encoding='utf8')
+            self.config['runtime_transition_sha256'] = operator.sha(file); self.write_config()
+            with self.subTest(change=change):
+                with self.assertRaisesRegex(ValueError, 'K6_RUNTIME_TRANSITION_INVALID'): self.valid('production', True)
+        missing = dict(certificate); missing.pop('old_python_sha256')
+        file.write_text(json.dumps(missing), encoding='utf8')
+        self.config['runtime_transition_sha256'] = operator.sha(file); self.write_config()
+        with self.assertRaisesRegex(ValueError, 'K6_RUNTIME_TRANSITION_INVALID'): self.valid('production', True)
+        self.mock.assert_not_called()
+
+    def test_runtime_certificate_digest_exact_receipt_and_executing_python_are_bound(self):
+        proof, file, certificate = self.transition_fixture()
+        before = file.read_bytes(); file.write_bytes(before + b' ')
+        with self.assertRaisesRegex(ValueError, 'K6_RUNTIME_TRANSITION_INVALID'): self.valid('production', True)
+        file.write_bytes(before)
+        original = proof.read_bytes(); proof.write_bytes(original + b' ')
+        self.config['test_success_sha256'] = operator.sha(proof); self.write_config()
+        with self.assertRaisesRegex(ValueError, 'K6_RUNTIME_TRANSITION_INVALID'): self.valid('production', True)
+        proof.write_bytes(original); self.config['test_success_sha256'] = operator.sha(proof); self.write_config()
+        wrong = self.root / 'different-python.exe'; wrong.write_bytes(b'INERT_DIFFERENT_RUNTIME')
+        with patch.object(operator.sys, 'executable', str(wrong)):
+            with self.assertRaisesRegex(ValueError, 'K6_RUNTIME_TRANSITION_INVALID'): self.valid('production', True)
+        self.mock.assert_not_called()
+
+    def test_runtime_transition_pair_is_production_only_and_never_partial(self):
+        proof, file, certificate = self.transition_fixture()
+        for key in ('runtime_transition_path', 'runtime_transition_sha256'):
+            value = self.config.pop(key); self.write_config()
+            with self.assertRaisesRegex(ValueError, 'K6_RUNTIME_TRANSITION_INVALID'): self.valid('production', True)
+            self.config[key] = value
+        self.config['receipt_directory'] = str(self.receipts)
+        # Test-target rejection happens before receipt freshness or any process.
+        self.write_config()
+        with self.assertRaisesRegex(ValueError, 'K6_RUNTIME_TRANSITION_INVALID'): self.valid('test')
+        self.mock.assert_not_called()
+
+    def test_runtime_certificate_does_not_bypass_changed_sql_psql_or_ca(self):
+        proof, file, certificate = self.transition_fixture()
+        for selected, code in [(self.sql, 'LF_SOURCE_HASH_MISMATCH'),
+                               (self.psql, 'K6_PSQL_AND_CA_PINS_REQUIRED'),
+                               (self.ca, 'K6_PSQL_AND_CA_PINS_REQUIRED')]:
+            original = selected.read_bytes(); selected.write_bytes(original + b'CHANGED')
+            with self.subTest(file=selected.name):
+                with self.assertRaisesRegex(ValueError, code): self.valid('production', True)
+            selected.write_bytes(original)
+        self.mock.assert_not_called()
+
+    def test_runtime_certificate_does_not_bypass_false_preflight_acceptance_or_target(self):
+        proof, file, certificate = self.transition_fixture(); legacy = json.loads(proof.read_text())
+        changes = [({'preflight': {**preflight(), 'read_only': False}}, 'K6_PREFLIGHT_FAILED'),
+            ({'acceptance': {**acceptance(), 'real_sends': 1}}, 'K6_ACCEPTANCE_FAILED'),
+            ({'business_id': '99999999-9999-4999-8999-999999999999'}, 'K6_TEST_SUCCESS_REQUIRED'),
+            ({'dependency_source_sha256': ['f'*64, 'e'*64]}, 'K6_TEST_SUCCESS_REQUIRED')]
+        for change, code in changes:
+            proof.write_text(json.dumps({**legacy, **change}), encoding='utf8')
+            digest = operator.sha(proof); self.config['test_success_sha256'] = digest
+            file.write_text(json.dumps({**certificate, 'test_success_sha256': digest}), encoding='utf8')
+            self.config['runtime_transition_sha256'] = operator.sha(file); self.write_config()
+            with patch.object(operator, 'TRANSITION_TEST_SUCCESS_SHA256', digest):
+                with self.subTest(change=change):
+                    with self.assertRaisesRegex(ValueError, code): self.valid('production', True)
+        self.mock.assert_not_called()
+
+    def test_runtime_certificate_cannot_replay_for_different_configured_targets(self):
+        proof, file, certificate = self.transition_fixture()
+        for target, field, changed in [('production', 'ref', 'c'*20),
+                                      ('production', 'business_id', '99999999-9999-4999-8999-999999999999'),
+                                      ('test', 'ref', 'c'*20),
+                                      ('test', 'business_id', '99999999-9999-4999-8999-999999999999')]:
+            original = dict(self.config['targets'][target])
+            self.config['targets'][target][field] = changed
+            if field == 'ref': self.config['targets'][target]['host'] = 'db.' + changed + '.supabase.co'
+            self.write_config()
+            with self.subTest(target=target, field=field):
+                with self.assertRaisesRegex(ValueError, 'K6_RUNTIME_TRANSITION_INVALID'): self.valid('production', True)
+            self.config['targets'][target] = original
+        self.mock.assert_not_called()
+
+    def test_runtime_certificate_is_rechecked_after_preflight_before_any_migration(self):
+        proof, file, certificate = self.transition_fixture(); before = proof.read_bytes()
+        cfg = self.valid('production', True)
+        self.mock.side_effect = self.fake('production', mutate=lambda: file.write_bytes(file.read_bytes()+b' '))
+        with self.assertRaisesRegex(ValueError, 'K6_RUNTIME_TRANSITION_INVALID'): operator.execute(cfg, 'production', DUMMY)
+        self.assertEqual(len(self.calls), 1); self.assertNotIn('--file', self.calls[0][0])
+        self.assertEqual(proof.read_bytes(), before)
+
+
 class K6PowerShellHandoffTests(unittest.TestCase):
     def setUp(self):
-        self.pwsh = Path(sys.executable).parent.parent / 'native/powershell/pwsh.exe'
-        if not self.pwsh.is_file(): self.skipTest('Bundled PowerShell7 not installed; no dependency is downloaded.')
+        candidates = [Path(sys.executable).parent.parent / 'native/powershell/pwsh.exe']
+        installed = shutil.which('pwsh')
+        if installed: candidates.append(Path(installed))
+        self.pwsh = next((candidate for candidate in candidates if candidate.is_file()), None)
+        if self.pwsh is None: self.skipTest('Installed PowerShell7 unavailable; no dependency is downloaded.')
         self.temp = tempfile.TemporaryDirectory(prefix='k6-wrapper-inert-', dir=CHECKOUT); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         self.wrapper = self.root/'k6-run.ps1'; self.wrapper.write_bytes(operator.LAUNCHER.read_bytes())

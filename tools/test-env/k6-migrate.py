@@ -22,6 +22,14 @@ MIGRATION_NAME = '20261020000800_message_send_gate.sql'
 ACCEPTANCE_SCOPE = 'K6_SYNTHETIC_ROLLBACK_DB_ACCEPTANCE'
 SCOPE = 'K6_HUMAN_PSQL_MIGRATION'
 PSQL_VERSION = 'psql (PostgreSQL) 18.6'
+# One reviewed interpreter transition for the exact immutable K6 sandbox proof.
+# A certificate cannot authorize other receipts, runtimes, SQL or tool changes.
+RUNTIME_TRANSITION_SCOPE = 'K6_REVIEWED_PYTHON_RUNTIME_TRANSITION_V1'
+TRANSITION_TEST_SUCCESS_SHA256 = 'e7289e5f6704cf4edcc954c573efbda4eb921f0ee96ccdd47879ea5f1578e680'
+TRANSITION_OLD_PYTHON_SHA256 = 'b07b03b9ba866a341a3c13ee69710fbc8d43d4ce2523dee13f6df5c25378d15b'
+TRANSITION_OLD_OPERATOR_SHA256 = '2fc71e016046353cd286c224b7264d8b4a28e9f0087df9491a34ba564562f827'
+TRANSITION_NEW_PYTHON_SHA256 = 'bf1b03022cadfc18049a7f0ecf1f3134c7676fcb6ff6c6941ae7f77e21285c73'
+TRANSITION_NEW_PYTHON_VERSION = (3, 11, 0)
 K5_SUPPORT_SHA256 = 'e7ef8b71b2cb4352c10839194e4520a737b83f7ec54ab84af7005ba8d130e462'
 DEPENDENCIES = {
     3: '3204eab72b8b0a9dc64eefc2f02d05ff0fde7a96489e010eb125896347007fa4',
@@ -53,7 +61,7 @@ K6_DEPENDENCY_RECEIPTS_REQUIRED K6_TEST_SUCCESS_REQUIRED K6_FRESH_RECEIPTS_REQUI
 K6_HUMAN_PRODUCTION_FLAG_REQUIRED K6_PSQL_AND_CA_PINS_REQUIRED K6_TOOL_VERSION_REQUIRED
 K6_PREFLIGHT_FAILED K6_ACCEPTANCE_FAILED K6_DISPLAYED_PLAN_CHANGED K6_SOURCE_CHANGED
 K6_DEADLINE_EXCEEDED K6_TIMEOUT_OUTCOME_REVIEW_REQUIRED K6_PROCESS_FAILED
-K6_HUMAN_STDIN_HANDOFF_REQUIRED K6_REVIEWED_SUPPORT_REQUIRED
+K6_HUMAN_STDIN_HANDOFF_REQUIRED K6_REVIEWED_SUPPORT_REQUIRED K6_RUNTIME_TRANSITION_INVALID
 AUTH_REJECTED TARGET_NOT_FOUND TLS_VERIFICATION_FAILED DNS_HOST_NOT_FOUND
 NETWORK_UNREACHABLE DATABASE_PERMISSION_REJECTED PSQL_FAILED_STOP_NO_RETRY
 REVIEWED_SOURCE_REQUIRED LF_SOURCE_HASH_MISMATCH REVIEWED_TRANSACTION_SQL_REQUIRED'''.split())
@@ -138,15 +146,66 @@ def acceptance(value, minimum):
                                       'auth_http_claimed', 'fixtures_rolled_back')}
 
 
+def runtime_transition(cfg, proof):
+    """Validate a separately reviewed certificate, never create or rewrite it.
+
+    Only Python/operator identity may differ from the exact anchored sandbox
+    receipt. Existing SQL, dependency, psql/CA, launcher and acceptance gates
+    remain mandatory in test_success(). No DB/process operation occurs here.
+    """
+    path = cfg.get('runtime_transition_path')
+    digest = cfg.get('runtime_transition_sha256')
+    try:
+        certificate = pinned_json(path, digest)
+        version = '.'.join(str(value) for value in TRANSITION_NEW_PYTHON_VERSION)
+        expected = {
+            'scope': RUNTIME_TRANSITION_SCOPE, 'reviewed': True,
+            'purpose': 'python_runtime_only', 'target': 'production',
+            'test_ref': cfg['targets']['test']['ref'],
+            'test_business_id': cfg['targets']['test']['business_id'],
+            'production_ref': cfg['targets']['production']['ref'],
+            'production_business_id': cfg['targets']['production']['business_id'],
+            'test_success_sha256': TRANSITION_TEST_SUCCESS_SHA256,
+            'old_python_sha256': TRANSITION_OLD_PYTHON_SHA256,
+            'new_python_sha256': TRANSITION_NEW_PYTHON_SHA256,
+            'new_python_version': version,
+            'old_operator_sha256': TRANSITION_OLD_OPERATOR_SHA256,
+            'new_operator_sha256': cfg['_operator_sha256'],
+            'migration_sha256': cfg['migration_sha256'],
+            'acceptance_sha256': cfg['acceptance_sha256'],
+            'psql_binary_sha256': cfg['psql_binary_sha256'],
+            'ca_sha256': cfg['ca_sha256'],
+            'launcher_sha256': cfg['_launcher_sha256'],
+            'support_sha256': K5_SUPPORT_SHA256,
+            'receipt_mutated': False, 'database_operations': 0,
+        }
+        if (not isinstance(proof, dict) or not isinstance(certificate, dict) or set(certificate) != set(expected)
+            or any(type(certificate[k]) is not type(v) or certificate[k] != v
+                   for k, v in expected.items())
+            or cfg.get('test_success_sha256') != TRANSITION_TEST_SUCCESS_SHA256
+            or proof.get('python_sha256') != TRANSITION_OLD_PYTHON_SHA256
+            or proof.get('operator_sha256') != TRANSITION_OLD_OPERATOR_SHA256
+            or cfg['python_sha256'] != TRANSITION_NEW_PYTHON_SHA256
+            or sha(sys.executable) != TRANSITION_NEW_PYTHON_SHA256
+            or Path(sys.executable).resolve() != Path(cfg['python_path']).resolve()
+            or tuple(sys.version_info[:3]) != TRANSITION_NEW_PYTHON_VERSION):
+            stop('K6_RUNTIME_TRANSITION_INVALID')
+    except (ValueError, TypeError, KeyError, OSError):
+        stop('K6_RUNTIME_TRANSITION_INVALID')
+    return certificate
+
+
 def test_success(cfg):
     proof = pinned_json(cfg.get('test_success_path'), cfg.get('test_success_sha256'))
+    transition = runtime_transition(cfg, proof) if 'runtime_transition_path' in cfg else None
     expected = {'scope': SCOPE, 'status': 'completed', 'target': 'test',
         'target_ref': cfg['targets']['test']['ref'], 'business_id': cfg['targets']['test']['business_id'],
         'migration_sha256': cfg['migration_sha256'],
         'acceptance_sha256': cfg['acceptance_sha256'], 'psql_version': PSQL_VERSION,
         'psql_binary_sha256': cfg['psql_binary_sha256'], 'ca_sha256': cfg['ca_sha256'],
-        'python_sha256': cfg['python_sha256'],
-        'operator_sha256': cfg['_operator_sha256'], 'launcher_sha256': cfg['_launcher_sha256'],
+        'python_sha256': TRANSITION_OLD_PYTHON_SHA256 if transition else cfg['python_sha256'],
+        'operator_sha256': TRANSITION_OLD_OPERATOR_SHA256 if transition else cfg['_operator_sha256'],
+        'launcher_sha256': cfg['_launcher_sha256'],
         'support_sha256': K5_SUPPORT_SHA256, 'password_recorded': False, 'automatic_retry': False}
     if not isinstance(proof, dict) or any(proof.get(k) != v for k, v in expected.items()):
         stop('K6_TEST_SUCCESS_REQUIRED')
@@ -167,8 +226,11 @@ def validate(path, target, allow_production=False):
     required = {'migration', 'migration_sha256', 'acceptance', 'acceptance_sha256', 'acceptance_minimum_checks',
         'psql_path', 'psql_binary_sha256', 'psql_version', 'ca_path', 'ca_sha256', 'receipt_directory',
         'targets', 'dependency_sources', 'python_path', 'python_sha256'}
-    if not isinstance(cfg, dict) or not required.issubset(cfg) or set(cfg) - required - {'test_success_path', 'test_success_sha256', 'dependency_evidence'}:
+    if not isinstance(cfg, dict) or not required.issubset(cfg) or set(cfg) - required - {'test_success_path', 'test_success_sha256', 'dependency_evidence', 'runtime_transition_path', 'runtime_transition_sha256'}:
         stop('K6_CONFIG_INVALID')
+    transition_keys = {'runtime_transition_path', 'runtime_transition_sha256'} & set(cfg)
+    if transition_keys and (target != 'production' or len(transition_keys) != 2):
+        stop('K6_RUNTIME_TRANSITION_INVALID')
     if not APPROVED_MIGRATION_SHA256 or not HASH.fullmatch(APPROVED_MIGRATION_SHA256):
         stop('K6_FINAL_REVIEW_HASH_REQUIRED')
     if cfg['migration_sha256'] != APPROVED_MIGRATION_SHA256 or Path(cfg['migration']).name != MIGRATION_NAME:
@@ -224,6 +286,9 @@ def plan(cfg, target):
         'python_sha256': cfg['python_sha256'],
         'dependency_source_sha256': cfg['_dependencies'], 'dependency_evidence_sha256': cfg['_evidence'],
         'connection_started': False, 'password_recorded': False}
+    if 'runtime_transition_sha256' in cfg:
+        value['runtime_transition_sha256'] = cfg['runtime_transition_sha256']
+        value['test_success_sha256'] = cfg['test_success_sha256']
     value['plan_sha256'] = hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
     return value
 
@@ -277,6 +342,8 @@ def execute(cfg, target, password):
         'launcher_sha256': cfg['_launcher_sha256'], 'migration_sha256': cfg['migration_sha256'],
         'acceptance_sha256': cfg['acceptance_sha256'],
         'phase': 'claimed_before_connection', 'password_recorded': False, 'automatic_retry': False}
+    if 'runtime_transition_sha256' in cfg:
+        state['runtime_transition_sha256'] = cfg['runtime_transition_sha256']
     attempt = directory / (target + '-attempt.json')
     with attempt.open('x', encoding='utf8') as handle:
         json.dump(state, handle, indent=2)
@@ -340,7 +407,10 @@ def execute(cfg, target, password):
             'password_recorded': False, 'automatic_retry': False, 'completed_at_utc': datetime.now(timezone.utc).isoformat()}
         if target == 'test':
             phase('rollback_acceptance'); result['acceptance'] = acceptance(json.loads(call(['--file', str(frozen['acceptance'])], test=True)), cfg['acceptance_minimum_checks'])
-        else: result['test_success_sha256'] = cfg['test_success_sha256']
+        else:
+            result['test_success_sha256'] = cfg['test_success_sha256']
+            if 'runtime_transition_sha256' in cfg:
+                result['runtime_transition_sha256'] = cfg['runtime_transition_sha256']
         pins()
         with (directory / (target + '-success.json')).open('x', encoding='utf8') as handle:
             json.dump(result, handle, indent=2)
