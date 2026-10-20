@@ -1,4 +1,4 @@
-import { ACTIONS, allowedOrigin, NAZAR_BUSINESS, uuid, type ActionName, type ClaimedAction, type Environment, type SafeResult } from "./contracts.ts";
+import { ACTIONS, allowedOrigin, projectUrl, NAZAR_BUSINESS, uuid, type ActionName, type ClaimedAction, type Environment, type SafeResult } from "./contracts.ts";
 import { OpsStore } from "./store.ts";
 import { CollectorError, metric, type CollectorContext, type CollectorResult, type MetricSnapshot } from "./collectors.ts";
 import { parseCloverCsv } from "./clover_csv.ts";
@@ -115,7 +115,7 @@ export async function handleRequest(request: Request, env: Environment, requestF
       newAction = input.action as ActionName; payload = input.payload as Record<string, unknown>;
     } else return reply(400, "invalid_action");
   } catch { return reply(400, "invalid_action"); }
-  if (env.SUPABASE_URL && env.SUPABASE_URL !== "https://khgczybubufouraqyrcj.supabase.co") return reply(503, "wrong_project_configuration");
+  try { projectUrl(env); } catch { return reply(503, "wrong_project_configuration"); }
   const store = new OpsStore(env, requestFetch); let action: ClaimedAction | null = null;
   try {
     const userId = await store.authenticate(bearer);

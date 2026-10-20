@@ -4,7 +4,7 @@ BEGIN;
 SET LOCAL lock_timeout='5s';
 SET LOCAL statement_timeout='30s';
 DO $guard$ BEGIN
- IF NOT EXISTS(SELECT 1 FROM core.installation WHERE declared_project_ref='khgczybubufouraqyrcj')
+ IF NOT EXISTS(SELECT 1 FROM core.installation WHERE declared_project_ref=coalesce(nullif(current_setting('app.ops_project_ref',true),''),'khgczybubufouraqyrcj'))
  OR to_regclass('core.crm_staff') IS NULL THEN RAISE EXCEPTION 'STOP: expected Nazar installation'; END IF;
 END $guard$;
 

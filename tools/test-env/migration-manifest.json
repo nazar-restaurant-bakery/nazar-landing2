@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "mode": "read_only_inventory",
+  "baseline": {
+    "ref": "origin/main",
+    "commit": "aa53f6d5fb5c02f814cfbba13a1b57df08874e62",
+    "model": "legacy_Nazar_schema_reference",
+    "held_prs": [52, 53],
+    "held_ops_path": "supabase/migrations/20261018_ops_panel.sql"
+  },
+  "checksum_policy": "SHA-256 of UTF-8 text after CRLF-to-LF normalization only; raw capture hashes are provenance and may differ after Git line-ending conversion.",
+  "execution": {"enabled": false, "neutral_baseline": "missing", "full_supabase_validation": "not_run"},
+  "canonical_replay": {
+    "status":"pending_review",
+    "target":"new_separate_Supabase_test_project",
+    "configuration":"new_test_project_and_business_environment_only",
+    "baseline":null,
+    "pending_additive":[{"id":"test_record_markers","path":"supabase/migrations/20261019000100_test_record_markers.sql","classification":"pending_canonical_additive","executable":false,"requires_reviewed_baseline":true,"sha256_lf":"bd5100fbc165d9dffee77b1199d5e346c5b2611ae665c46f42608aaaa645de90","sha256_bytes_at_capture":"bd5100fbc165d9dffee77b1199d5e346c5b2611ae665c46f42608aaaa645de90"}],
+    "legacy_sources_executable":false,
+    "environment_names":{"browser":["VITE_APP_ENV","VITE_TEST_SUPABASE_URL","VITE_TEST_SUPABASE_ANON_KEY","VITE_TEST_BUSINESS_ID","VITE_TEST_TURNSTILE_SITE_KEY"],"server":["APP_ENV","TEST_SUPABASE_URL","TEST_BUSINESS_ID","TEST_SUPABASE_SECRET_KEY","TEST_TURNSTILE_SECRET_KEY"]}
+  },
+  "reviewed_additive": [
+    {"id":"k4_suppression_consent_offers","path":"supabase/migrations/20261019000200_suppression_consent_offers.sql","classification":"reviewed_additive_delivery","executable":false,"requires_reviewed_baseline":true,"line_endings":"LF","sha256_lf":"a80a4ef10a81e86237f5cf208036e5ec84b8b230db6d48dd90b47014e04b712e","sha256_bytes_at_capture":"a80a4ef10a81e86237f5cf208036e5ec84b8b230db6d48dd90b47014e04b712e","scope":"K4 test-first delivery; not included in K3 reset or historical replay","application_tool":"tools/test-env/k4-migrate.py"},
+    {"id":"k5_klaviyo_profile_sync","path":"supabase/migrations/20261019000300_klaviyo_profile_sync.sql","classification":"reviewed_additive_delivery","executable":false,"requires_reviewed_baseline":true,"line_endings":"LF","sha256_lf":"d28672a87149839c71e44c72116ebbf3b96b2e76c7ec42a2a79c1f7b9f4fabc2","sha256_bytes_at_capture":"d28672a87149839c71e44c72116ebbf3b96b2e76c7ec42a2a79c1f7b9f4fabc2","scope":"K5 local reviewed profile-only sync preparation; not applied hosted and not included in K3 reset or historical replay","application_tool":"tools/test-env/k5-migrate.py"}
+  ],
+  "foundation": {
+    "id": "foundation",
+    "path": "tools/test-env/legacy/01_KURULUM.sql",
+    "original_workspace_path": "03_Nazar_Supabase_Kurulum/01_KURULUM.sql",
+    "sha256_lf": "1a3da1c31f5dceb714b187b785ce471e6a705b7572f31936c1485168c738889b",
+    "sha256_bytes_at_capture": "1a3da1c31f5dceb714b187b785ce471e6a705b7572f31936c1485168c738889b",
+    "classification": "historical_non_executable_reference",
+    "executable": false,
+    "evidence": [{"line": 9, "reason": "Historical human project-ref placeholder is unchanged; source is not executable in the new test project."}, {"line": 250, "reason": "RLS and schema/table/function revocations are baseline contract evidence."}]
+  },
+  "proposed_order": ["foundation", "intake_cutover", "crm_staff", "crm_overview", "signup_idempotency", "staff_authorized", "follow_up_tasks", "decision_queue", "decision_owner", "decision_notifications", "catering_notification", "test_exclusion", "form_error_monitoring", "form_error_setup_test", "klaviyo_optout", "assignee_whitespace", "follow_up_queue", "note_authors"],
+  "sources": [
+    {"id":"intake_cutover","path":"database/20260923_form_intake_cutover.sql","classification":"production_incremental","requires":["foundation"],"executable":false,"sha256_lf":"095c5344ba4c0edf373fa91e4aab1046eeadcf11910b64fe5225685c72e0b8e4","sha256_bytes_at_capture":"c82ab0a2a348f3172a356fa3f560c487cf5df1e32514755c87485a09ece688eb"},
+    {"id":"intake_pause","path":"database/20260923_form_intake_pause.sql","classification":"emergency_excluded","requires":["foundation"],"executable":false,"sha256_lf":"8477d909beaa0cf9132e7480d7f465d8323168d8d6b507bc1c2978ba730e4b43","sha256_bytes_at_capture":"a43a2cbb65594daf33f22c3e0fd1eaa3f7cb50b9723af902caad134e56e5f631","reason":"Emergency pause changes intake_enabled=false; never include in normal replay."},
+    {"id":"crm_staff","path":"database/20261011_crm_staff_draft.sql","classification":"production_incremental","requires":["foundation"],"executable":false,"sha256_lf":"bab17aeb6c018960bb8108f5ab946366208f57241fd915fa454909c0d6773af2","sha256_bytes_at_capture":"335450376768422de80d9bdad1f1c5b223f6490b9ae7de1015b2223670ffed7f"},
+    {"id":"crm_overview","path":"database/20261012_crm_unified_view.sql","classification":"production_incremental","requires":["foundation","crm_staff"],"executable":false,"sha256_lf":"56663b08396d99629ac8246a36c11a4b53879a8f51ac281a26176f2cc4a4962c","sha256_bytes_at_capture":"109dfb8aa61679b088414d73791dfcb16e8262fd5ec91b8582eb57c218b88fcc"},
+    {"id":"signup_idempotency","path":"database/20261012_signup_retry_idempotency.sql","classification":"production_incremental","requires":["foundation"],"executable":false,"sha256_lf":"e34f7b8ba0ae54829e00b96df6c3d5146dd9b8217bd553ec012ad6e6df3405a4","sha256_bytes_at_capture":"596e65dc59ef3a0c0989add1e6e9d06517e2948b8cb5d982028ee8efef216f54"},
+    {"id":"staff_authorized","path":"database/20261013_crm_staff_authorized.sql","classification":"production_incremental","requires":["foundation","crm_staff"],"executable":false,"sha256_lf":"0b9ab47f00b0d91120581d20f64f325a9fd6346b5eb2a9eddb35fc0b8191dff3","sha256_bytes_at_capture":"05fefc6d3770dd8bc255bfa529e6d1921e7707fbc1ef4f49a3a61c8a0ba6b8b9"},
+    {"id":"follow_up_tasks","path":"database/20261013_crm_follow_up_tasks.sql","classification":"production_incremental","requires":["foundation","crm_staff"],"executable":false,"sha256_lf":"0b5737e649d838f8817cff8d1eb7c6fc16c0a8d6abefad31d8c2806ceb56abfa","sha256_bytes_at_capture":"744f7ffe88311074e5d061aafcbe6b70e0da160f422f3c6a505cab293ca57a96"},
+    {"id":"decision_queue","path":"database/20261013_catering_decision_queue.sql","classification":"production_incremental","requires":["foundation","crm_staff"],"executable":false,"sha256_lf":"2f8f09064593e58db545eb1ad03bd38caab7a522a5d27516041adeb0052e26a7","sha256_bytes_at_capture":"e79151ad01033e883f9c3e88b1fa7e82ebb4be594bcb48b6ee276b3238e1119c"},
+    {"id":"decision_owner","path":"database/20261013_catering_decision_owner_guard.sql","classification":"production_incremental","requires":["foundation","crm_staff","decision_queue"],"executable":false,"sha256_lf":"992f0f2825426ddc4e3e09fee87e69a8328090d9d4d2a9ff2cf7e85d39126007","sha256_bytes_at_capture":"57de07abf01c87dfd0eb5c22917a41446d811bc4780763a3e04ba3d88a3fc802"},
+    {"id":"decision_notifications","path":"database/20261013_catering_decision_notifications.sql","classification":"production_incremental","requires":["decision_queue"],"executable":false,"sha256_lf":"31d27fd602f63cc2d39bf90415805b799912fa0b547f01b5f270096283990997","sha256_bytes_at_capture":"35443e2ec80ac732a1de3a148618b5d0dc5a51e4d9bc31102dfa305940bff2aa"},
+    {"id":"catering_notification","path":"database/20261013_catering_staff_notification.sql","classification":"production_incremental","requires":["foundation","crm_staff","signup_idempotency"],"executable":false,"sha256_lf":"2d8c03fa39c4594e3538b2fc5bf8368a51946f0a57aba394400a9443b8b6ef12","sha256_bytes_at_capture":"5c26c2c2b454e836a0afa847b5bd2858527753f2b4bc98c13db0a2c234850edd"},
+    {"id":"test_exclusion","path":"database/20261013_test_record_exclusion.sql","classification":"production_incremental","requires":["foundation","crm_staff","crm_overview"],"executable":false,"sha256_lf":"297a7d53a4c4dd52060003cf471b0678771eea013de7d0fbdd9c23bf8b431636","sha256_bytes_at_capture":"324f23c5c3f24e284ce2cabc617aa95b411713051dfcd9ab4b76f031db3ef0cb"},
+    {"id":"form_error_monitoring","path":"database/20261015_form_error_monitoring.sql","classification":"production_incremental","requires":["foundation","crm_staff","signup_idempotency"],"executable":false,"sha256_lf":"1c96d86e68d82680f703685d4938902264888b08df669e7d90361473d4549d15","sha256_bytes_at_capture":"e28e6a8542cbd8fe98138aebaca640e6e122b0f7f520d3a784509747bfed1edc"},
+    {"id":"form_error_setup_test","path":"database/20261015_form_error_setup_test.sql","classification":"production_incremental","requires":["form_error_monitoring"],"executable":false,"sha256_lf":"60a222872abc5e265631fe2dd75b1972488a295052ed12277da919b6dcfdf0fe","sha256_bytes_at_capture":"0e3bdfd395cd88f67ac07427a1fb4dbf50295d330d0bc4b9b49e0fef6f4c5711"},
+    {"id":"klaviyo_optout","path":"database/20261015_klaviyo_optout_return.sql","classification":"production_incremental","requires":["foundation","crm_staff"],"executable":false,"sha256_lf":"154aaccb5b612eb5179196e3b7c96c0efc42b02ae2533a619ad000e7b83e6f98","sha256_bytes_at_capture":"1a6fde67cd31f5e735b90bf94f0494886585248d7c54159222c8cd3c24f2977a"},
+    {"id":"assignee_whitespace","path":"database/20261016_catering_assignee_whitespace.sql","classification":"production_incremental","requires":["foundation","crm_staff"],"executable":false,"sha256_lf":"680d9a05e30381d58addb5387fdb8288ea0f471ea66bb1716d415126d99ace67","sha256_bytes_at_capture":"150838009ad105c5e68a552e9d28c58efa807ceb4f79b5fc3d1d4aec03ff90ea","definition_guard":{"function":"public.crm_update_catering(uuid,text,text,timestamptz)","md5":"6964b069513cb32409e80319ce490131","line":11}},
+    {"id":"follow_up_queue","path":"database/20261016_crm_follow_up_queue.sql","classification":"production_incremental","requires":["foundation","crm_staff","follow_up_tasks","decision_queue","test_exclusion"],"executable":false,"sha256_lf":"11e7ffca4a6caf78d74f779fceda6aa120eedc9bb0fa241461ea96a794bb26c4","sha256_bytes_at_capture":"961ece2a6232a78b2886983c8adb3fe0b89a8ef66d79504ccf3bbc5d13e1bdbb"},
+    {"id":"note_authors","path":"database/20261016_crm_note_authors.sql","classification":"production_incremental","requires":["foundation","crm_staff","crm_overview","test_exclusion"],"executable":false,"sha256_lf":"38a2be871e61e075869d6e918e2eaa0b1d7faa9faeb453a5e621b58e43dd5a3d","sha256_bytes_at_capture":"d7dc68ba69b961d040ee3b33571a9c4a06d97b8ec6208ea4c5857ad855a126e9","definition_guard":{"function":"public.crm_overview_v2(text,text)","before_md5":"cc7195cbba782cf8543bb2beb03bcba2","already_applied_md5":"90ab6562cb720f99c1402b08e02c1397","line":10}}
+  ],
+  "not_migrations": ["tests/fixtures/crmNoteAuthors.before.sql", "tests/formErrorMonitoring.rollback.sql", "tests/klaviyoOptout.rollback.sql"],
+  "blockers": [
+    {"id":"NEUTRAL_BASELINE_MISSING","detail":"No reviewed environment-neutral full schema migration exists. Historical foundation has production-only human guard; do not run it as a canonical test migration.","evidence":["tools/test-env/legacy/01_KURULUM.sql:9","tools/test-env/legacy/01_KURULUM.sql:13","tools/test-env/legacy/01_KURULUM.sql:266"]},
+    {"id":"LEGACY_FUNCTION_GUARDS_UNVERIFIED","detail":"Two patches require exact pg_get_functiondef hashes; dependency order is a proposal, not evidence that a clean replay reaches those definitions.","evidence":["database/20261016_catering_assignee_whitespace.sql:11","database/20261016_crm_note_authors.sql:10"]},
+    {"id":"NATIVE_SUPABASE_RUNTIME_UNVERIFIED","detail":"A manifest and existing PGlite/SDK fixtures do not prove actual Auth, PostgREST schema exposure, Storage or role behavior on an isolated Supabase stack.","evidence":["tests/crmQueueDb.mjs:13","tests/crmNoteAuthorsDb.mjs:17","src/lib/supabase.ts:5"]}
+  ]
+,
+  "ops_delivery": {"path": "supabase/migrations/20261020000100_ops_panel.sql", "sha256_bytes": "3204eab72b8b0a9dc64eefc2f02d05ff0fde7a96489e010eb125896347007fa4", "included_in_k3_reset": false, "execution_enabled": false}
+}

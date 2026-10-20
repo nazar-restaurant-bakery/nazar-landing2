@@ -16,3 +16,10 @@ export function allowedOrigin(origin: string | null, env: Environment) {
   if (/^https:\/\/[a-z0-9-]+\.nazar-restaurant-website\.pages\.dev$/.test(origin)) return true;
   return env.OPS_ALLOW_LOCALHOST === "true" && /^http:\/\/localhost(?::\d{1,5})?$/.test(origin);
 }
+
+// Trusted deployment configuration only; never take a project from request input.
+export function projectUrl(env: Environment) {
+  const expected = env.OPS_PROJECT_REF ? `https://${env.OPS_PROJECT_REF}.supabase.co` : NAZAR_PROJECT;
+  if (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(expected) || (env.SUPABASE_URL && env.SUPABASE_URL !== expected)) throw new Error("wrong_project_configuration");
+  return expected;
+}

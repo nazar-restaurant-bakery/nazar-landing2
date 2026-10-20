@@ -1,4 +1,4 @@
-import { NAZAR_PROJECT, OPS_BUCKET, uuid, type ActionName, type ClaimedAction, type Commission, type Environment, type SafeAction, type SafeResult } from "./contracts.ts";
+import { projectUrl, OPS_BUCKET, uuid, type ActionName, type ClaimedAction, type Commission, type Environment, type SafeAction, type SafeResult } from "./contracts.ts";
 import type { CollectorResult, MetricSnapshot } from "./collectors.ts";
 
 export class OpsStore {
@@ -11,7 +11,7 @@ export class OpsStore {
     return { apikey: key, Authorization: bearer || `Bearer ${key}`, "Content-Type": "application/json" };
   }
   async rpc<T>(name: string, args: Record<string, unknown> = {}, bearer?: string): Promise<T> {
-    const response = await this.request(`${NAZAR_PROJECT}/rest/v1/rpc/${name}`, { method: "POST", headers: this.headers(!bearer, bearer), body: JSON.stringify(args), signal: AbortSignal.timeout(12000) });
+    const response = await this.request(`${projectUrl(this.env)}/rest/v1/rpc/${name}`, { method: "POST", headers: this.headers(!bearer, bearer), body: JSON.stringify(args), signal: AbortSignal.timeout(12000) });
     if (!response.ok) {
       const code = await response.json().then((value: { code?: string }) => value.code).catch(() => undefined);
       throw new Error(response.status === 401 || response.status === 403 ? "forbidden" : code === "55000" || code === "PGRST202" ? "capability_not_connected" : code === "23505" ? "already_imported_or_busy" : "ops_source_unavailable");
@@ -19,7 +19,7 @@ export class OpsStore {
     return await response.json() as T;
   }
   async authenticate(bearer: string) {
-    const response = await this.request(`${NAZAR_PROJECT}/auth/v1/user`, { headers: this.headers(false, bearer), signal: AbortSignal.timeout(8000) });
+    const response = await this.request(`${projectUrl(this.env)}/auth/v1/user`, { headers: this.headers(false, bearer), signal: AbortSignal.timeout(8000) });
     if (!response.ok) throw new Error("forbidden");
     const value: unknown = await response.json();
     const id = (value as { id?: unknown } | null)?.id;
@@ -49,7 +49,7 @@ export class OpsStore {
   commission(action: ClaimedAction) { return this.rpc<Commission>("ops_commission_report_data", { p_action_id: action.id, p_claim_token: action.claim_token }); }
   claimValid(action: ClaimedAction) { return this.rpc<boolean>("ops_action_claim_valid", { p_action_id: action.id, p_claim_token: action.claim_token }); }
   async uploadPdf(path: string, bytes: Uint8Array) {
-    const response = await this.request(`${NAZAR_PROJECT}/storage/v1/object/${OPS_BUCKET}/${path}`, { method: "POST", headers: { ...this.headers(), "Content-Type": "application/pdf", "x-upsert": "false" }, body: bytes as unknown as BodyInit, signal: AbortSignal.timeout(15000) });
+    const response = await this.request(`${projectUrl(this.env)}/storage/v1/object/${OPS_BUCKET}/${path}`, { method: "POST", headers: { ...this.headers(), "Content-Type": "application/pdf", "x-upsert": "false" }, body: bytes as unknown as BodyInit, signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error("report_storage_unavailable");
   }
 }

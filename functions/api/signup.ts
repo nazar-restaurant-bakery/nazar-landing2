@@ -1,15 +1,21 @@
 // Cloudflare Pages Function. Only this route may submit leads to Supabase.
+import { PRODUCTION_SUPABASE_URL, resolveServerEnvironment } from "../../src/lib/deploymentEnvironment.ts";
 type Env = {
   SUPABASE_SECRET_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
   CLOUDFLARE_EMAIL_SEND_TOKEN?: string;
   FORM_ERROR_ALERTS_ENABLED?: string;
+  APP_ENV?: string;
+  TEST_SUPABASE_URL?: string;
+  TEST_BUSINESS_ID?: string;
+  TEST_SUPABASE_SECRET_KEY?: string;
+  TEST_TURNSTILE_SECRET_KEY?: string;
+  TEST_TURNSTILE_EXPECTED_HOSTNAME?: string;
 };
 
 type Context = { request: Request; env: Env; waitUntil(promise: Promise<unknown>): void };
 
-const SUPABASE_URL = "https://khgczybubufouraqyrcj.supabase.co";
-const BUSINESS_ID = "a358eba4-b197-4309-805b-46f43a718454";
+const SUPABASE_URL = PRODUCTION_SUPABASE_URL;
 const CLOUDFLARE_ACCOUNT_ID = "50a358ead900374fd545df744bd28bef";
 const STAFF_EMAIL = "ctnazarbakery@gmail.com";
 const STAFF_EMAIL_FROM = "notifications@alerts.nazarrestaurantandbakery.com";
@@ -92,6 +98,7 @@ async function errorRpc(env: Env, name: string, body: Record<string, unknown>): 
 }
 
 export async function recordFormFailure(env: Env, failure: FormFailure): Promise<"accepted" | "failed" | "not_sent"> {
+  if (env.APP_ENV === "isolated-test") return "not_sent";
   if (!env.SUPABASE_SECRET_KEY?.startsWith("sb_secret_")) return "not_sent";
   try {
     const saved = await errorRpc(env, "record_form_error_v1", {
@@ -252,7 +259,9 @@ export async function onRequestPost(context: Context): Promise<Response> {
     return response(415, "invalid_content_type");
   }
   if (Number(request.headers.get("Content-Length") || 0) > 8192) return response(413, "too_large");
-  if (!env.TURNSTILE_SECRET_KEY || !env.SUPABASE_SECRET_KEY?.startsWith("sb_secret_")) {
+  const deployment = resolveServerEnvironment(env, url.hostname);
+  if (!deployment.configured) return response(503, "isolated_environment_unavailable");
+  if (!deployment.turnstileSecret || !deployment.secret.startsWith("sb_secret_")) {
     return unavailable(context, "configuration", "missing_server_configuration");
   }
 
@@ -382,28 +391,28 @@ export async function onRequestPost(context: Context): Promise<Response> {
       signal: AbortSignal.timeout(5000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        secret: env.TURNSTILE_SECRET_KEY,
+        secret: deployment.turnstileSecret,
         response: token,
         remoteip: request.headers.get("CF-Connecting-IP") || undefined,
       }),
     });
     if (!challenge.ok) return unavailable(context, stage, "challenge_unavailable", requestId, kind);
     const verification = await challenge.json() as { success?: boolean; hostname?: string };
-    if (!verification.success || verification.hostname !== url.hostname) {
+    if (!verification.success || verification.hostname !== deployment.turnstileExpectedHostname) {
       return response(403, "verification_failed");
     }
 
     stage = "database";
-    const db = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_signup_once`, {
+    const db = await fetch(`${deployment.url}/rest/v1/rpc/submit_signup_once`, {
       method: "POST",
       signal: AbortSignal.timeout(7000),
       headers: {
-        apikey: env.SUPABASE_SECRET_KEY,
+        apikey: deployment.secret,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         p_request_id: requestId,
-        p_business_id: BUSINESS_ID,
+        p_business_id: deployment.businessId,
         p_name: name || null,
         p_email: email || null,
         p_phone: normalizedPhone || null,
@@ -415,7 +424,7 @@ export async function onRequestPost(context: Context): Promise<Response> {
       }),
     });
     if (!db.ok) return unavailable(context, stage, "database_unavailable", requestId, kind);
-    context.waitUntil?.(Promise.allSettled([
+    if (!deployment.isolated) context.waitUntil?.(Promise.allSettled([
       resolveFormFailures(env, requestId),
       ...(kind === "catering" ? [notifyCateringStaff(env, requestId)] : []),
     ]));

@@ -6,7 +6,7 @@ export async function runOpsScenarios({ run, visible, screenshot, exact, snapsho
   const confirm = page => page.getByTestId('ops-action-confirmation');
   const ops = page => page.evaluate(() => window.__opsMock.snapshot());
   const complete = async page => { await page.getByRole('region',{name:o.actionLog}).getByText(o.done,{exact:true}).first().waitFor({timeout:10000}); };
-  await run('37 Ops legacy address redirects and ten tiles plus seven actions remain in place','normal',async page=>{
+  await run('37 Ops menu route has ten tiles and seven actions; System stays separate','normal',async page=>{
     await page.waitForURL('**/staff/ops*');await ready(page);
     assert.equal(await page.locator('[data-testid^="ops-tile-"]').count(),10);
     assert.equal(await page.locator('button[data-testid^="ops-action-"]').count(),7);
@@ -15,7 +15,7 @@ export async function runOpsScenarios({ run, visible, screenshot, exact, snapsho
     await page.getByTestId('ops-tile-3').getByText(o.estimate,{exact:true}).waitFor();
     assert.equal(await page.getByTestId('ops-tile-5').getByText('$0',{exact:true}).count(),0);
     await screenshot(page,'staff-ops-desktop');
-  },'/staff/system');
+  },'/staff/ops');
   await run('38 Missing ops migration preserves complete waiting layout without queue writes','ops-pending',async page=>{
     await visible(page,o.missingMigration);
     assert.equal(await page.locator('[data-testid^="ops-tile-"]').count(),10);

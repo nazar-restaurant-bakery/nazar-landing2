@@ -7,7 +7,7 @@ const installed=await import(modulePath).catch(error=>{if(process.env.PGLITE_MOD
 const PGlite=installed?.PGlite;
 const business='a358eba4-b197-4309-805b-46f43a718454',staff='11111111-1111-4111-8111-111111111111',guest='22222222-2222-4222-8222-222222222222';
 
-test('isolated ops migration: staff isolation, claims, payload privacy, exact net commission, budget and trusted offer gate',{skip:!PGlite?'Install isolated PGlite or set PGLITE_MODULE to run this database test.':false},async()=>{
+for (const projectRef of ['khgczybubufouraqyrcj', 's'.repeat(20)]) test('isolated ops migration '+projectRef+': staff isolation, claims, payload privacy, exact net commission, budget and trusted offer gate',{skip:!PGlite?'Install isolated PGlite or set PGLITE_MODULE to run this database test.':false},async()=>{
  const db=new PGlite(); const rows=async(sql,args=[])=>(await db.query(sql,args)).rows;
  const run=async(sql,args=[])=>(await rows(sql,args))[0]?.data;
  const role=async(value)=>db.exec(`RESET ROLE;SET ROLE ${value}`);
@@ -17,7 +17,7 @@ test('isolated ops migration: staff isolation, claims, payload privacy, exact ne
  try {
   await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role;
    CREATE SCHEMA core;CREATE SCHEMA auth;CREATE SCHEMA storage;
-   CREATE TABLE core.installation(declared_project_ref text);INSERT INTO core.installation VALUES('khgczybubufouraqyrcj');
+   CREATE TABLE core.installation(declared_project_ref text);INSERT INTO core.installation VALUES('${projectRef}');
    CREATE TABLE auth.users(id uuid PRIMARY KEY);INSERT INTO auth.users VALUES('${staff}'),('${guest}');
    CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
    CREATE TABLE core.crm_staff(auth_user_id uuid,active boolean);INSERT INTO core.crm_staff VALUES('${staff}',true);
@@ -33,7 +33,8 @@ test('isolated ops migration: staff isolation, claims, payload privacy, exact ne
    CREATE TABLE storage.objects(id uuid DEFAULT gen_random_uuid(),bucket_id text,name text);ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;GRANT USAGE ON SCHEMA storage TO authenticated;GRANT SELECT ON storage.objects TO authenticated;
    SET request.jwt.claim.sub='${staff}';`);
   await db.exec(await fs.readFile(new URL('./opsDbCommission.fixture.sql',import.meta.url),'utf8'));
-  await db.exec(await fs.readFile(new URL('../supabase/migrations/20261018_ops_panel.sql',import.meta.url),'utf8'));
+  await db.exec("SET app.ops_project_ref='"+projectRef+"'");
+  await db.exec(await fs.readFile(new URL('../supabase/migrations/20261020000100_ops_panel.sql',import.meta.url),'utf8'));
   await role('anon');await assert.rejects(()=>run('select public.ops_actions_v() data'));
   await role('authenticated');await db.exec(`SET request.jwt.claim.sub='${guest}'`);
   await assert.rejects(()=>run('select public.ops_dashboard_v() data'),/Access denied/);

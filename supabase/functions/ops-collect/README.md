@@ -1,6 +1,6 @@
 # Nazar ops-collect — deployment preparation only
 
-This PR does **not** apply the migration, deploy an Edge Function, create a live bucket, add secrets, change an offer or campaign, upload a real CSV, or send email. Talip controls deployment and acceptance. Only Nazar-production `khgczybubufouraqyrcj` / business `a358eba4-b197-4309-805b-46f43a718454` is supported.
+This PR does **not** apply the migration, deploy an Edge Function, create a live bucket, add secrets, change an offer or campaign, upload a real CSV, or send email. Talip controls deployment and acceptance. The inherited single-business model remains. The same release is tested on the isolated project with explicit `OPS_PROJECT_REF`; Production defaults retain their existing guard. This is not multi-tenant completion.
 
 ## Execution and scope
 
@@ -40,7 +40,7 @@ Unconnected buttons can submit an empty-target intent; SQL logs `not_connected` 
 
 ## Database and storage
 
-Migration: `supabase/migrations/20261018_ops_panel.sql`. Review and apply separately, in Nazar only. `core` remains unexposed; no direct table grants are added. Staff reads aggregate public RPCs and requests narrow actions. Claim, finish, source context, budget, finance, offer and reconciliation RPCs are service-role only. Every security-definer function uses an empty search path.
+Migration: `supabase/migrations/20261020000100_ops_panel.sql`. Review and apply first in sandbox, then Production with the same LF file and psql 18.6. `core` remains unexposed; no direct table grants are added. Staff reads aggregate public RPCs and requests narrow actions. Claim, finish, source context, budget, finance, offer and reconciliation RPCs are service-role only. Every security-definer function uses an empty search path.
 
 The spec's nullable `period_start` cannot be part of a primary key. Metrics therefore have a surrogate UUID plus a unique snapshot expression with a null sentinel. Connections use `(business_id,source)`, not a globally shared source key. Additional private tables hold only import metadata, a daily call budget, and trusted offer approvals; raw CSV is retained only in the action payload until finish/reconciliation and is never returned by staff reads.
 
@@ -69,12 +69,12 @@ After **at least five minutes**, a privileged operator must inspect the exact ac
 
 Secrets are server-only; values must never enter Vite configuration, snapshots, logs, tests or screenshots.
 
-- Platform: `SUPABASE_URL` (must be Nazar), `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+- Platform: `SUPABASE_URL` (must match trusted `OPS_PROJECT_REF`, or the existing Production default), `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 - Optional local development CORS only: `OPS_ALLOW_LOCALHOST=true`; leave unset in production.
 - Klaviyo: `KLAVIYO_OPS_READ_KEY`; optional `KLAVIYO_CONVERSION_METRIC_ID` for campaign statistics. Account/list identity and consent/test exclusion are checked.
 - Places: `GOOGLE_PLACES_API_KEY`. Rating/total reviews are direct reads. The seven-day value is a net snapshot difference, not a count of newly posted reviews.
 - GA4: `GA4_SERVICE_ACCOUNT_JSON` (read-only scoped) or temporary `GA4_ACCESS_TOKEN`; property `551076037` (`GA4_PROPERTY_ID` must match).
-- Google Ads: `GOOGLE_ADS_DEVELOPER_TOKEN`; either temporary `GOOGLE_ADS_ACCESS_TOKEN` or `GOOGLE_ADS_CLIENT_ID`/`GOOGLE_ADS_CLIENT_SECRET`/`GOOGLE_ADS_REFRESH_TOKEN`. Optional `GOOGLE_ADS_LOGIN_CUSTOMER_ID`; customer must be `6478477284`, USD/New York.
+- Google Ads: `GOOGLE_ADS_DEVELOPER_TOKEN`; either temporary `GOOGLE_ADS_ACCESS_TOKEN` or `GOOGLE_ADS_CLIENT_ID`/`GOOGLE_ADS_CLIENT_SECRET`/`GOOGLE_ADS_REFRESH_TOKEN`. Optional `GOOGLE_ADS_LOGIN_CUSTOMER_ID` and `GOOGLE_ADS_CUSTOMER_ID`; customer must be `6478477284`, USD/New York.
 - Meta: `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID`, `META_API_VERSION`, optional `META_RESULT_ACTION_TYPE`. Read identity, currency and New York timezone are verified; this is not an ads-management write grant.
 - Clover API scaffold: `CLOVER_OPS_READ_TOKEN`, `CLOVER_MERCHANT_ID`, `CLOVER_OPS_API_ENABLED`. Credentials alone do not approve financial/refund/channel mapping or inventory writes; CSV is the first-release path.
 
@@ -91,3 +91,5 @@ node node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module 
 ```
 
 The database test creates an in-memory isolated PostgreSQL fixture and loads the migration there only. The included commission fixture is the existing historical engine; tests verify the actual formula call and absence of a second refund deduction. It is not a production migration.
+
+K1c deploy order and hosted JWT acceptance: [runbook](../../../docs/staff-ops/K1C_DEPLOY.md). Optional `OPS_PROJECT_REF` is deployment configuration, not request input. Leave it unset for Production default or set to that project explicitly; sandbox must set its own ref. No provider credential is required for initial Supabase count and site ping.

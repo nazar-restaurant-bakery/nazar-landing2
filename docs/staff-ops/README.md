@@ -1,12 +1,12 @@
 # Nazar operations panel — review and acceptance
 
-This change adds `/staff/ops` to the existing **Sistem** tab. `/staff/system` redirects there. It contains the ten requested tiles, seven action entry points, aggregate-only source states, the last ten actions, and the existing form-error, notification and session controls. Public pages and existing CRM mutation contracts are unchanged.
+This change adds a separate **Ops** menu at `/staff/ops`; `/staff/system` and its password controls remain unchanged. It contains the ten requested tiles, seven action entry points, aggregate-only source states, the last ten actions, and the existing form-error, notification and session controls. Public pages and existing CRM mutation contracts are unchanged.
 
 ## Release boundary
 
 - **Manual collection only**, following Talip's explicit decision. No 06:00 schedule, cron, n8n or automatic retry is installed.
 - The specification's §6 “günde 1 (06:00)” line is **not applicable to this release**; “istekle” applies. No scheduler SQL file, module or separate scheduler authorization path is included. Daily automatic collection is a separate decision.
-- This is a stacked PR on `feat/staff-crm-hubspot-layout` / PR #52. That CRM PR is still unmerged. Review the operations diff separately; after #52 merges, retarget this PR to `main` and check its diff again.
+- PR #52 is merged. This delivery includes main `477d617` and is reviewed against main; merge remains Talip’s decision.
 - No migration, function, bucket or secrets were installed in production. No real CSV was uploaded, no campaign/offer/inventory state was changed, and no customer communication was sent.
 - A Cloudflare frontend preview cannot collect production data until Talip separately reviews/applies the SQL and deploys the function. It shows a truthful waiting state before that. Screenshots and browser tests use synthetic data and a local fake SDK.
 
@@ -40,7 +40,7 @@ CSV input is either the verified **Sales Report** aggregate layout or the strict
 
 ## Review / deployment checklist (Talip; not executed by this PR)
 
-1. Review `supabase/migrations/20261018_ops_panel.sql`, including fixed Nazar identity, permissions, existing financial engine compatibility and private Storage rules. Apply through the approved Nazar MCP procedure only.
+1. Review `supabase/migrations/20261020000100_ops_panel.sql`, including fixed Nazar identity, permissions, existing financial engine compatibility and private Storage rules. Apply through the approved Nazar MCP procedure only.
 2. Review [the server README](../../supabase/functions/ops-collect/README.md) for exact secret **names**, provider scopes, action capabilities and explicit stale-action reconciliation. No secret values belong in this repository or Vite variables.
 3. Deploy `ops-collect` separately, with JWT verification and the existing staff authorization. Enable only reviewed provider reads. The shared external-call budget is 30 per New York day.
 4. Test access denial first, then manual collection, one synthetic qualified closed-month CSV, one verified test offer and the private report. Do not use live customer records or Weekday Lunch Special.
@@ -51,3 +51,7 @@ The server README documents raw CSV retention until finish/reconciliation and th
 ## Verification evidence
 
 See [verification.json](evidence/verification.json) and [the latest manual-only browser scenarios](evidence/manual-only/results.json). Latest synthetic screenshots: [desktop](evidence/manual-only/staff-ops-desktop.png) / [375px mobile](evidence/manual-only/staff-ops-mobile.png). The private September source was validated locally against all 180 reference financial cells; only hashes and the comparison count are committed. No live amounts or source file are included.
+
+## K1c installation
+
+See [K1c runbook](K1C_DEPLOY.md) for the exact test-first LF migration, hash, psql 18.6 and function deploy commands. No hosted installation has been performed.

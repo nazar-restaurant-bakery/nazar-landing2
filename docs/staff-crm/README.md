@@ -1,13 +1,13 @@
 # Nazar staff CRM layout
 
-Presentation-only update, based on `origin/main` at `aa53f6d5fb5c02f814cfbba13a1b57df08874e62`.
+Presentation-only update, refreshed onto main `4f2d1f9` (#54/#55/#56 included).
 No database, migration, RPC definition, policy, Pages Function, public-page content, dependency or theme-token changes.
 
 ## Routes and behavior
 
 - `/staff` opens `/staff/tasks`.
 - `/staff/crm` redirects to `/staff/customers`.
-- `/staff/customers`, `/staff/catering`, `/staff/tasks`, `/staff/offers`, `/staff/system` share one Auth/authorization gate.
+- `/staff/customers`, `/staff/catering`, `/staff/tasks`, `/staff/offers`, `/staff/profile-sync`, `/staff/orders`, `/staff/system` share one Auth/authorization gate.
 - Assignees are Talip / Yücel / Other (free text). Existing stored assignees remain editable through Other.
 - Customers: desktop three-column list/timeline/readonly profile; tablet list toggle and two-column record; mobile list/profile/timeline.
 - Catering: keyboard-accessible status selector and native drag/drop, plus list view. Existing owner and open-request follow-up requirements remain.
@@ -72,3 +72,9 @@ No live Auth sign-in, production customer query, database action or provider tes
 See [browser runner instructions](../../tests/browser/README.md), [machine-readable evidence](../../tests/browser/evidence/results.json), [desktop](../../tests/browser/evidence/staff-customers-desktop.png), [mobile list](../../tests/browser/evidence/staff-customers-mobile-list.png), and [mobile record](../../tests/browser/evidence/staff-customers-mobile-record.png).
 
 Clean `main` baseline: 147,790 bytes gzip across JS/CSS. Redesigned build: 160,440 bytes gzip across all JS/CSS chunks, an increase of 12,650 bytes (+12.65 kB), below the 60,000-byte limit. Both builds use the same Node gzip settings; exact measurements are in [checks.json](../../tests/browser/evidence/checks.json). The pre-existing Browserslist database-age advisory is not a build failure.
+
+## October 20 restoration
+
+Production navigation uses the existing authorized `list_offers` panel and existing profile-sync panel. Isolated Preview preserves the separate provider-safe entry pages and the legacy CRM provider block. Clover last-seven-days orders are available under `/staff/orders` through the existing read endpoint. Pending catering decisions can prepare the existing email draft and expose a mailto link; this does not send email. Both restored paths have strict synthetic browser scenarios, including bearer/identifier checks and logout clearing.
+
+The historical evidence above belongs to the original head. Updated test and Production-public-config comparison evidence is recorded in the project K1a refresh delivery report. Live staff acceptance remains pending Talip’s merge and session.
