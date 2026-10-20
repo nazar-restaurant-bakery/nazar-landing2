@@ -1,0 +1,24 @@
+{
+  "migration": "<ABSOLUTE_REVIEWED_20261020000800_message_send_gate.sql>",
+  "migration_sha256": "<FINAL_REVIEWED_LF_HASH>",
+  "acceptance": "<ABSOLUTE_REVIEWED_k6-acceptance.sql>",
+  "acceptance_sha256": "<REVIEWED_ACCEPTANCE_HASH>",
+  "acceptance_minimum_checks": 33,
+  "psql_path": "<ABSOLUTE_PINNED_PSQL_18_6_EXE>",
+  "psql_binary_sha256": "<REVIEWED_PSQL_HASH>",
+  "psql_version": "psql (PostgreSQL) 18.6",
+  "ca_path": "<ABSOLUTE_VERIFIED_CA_FILE>",
+  "ca_sha256": "<REVIEWED_CA_HASH>",
+  "python_path": "<ABSOLUTE_PYTHON_EXE>",
+  "python_sha256": "<REVIEWED_PYTHON_HASH>",
+  "receipt_directory": "<ABSOLUTE_FRESH_EMPTY_LOCAL_DIRECTORY>",
+  "targets": {
+    "test": {"name":"Test project","ref":"<TEST_REF>","host":"db.<TEST_REF>.supabase.co","port":5432,"business_id":"<TEST_BUSINESS_UUID>"},
+    "production": {"name":"Production project","ref":"<PRODUCTION_REF>","host":"db.<PRODUCTION_REF>.supabase.co","port":5432,"business_id":"<PRODUCTION_BUSINESS_UUID>"}
+  },
+  "dependency_sources": [
+    {"order":3,"path":"<ABSOLUTE_REVIEWED_OPS_SQL>","sha256":"3204eab72b8b0a9dc64eefc2f02d05ff0fde7a96489e010eb125896347007fa4"},
+    {"order":4,"path":"<ABSOLUTE_REVIEWED_K7_SQL>","sha256":"5f68772059d9cd1e1d7a6a290aa31ee32d10ff5a367201577c4058861aada4a8"}
+  ],
+  "dependency_evidence": {"test":[],"production":[]}
+}
