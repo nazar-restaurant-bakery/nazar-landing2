@@ -52,11 +52,24 @@ export function cloverOrderPullHandler(fetcher: Fetcher = fetch) {
     const window = closedPullWindow(day);
     if (!window) return reply(400, "invalid_request");
     const gate = new CloverRequestGate();
+    const started = new Date().toISOString();
+    let authorized = false;
+    let fetched = 0;
     let written = 0;
+    const recordAttempt = async (step: PullStep, code: string | null, status: number) => {
+      if (!authorized) return;
+      try { await rpc(config.url, config.secret, "clover_pull_attempt_record_v1",
+        { p_business_id: config.businessId, p_source: "manual", p_step: step,
+          p_error_code: code, p_http_status: status, p_fetched_count: fetched,
+          p_upserted_count: written, p_started_at: started }, fetcher); }
+      catch { console.warn("k7_pull_attempt_record_unavailable"); }
+    };
     try {
       const allowed = await rpc(config.url, config.publicKey, "crm_staff_authorized_v1", {}, fetcher, bearer);
       if (allowed !== true) return failure(env, 403, "forbidden", "authorization");
+      authorized = true;
       const { orders, warnings, requestCount } = await collectOrders(config, window, fetcher, gate);
+      fetched = orders.length;
       const uniqueWarnings = [...new Map(warnings.map(warning => [warning.step, warning])).values()];
       for (const warning of uniqueWarnings) auditIssue(env, 200, warning.code, warning.step, warning.httpStatus, requestCount);
       for (const order of orders) {
@@ -66,12 +79,14 @@ export function cloverOrderPullHandler(fetcher: Fetcher = fetch) {
       }
       try { (env as unknown as { CLOVER_PULL_AUDIT?: AuditBinding }).CLOVER_PULL_AUDIT?.writeDataPoint({
         blobs: ["pull_completed", "ingest"], doubles: [200, 0, requestCount] }); } catch { /* audit cannot fail an ingested pull */ }
+      await recordAttempt("ingest", null, 200);
       return reply(200, "ok", { fetched: orders.length, upserted: written,
         day, requestCount, warnings: uniqueWarnings });
     } catch (error) {
       const known = error instanceof PullError ? error : new PullError("pull_unconfirmed", "ingest");
       const status = known.step === "authorization" && known.code === "database_access_denied" ? 403 : 503;
       auditIssue(env, status, known.code, known.step, known.providerStatus, gate.attempts);
+      await recordAttempt(known.step, known.code, status);
       return reply(status, known.code, { step: known.step, requestCount: gate.attempts,
         upserted: written, ...(known.providerStatus ? { providerStatus: known.providerStatus } : {}) });
     }
