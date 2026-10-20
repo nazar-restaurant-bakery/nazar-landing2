@@ -1,0 +1,15 @@
+{
+  "scheduler_pr": 73,
+  "local_only": true,
+  "merged_for_test": [
+    64,
+    68
+  ],
+  "automatic_merge": true,
+  "node_tests": 94,
+  "passed": 94,
+  "failed": 0,
+  "skipped": 0,
+  "machine_paths_typecheck_passed": true,
+  "published_merge": false
+}

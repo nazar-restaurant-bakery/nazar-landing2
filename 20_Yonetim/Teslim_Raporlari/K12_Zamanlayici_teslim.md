@@ -1,6 +1,6 @@
 # K12 — günlük zamanlayıcı kod teslimi
 
-20 Ekim 2026 · Draft / kurulum yapılmadı. Dal: `feat/daily-ops-scheduler`; taban main `55806db`. Birleşme **K7 mutabakatı ve K12 kapanışından sonra**, Talip'te. Ortak personel sözleşmesi (#65) migration önkoşuludur; sıra 12 korunur.
+20 Ekim 2026 · [Draft PR #73](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/73) / kurulum yapılmadı. Dal: `feat/daily-ops-scheduler`; taban main `55806db`. Birleşme **K7 mutabakatı ve K12 kapanışından sonra**, Talip'te. Ortak personel sözleşmesi (#65) migration önkoşuludur; sıra 12 korunur.
 
 ## Sonuç ve kapsam
 
@@ -30,6 +30,8 @@ Tenant ayarı varsayılan kapalıdır; panel plan, son koşu/Clover/Ops sonuçla
 | Gerçek React/Chrome localhost testi | 1/1; salt okunur RPC, hata/kota uyarısı, tenant değişiminde eski durum temizlenir. |
 | PostgreSQL 18.6 | Mart/Kasım 07:00, 23/25 saat; iki tenant izolasyonu; aynı gün tekrar; eşzamanlı 2 tick → tenant başına 1 dispatch; 2 start → 1 kabul; kota 29'da 2 rezervasyon → 1 kabul; pause/hata/42501/ACL. |
 | Production derleme / parity | 212 dosyanın 209'u byte-eşit. Staff JS ve main/index hash bağlantıları değişti; main'de ayrıca yalnız bir Ops açıklaması değişti. Bu açıklama ve hash'ler normalize edilince main aynı. Public form handler'ları ve GA4 kaynağı aynı. İki build aynı Production hedefi ve aynı sentetik public değerlerle; hosted secret okunmadı. |
+
+Ek birleşim kontrolü: #64 Ads + #68 Places yerel geçici birleşiminde çatışma yok; **94/94** Node ve makine yollarının TypeScript kontrolü geçti. Bu birleşim yayınlanmadı.
 
 Kanıtlar: `K12_Zamanlayici_kanit/{synthetic-summary,postgres-synthetic,production-parity}.json`. Test komutları: `node --test tests/ops*.test.mjs tests/dailyScheduler.test.mjs tools/test-env/k7-clover-pull.test.mjs` (PGLITE_MODULE yerel paket yolu), `node --test tests/dailySchedulerPanel.test.mjs`, `python tests/dailySchedulerPostgres.py`; uygulama tsc/Vite build ve hedefli TypeScript/ESLint geçti.
 
