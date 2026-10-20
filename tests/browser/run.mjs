@@ -25,8 +25,8 @@ const output = outputFlag >= 0 ? path.resolve(process.argv[outputFlag + 1]) : pa
 const grepFlag = process.argv.indexOf('--grep');
 const grep = grepFlag >= 0 ? new RegExp(process.argv[grepFlag + 1], 'i') : null;
 await fs.mkdir(output, { recursive: true });
-const server = await createServer({ configFile: false, root: here, envDir: here, appType: 'spa', plugins: [react()],
-  define: { 'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://mock-only.invalid'), 'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('mock-only'), 'import.meta.env.VITE_NAZAR_BUSINESS_ID': JSON.stringify('a358eba4-b197-4309-805b-46f43a718454') },
+const server = await createServer({ configFile: false, root: here, envDir: here, appType: 'spa', plugins: [react(), { name: 'synthetic-production-host', transform(source, id) { if (id.endsWith('/src/lib/supabase.ts')) return source.replace('window.location.hostname', JSON.stringify('synthetic-production.invalid')); } }],
+  define: { 'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://khgczybubufouraqyrcj.supabase.co'), 'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('sb_publishable_OFFLINE_SYNTHETIC_ONLY'), 'import.meta.env.VITE_NAZAR_BUSINESS_ID': JSON.stringify('a358eba4-b197-4309-805b-46f43a718454') },
   resolve: { alias: { '@supabase/supabase-js': path.join(here, 'mockSdk.js') } },
   server: { host: '127.0.0.1', port: 0, strictPort: false, hmr: false, fs: { allow: [repo] } },
   css: { postcss: repo },
@@ -327,6 +327,34 @@ try {
     await visible(page, 'SYNTHETIC — belirsiz görev');
     assert.equal((await calls(page, 'crm_create_task_v1')).length, 1);
   });
+  await run('42 Clover panel loads last seven days with staff bearer', 'normal', async page => {
+    await tab(page, 'Clover siparişleri');
+    await page.getByRole('button', exact('Load last 7 days')).click();
+    await page.getByText(/Order SYNTHETIC-ORDER/).waitFor();
+    await visible(page, '$42.50');
+    assert.equal(await page.getByRole('link', exact('View order in Clover')).getAttribute('href'), 'https://www.clover.com/orders/SYNTHETIC-ORDER');
+    assert.equal((await calls(page, 'fetch.clover-orders')).length, 1);
+    assert.equal(await writeCount(page), 0);
+    await page.evaluate(() => window.__staffMock.signOut());
+    assert.equal(await page.getByText(/Order SYNTHETIC-ORDER/).count(), 0);
+  });
+  await run('43 Catering decision prepares exact draft without sending email', 'normal', async page => {
+    await selectRequest(page);
+    await page.getByRole('textbox', exact(c.decisionQuestion)).fill('Synthetic review question');
+    await page.getByRole('button', exact(c.askDecision)).click();
+    await visible(page, c.questionSaved);
+    await page.getByRole('button', exact('Karar e-postası taslağını hazırla')).click();
+    const link = page.getByRole('link', exact('E-posta uygulamasında aç'));
+    await link.waitFor();
+    const href = new URL(await link.getAttribute('href'));
+    assert.equal(decodeURIComponent(href.pathname), 'review@example.invalid');
+    assert.equal(href.searchParams.get('subject'), 'Synthetic decision');
+    assert.equal(href.searchParams.get('body'), 'Synthetic review only');
+    assert.deepEqual((await calls(page, 'fetch.decision-email-draft'))[0].params, { decisionId: (await snapshot(page)).decisions[0].id });
+    assert.equal(await writeCount(page), 1);
+    await page.evaluate(() => window.__staffMock.signOut());
+    assert.equal(await link.count(), 0);
+  }, '/staff/catering');
 } finally {
   await browser.close(); await server.close();
   const report = { scope: 'Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.',

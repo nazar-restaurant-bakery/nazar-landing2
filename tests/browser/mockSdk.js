@@ -135,6 +135,7 @@ async function rpc(name, params) {
     if (state.mode === 'errors-unavailable') return result(null, { code: 'NETWORK_ERROR' });
     return result(state.mode === 'errors-malformed' ? { total_open: 0, items: null } : { total_open: state.errors.length, items: state.errors });
   }
+  if (name === 'list_offers') return result([{ id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', name: 'ÖRNEK — Yayında olmayan test teklifi', description: 'Synthetic read-only fixture', code: 'FIXTURE-ONLY', channel_target: 'pickup', starts_at: '2026-10-01', ends_at: '2026-11-01', active: false, offer_status: 'inactive' }]);
   if (name === 'get_active_offers') {
     if (params?.p_business_id !== 'a358eba4-b197-4309-805b-46f43a718454') return unknown(name + ' business', params);
     return result([{ id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', name: 'ÖRNEK — Yayında olmayan test teklifi', description: 'Synthetic read-only fixture', code: 'FIXTURE-ONLY', channel_target: 'pickup', starts_at: '2026-10-01T00:00:00Z', ends_at: '2026-11-01T00:00:00Z' }]);
@@ -168,7 +169,7 @@ async function rpc(name, params) {
   return result(response);
 }
 export function createClient(url, key) {
-  if (url !== 'https://mock-only.invalid' || key !== 'mock-only') return unknown('createClient real credentials rejected', { url });
+  if (url !== 'https://khgczybubufouraqyrcj.supabase.co' || key !== 'sb_publishable_OFFLINE_SYNTHETIC_ONLY') return unknown('createClient real credentials rejected', { url });
   return { rpc, auth: {
     async getSession() { remember('auth.getSession'); return { data: { session: state.signedIn ? clone(session) : null }, error: null }; },
     onAuthStateChange(fn) { listeners.add(fn); return { data: { subscription: { unsubscribe() { listeners.delete(fn); } } } }; },
@@ -184,6 +185,18 @@ export function createClient(url, key) {
 }
 window.fetch = async (input, init) => {
   const url = new URL(typeof input === 'string' ? input : input.url, window.location.href);
+  if (url.origin === window.location.origin && ['/api/staff/clover-orders', '/api/staff/decision-email-draft'].includes(url.pathname)) {
+    if (new Headers(init?.headers).get('Authorization') !== 'Bearer ' + session.access_token) return unknown('Missing staff bearer');
+    if (url.pathname.endsWith('clover-orders')) {
+      if (init?.method !== 'GET') return unknown('Clover method');
+      remember('fetch.clover-orders', {});
+      return Response.json({ code: 'ok', checkedAt, orders: [{ id: 'SYNTHETIC-ORDER', cloverUrl: 'https://www.clover.com/orders/SYNTHETIC-ORDER', createdAt: checkedAt, orderType: 'pickup', totalCents: 4250 }] });
+    }
+    const body = JSON.parse(init.body);
+    if (init?.method !== 'POST' || !state.decisions.some(d => d.id === body.decisionId)) return unknown('Decision draft parameters', body);
+    remember('fetch.decision-email-draft', body);
+    return Response.json({ to: 'review@example.invalid', cc: 'owner@example.invalid', subject: 'Synthetic decision', body: 'Synthetic review only' });
+  }
   if (url.origin !== window.location.origin || url.pathname !== '/api/staff/klaviyo-status' || init?.method !== 'POST') return unknown('fetch ' + url.href, { method: init?.method });
   if (new Headers(init.headers).get('Authorization') !== 'Bearer ' + session.access_token) return unknown('Klaviyo missing staff bearer');
   let body;

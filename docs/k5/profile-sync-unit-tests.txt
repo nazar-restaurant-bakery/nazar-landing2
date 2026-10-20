@@ -1,0 +1,18 @@
+✔ queue accepts an explicit disabled connection and an actual empty active queue (1.9001ms)
+✔ reject malformed job data and unsafe provider text instead of presenting zero (0.6411ms)
+✔ read uses only the fixed same-origin endpoint and provided bearer session (61.799ms)
+✔ manual command has one request with no client business or provider parameters (1.1802ms)
+✔ manual command deadline permits the bounded server path without lengthening read timeout (1.1438ms)
+✔ missing session makes no request; 401 and 403 always mean denied (0.5763ms)
+✔ read failures and malformed data remain unavailable, never an invented empty queue (1.857ms)
+✔ uncertain command is not automatically repeated and does not invent a success (1.0252ms)
+✔ run counters must be numeric, nonnegative integers with an explicit server mode (0.7722ms)
+✔ display helpers use safe short ids, explicit unknown status and New York dates (29.7693ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 440.3778

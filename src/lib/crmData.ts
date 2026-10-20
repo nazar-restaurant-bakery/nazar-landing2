@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { getStaffSupabase } from "./staffSupabase";
 import { safeCrmRequest } from "./crmUi";
-import { NAZAR_BUSINESS_ID } from "./supabase";
+import { browserDeployment, NAZAR_BUSINESS_ID } from "./supabase";
 import type { EmailStatusResult } from "./crmEmailStatus";
 import type { CrmQueueName } from "./crmQueue";
 
@@ -32,13 +32,12 @@ export type FormErrors = { total_open: number; items: FormError[] };
 export type MutationResult = Promise<boolean>;
 export type EmailState = { loading: boolean; result: EmailStatusResult | null };
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-// Same browser Auth and narrow public RPCs as the existing StaffPage. No table reads.
-export const staffClient = url && key ? createClient(url, key) : null;
+// Preserve isolated Preview provider guards.
+export const staffClient = !browserDeployment.isolated ? getStaffSupabase() : null;
 const rpc = (name: string, params?: Record<string, unknown>) => safeCrmRequest(() => staffClient
   ? staffClient.rpc(name, params) : Promise.resolve({ data: null, error: { code: "MISSING_CONFIG" } }));
 export const crmData = {
+  rpc,
   authorized: () => rpc("crm_staff_authorized_v1"),
   overview: (segment: "all" | "test") => rpc("crm_overview_v2", { p_search: "", p_segment: segment }),
   tasks: (customerId: string) => rpc("crm_customer_tasks_v1", { p_customer_id: customerId }),

@@ -4,7 +4,8 @@ import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 
 const source = await readFile(new URL('../functions/api/signup.ts', import.meta.url), 'utf8');
-const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
+  .replace('"../../src/lib/deploymentEnvironment.ts"', JSON.stringify(new URL('../src/lib/deploymentEnvironment.ts', import.meta.url).href));
 const { onRequestPost } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 
 const requestId = '0c8f9e8d-5a8b-4f1f-8afa-5916392b8d05';

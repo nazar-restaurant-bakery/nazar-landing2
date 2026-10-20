@@ -11,6 +11,9 @@ import ContactPage from "./pages/ContactPage";
 import VipPage from "./pages/VipPage";
 import SpecialsPage from "./pages/SpecialsPage";
 import CateringPage from "./pages/CateringPage";
+import { browserDeployment } from "./lib/supabase";
+import StaffOffersPage from "./pages/StaffOffersPage";
+import StaffProfileSyncPage from "./pages/StaffProfileSyncPage";
 import CrmPreviewPage from "./pages/CrmPreviewPage";
 import { staffCopy } from "./lib/staffCopy";
 
@@ -19,6 +22,8 @@ const StaffPage = lazy(() => import("./pages/StaffPage"));
 export default function App() {
   return (
     <Routes>
+      {browserDeployment.isolated && <Route path="/staff/offers" element={<StaffOffersPage />} />}
+      {browserDeployment.isolated && <Route path="/staff/profile-sync" element={<StaffProfileSyncPage />} />}
       <Route path="/staff/*" element={<Suspense fallback={<div role="status" className="p-6">{staffCopy.loading}</div>}><StaffPage /></Suspense>} />
       {import.meta.env.DEV && <Route path="/staff-preview" element={<CrmPreviewPage />} />}
       <Route element={<Layout />}>
