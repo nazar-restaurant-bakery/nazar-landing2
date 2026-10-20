@@ -140,7 +140,9 @@ const page = (data, next = null) => ({ data, links: { next } });
 const campaign = (id, name, date) => ({ id, attributes: { name, status: 'Sent', send_time: date } });
 function klaviyoRouter(overrides = {}) {
   return (url, init) => {
-    assert.equal(init.headers.revision, '2026-10-15'); assert.match(init.headers.Authorization, /^Klaviyo-API-Key synthetic/);
+    assert.equal(init.headers.revision, '2026-07-15'); assert.match(init.headers.Authorization, /^Klaviyo-API-Key synthetic/);
+    if (url.pathname === '/api/accounts/') assert.equal(url.searchParams.get('fields[account]'), 'timezone,preferred_currency');
+    if (url.pathname === '/api/campaigns/') assert.equal(url.searchParams.get('filter'), 'and(equals(messages.channel,"email"),equals(archived,false))');
     if (url.pathname === '/api/accounts/') return json(page([{ id: 'W6Kr7z', attributes: { timezone: 'America/New_York' } }]));
     if (url.pathname === '/api/lists/UeJynm/profiles/') return json(page([profile('fixture-one')]));
     if (url.pathname === '/api/campaigns/') return json(page([campaign('campA', 'Fixture weekly offer', '2026-10-17T14:00:00Z'), campaign('testA', 'Nazar internal test — delivery and unsubscribe', '2026-10-18T14:00:00Z')]));
@@ -237,4 +239,25 @@ test('Clover API remains a merchant-read scaffold; a token alone never fabricate
     assert.equal(url.href, 'https://api.clover.com/v3/merchants/F8Q154GMDKFD1'); return json({ id: 'F8Q154GMDKFD1', name: 'Nazar synthetic fixture' });
   });
   const result = await clover(ctx); assert.equal(result.status, 'not_connected'); assert.deepEqual(result.metrics, []); assert.equal(ctx.calls.length, 1); assert.deepEqual(result.capabilities, []);
+});
+
+// Synthetic reproduction of the observed Account sparse-field rejection.
+test('Klaviyo 400 Account field regression stops before profiles and corrected request reaches counts', async () => {
+  const fieldsError = { errors: [{ code: 'invalid', detail: "fields must be in ['contact_information', 'id', 'industry', 'locale', 'preferred_currency', 'public_api_key', 'test_account', 'timezone']: (got ['timezone', 'currency'])" }] };
+  const router = klaviyoRouter();
+  const provider = (url, init) => {
+    if (url.pathname === '/api/accounts/' && url.searchParams.get('fields[account]').split(',').includes('currency'))
+      return Response.json(fieldsError, { status: 400 });
+    return router(url, init);
+  };
+  const bad = make({ KLAVIYO_OPS_READ_KEY: 'synthetic-key' }, (url, init) => {
+    if (url.pathname === '/api/accounts/') url.searchParams.set('fields[account]', 'timezone,currency');
+    return provider(url, init);
+  });
+  const rejected = await klaviyo(bad);
+  assert.equal(rejected.error, 'provider_http_400'); assert.equal(bad.calls.length, 1); assert.deepEqual(rejected.metrics, []);
+  const good = make({ KLAVIYO_OPS_READ_KEY: 'synthetic-key' }, provider);
+  const accepted = await klaviyo(good);
+  assert.equal(accepted.status, 'connected'); assert.equal(val(accepted, 'subscribers'), 1); assert.equal(good.calls.length, 3);
+  assert.doesNotMatch(JSON.stringify(accepted), /synthetic-key|@customer\.example/);
 });
