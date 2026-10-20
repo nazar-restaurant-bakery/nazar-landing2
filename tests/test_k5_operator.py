@@ -182,6 +182,37 @@ class K5OperatorTests(unittest.TestCase):
         self.mock_run.side_effect = lambda args, **kwargs: subprocess.CompletedProcess(args, 0, b'psql (PostgreSQL) 17.6\n', b'')
         with self.assertRaisesRegex(ValueError, '^REVIEWED_PSQL_VERSION_REQUIRED$'): self.validated()
 
+    def test_direct_host_is_bound_to_exact_ref_and_does_not_accept_arbitrary_user_or_port(self):
+        original = json.loads(json.dumps(self.config))
+        self.config['targets']['test']['host'] = 'db.' + self.config['targets']['test']['ref'] + '.supabase.co'
+        self.write_config()
+        self.assertEqual(operator.connection_kind(self.validated()['targets']['test']), 'Direct')
+        for override in [
+            {'host': 'db.' + original['targets']['production']['ref'] + '.supabase.co'},
+            {'host': 'db.' + original['targets']['test']['ref'] + '.supabase.co.evil.invalid'},
+            {'port': 6543}, {'user': 'other_role'},
+        ]:
+            self.config['targets']['test'] = {**original['targets']['test'],
+                'host': 'db.' + original['targets']['test']['ref'] + '.supabase.co', **override}
+            self.write_config()
+            with self.assertRaisesRegex(ValueError, '^REVIEWED_POOLER_PROJECT_BINDING_REQUIRED$'):
+                self.validated()
+
+    def test_direct_execution_uses_postgres_user_and_unchanged_tls_and_frozen_sql_guards(self):
+        self.config['targets']['test']['host'] = 'db.' + self.config['targets']['test']['ref'] + '.supabase.co'
+        self.write_config()
+        cfg = self.validated(); self.mock_run.side_effect = self.fake_psql()
+        result = operator.execute(cfg, 'test', 'SYNTHETIC_PASSWORD')
+        self.assertEqual(len(self.calls), 3)
+        for args, kwargs in self.calls:
+            self.assertEqual(kwargs['env']['PGHOST'], 'db.' + 'a' * 20 + '.supabase.co')
+            self.assertEqual(kwargs['env']['PGUSER'], 'postgres')
+            self.assertEqual(kwargs['env']['PGSSLMODE'], 'verify-full')
+            self.assertEqual(kwargs['env']['PGSSLROOTCERT'], str(self.ca))
+            self.assertEqual(kwargs['env']['PGPORT'], '5432')
+        self.assertEqual(result['migration_sha256'], self.config['migration_sha256'])
+        self.assertEqual(result['acceptance']['passed'], 17)
+
     def test_any_existing_receipt_attempt_or_arbitrary_file_blocks_new_window(self):
         for name in ['test-attempt.json', 'test-success.json', 'unexpected.json']:
             marker = self.receipts / name; marker.write_text('{}')
@@ -310,7 +341,7 @@ class K5OperatorTests(unittest.TestCase):
         self.assertEqual(result['test_success_sha256'], operator.sha(path))
 
     def fake_tk(self, confirm=True, click=True):
-        state = SimpleNamespace(entry=None, confirmed=None, button=None, messages=[], labels=[])
+        state = SimpleNamespace(entry=None, confirmed=None, button=None, messages=[], labels=[], titles=[])
         class Variable:
             def __init__(self, value=False):
                 self.value = value
@@ -323,7 +354,7 @@ class K5OperatorTests(unittest.TestCase):
                 if 'text' in kwargs: state.labels.append(kwargs['text'])
             def pack(self, **kwargs): pass
             def config(self, **kwargs): pass
-            def title(self, *args): pass
+            def title(self, value): state.titles.append(value)
             def geometry(self, *args): pass
             def focus_set(self): pass
             def protocol(self, *args): pass
@@ -369,6 +400,18 @@ class K5OperatorTests(unittest.TestCase):
         run.assert_called_once()
         self.assertEqual(self.mock_run.call_count, 3)  # explicit validated() plus both GUI validations
         self.assertNotIn('SYNTHETIC_GUI_PASSWORD', (self.receipts / 'gui-ready.json').read_text())
+
+    def test_direct_gui_title_and_database_password_label_distinguish_old_pooler_and_staff_login(self):
+        self.config['targets']['test']['host'] = 'db.' + self.config['targets']['test']['ref'] + '.supabase.co'
+        self.write_config()
+        tk, state = self.fake_tk(click=False)
+        with patch.dict(sys.modules, {'tkinter': tk}), patch.object(operator.threading, 'Thread') as thread:
+            operator.gui(self.path, 'test')
+        thread.assert_not_called()
+        self.assertEqual(state.titles, ['K5 — TEST migration — Direct'])
+        self.assertIn('Synthetic test — database password', state.labels)
+        self.assertTrue(any('Connection: Direct' in label for label in state.labels))
+        self.assertFalse((self.receipts / 'test-attempt.json').exists())
 
     def test_safe_error_classifier_never_echoes_unknown_raw_even_uppercase_errors(self):
         self.assertEqual(operator.safe_code(ValueError('RAW_PRIVATE_PASSWORD')), 'K5_STOP_RESULT_REVIEW_REQUIRED')

@@ -124,6 +124,15 @@ def clean_environment():
             and key.upper() not in ('PSQLRC', 'PSQL_HISTORY')}
 
 
+def connection_kind(target):
+    """No configurable username: direct host must bind the exact reviewed ref."""
+    if target['host'] == 'db.' + target['ref'] + '.supabase.co':
+        return 'Direct'
+    if re.fullmatch(r'aws-[0-9]+-[a-z0-9-]+\.pooler\.supabase\.com', str(target['host'])):
+        return 'Session pooler'
+    return None
+
+
 def validate(config_path, target, allow_production=False, ready_token=None):
     if target not in ('test', 'production'):
         raise ValueError('EXPLICIT_TARGET_REQUIRED')
@@ -152,7 +161,7 @@ def validate(config_path, target, allow_production=False, ready_token=None):
         if (not isinstance(value, dict) or set(value) != {'name', 'ref', 'host', 'port', 'business_id'}
                 or not isinstance(value['name'], str) or not 1 <= len(value['name']) <= 120
                 or not re.fullmatch(r'[a-z]{20}', str(value['ref']))
-                or not re.fullmatch(r'aws-[0-9]+-[a-z0-9-]+\.pooler\.supabase\.com', str(value['host']))
+                or connection_kind(value) is None
                 or type(value['port']) is not int or value['port'] != 5432
                 or not _UUID.fullmatch(str(value['business_id']))):
             raise ValueError('REVIEWED_POOLER_PROJECT_BINDING_REQUIRED')
@@ -258,7 +267,8 @@ def execute(cfg, target, password):
             handle.write(data)
     deadline = time.monotonic() + TOTAL_DEADLINE_SECONDS
     env = clean_environment()
-    env.update(PGHOST=selected['host'], PGPORT=str(selected['port']), PGUSER='postgres.' + selected['ref'],
+    env.update(PGHOST=selected['host'], PGPORT=str(selected['port']),
+               PGUSER='postgres' if connection_kind(selected) == 'Direct' else 'postgres.' + selected['ref'],
                PGDATABASE='postgres', PGPASSWORD=password, PGSSLMODE='verify-full', PGSSLROOTCERT=cfg['ca_path'],
                PGCONNECT_TIMEOUT='15', PGCLIENTENCODING='UTF8', PGAPPNAME='k5-human-migration',
                PSQL_HISTORY=os.devnull,
@@ -338,12 +348,15 @@ def gui(config_path, target, allow_production=False):
     cfg['_gui_token'] = uuid.uuid4().hex
     selected = cfg['targets'][target]
     window = tk.Tk()
-    window.title('K5 — ' + target.upper() + ' migration')
+    window.title('K5 — ' + target.upper() + ' migration'
+                 + (' — Direct' if connection_kind(selected) == 'Direct' else ''))
     window.geometry('780x460')
     active = {'running': False}
     tk.Label(window, text='K5 — ' + target.upper(), font=('Segoe UI', 16, 'bold')).pack(pady=12)
-    tk.Label(window, text=selected['name'] + '\nProject ref: ' + selected['ref'] + '\nHost: ' + selected['host']).pack()
+    tk.Label(window, text=selected['name'] + '\nProject ref: ' + selected['ref']
+             + '\nConnection: ' + connection_kind(selected) + '\nHost: ' + selected['host']).pack()
     tk.Label(window, text='psql 18.6 · reviewed LF SQL · TLS verify-full\nBu projenin database password değerini gir. Web / CRM / archive password kullanılmaz.').pack(pady=12)
+    tk.Label(window, text=selected['name'] + ' — database password', font=('Segoe UI', 10, 'bold')).pack()
     entry = tk.Entry(window, show='•', width=58)
     entry.pack(); entry.focus_set()
     confirmed = tk.BooleanVar(value=False)
