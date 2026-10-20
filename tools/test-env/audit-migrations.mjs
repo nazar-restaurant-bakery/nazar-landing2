@@ -97,7 +97,18 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   if(opsDelivery.path!=='supabase/migrations/20261020000100_ops_panel.sql'||opsDelivery.execution_enabled!==false||opsDelivery.included_in_k3_reset!==false)issue('OPS_DELIVERY_CONTRACT','Separate held Ops delivery must not enter historical replay.');
   try{const bytes=await fs.readFile(path.join(realRoot,opsDelivery.path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==opsDelivery.sha256_bytes)issue('OPS_DELIVERY_BYTES','Ops LF delivery bytes changed.');}catch{issue('OPS_DELIVERY_MISSING','Ops file missing.');}
  }
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[]);
+ // K7 is an independently reviewed delivery from current main, never a K3
+ // replay step. Its exact source identity cannot be selected by manifest data.
+ const k7Delivery=manifest.k7_delivery;
+ const k7Path='supabase/migrations/20261020000700_clover_order_core.sql';
+ const k7Sha='5f68772059d9cd1e1d7a6a290aa31ee32d10ff5a367201577c4058861aada4a8';
+ if(k7Delivery){
+  if(typeof k7Delivery!=='object'||Object.keys(k7Delivery).sort().join(',')!=='execution_enabled,included_in_k3_reset,path,sha256_bytes'
+   ||k7Delivery.path!==k7Path||k7Delivery.sha256_bytes!==k7Sha||k7Delivery.execution_enabled!==false||k7Delivery.included_in_k3_reset!==false)
+   issue('K7_DELIVERY_CONTRACT','Reviewed K7 delivery must retain its exact identity and stay outside historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k7Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k7Sha)issue('K7_DELIVERY_BYTES','K7 reviewed LF delivery bytes changed.');}catch{issue('K7_DELIVERY_MISSING','K7 file missing.');}
+ }
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[]);
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');
