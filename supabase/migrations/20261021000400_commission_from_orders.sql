@@ -10,6 +10,7 @@ DO $guard$ BEGIN
  OR to_regclass('core.ops_metrics') IS NULL
  OR to_regprocedure('core.clover_order_status_v1(uuid)') IS NULL
  OR to_regprocedure('core.compute_commission(uuid,date,numeric,numeric,boolean)') IS NULL
+ OR to_regprocedure('core.staff_authorized_v1(uuid,text)') IS NULL
  THEN RAISE EXCEPTION 'K13_REQUIRES_K7_AND_OPS'; END IF;
 END $guard$;
 
@@ -145,17 +146,24 @@ BEGIN
      AND (tab->>'qualifiedNetCents')::bigint=round(imported.qualified_sales*100)::bigint));
 END $$;
 
--- Only service_role can read cross-tenant aggregates or persist. The caller must
--- supply its server-side business identity; browser-supplied IDs are not trusted.
+-- Staff authority is scoped to the target business. Platform-only operators may
+-- compare but cannot persist. No caller-supplied actor identity is accepted.
 CREATE FUNCTION public.commission_compare_from_orders_v1(p_business_id uuid,p_month date)
-RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
- SELECT core.commission_compare_from_orders_v1(p_business_id,p_month)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF auth.role() IS DISTINCT FROM 'authenticated'
+   OR NOT core.staff_authorized_v1(p_business_id,'ops.read')
+ THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
+ RETURN core.commission_compare_from_orders_v1(p_business_id,p_month);
+END
 $$;
 CREATE FUNCTION public.commission_persist_from_orders_v1(p_business_id uuid,p_month date)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE comparison jsonb;
 BEGIN
- IF auth.role() IS DISTINCT FROM 'service_role' THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
+ IF auth.role() IS DISTINCT FROM 'authenticated'
+   OR NOT core.staff_authorized_v1(p_business_id,'ops.write')
+ THEN RAISE EXCEPTION 'Access denied' USING ERRCODE='42501'; END IF;
  comparison:=core.commission_compare_from_orders_v1(p_business_id,p_month);
  IF comparison->>'canPersist' IS DISTINCT FROM 'true'
  THEN RAISE EXCEPTION 'commission_source_unverified' USING ERRCODE='55000'; END IF;
@@ -169,5 +177,5 @@ REVOKE ALL ON FUNCTION core.commission_order_day_rows_v1(uuid,date),
  public.commission_compare_from_orders_v1(uuid,date),public.commission_persist_from_orders_v1(uuid,date)
  FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.commission_compare_from_orders_v1(uuid,date),
- public.commission_persist_from_orders_v1(uuid,date) TO service_role;
+ public.commission_persist_from_orders_v1(uuid,date) TO authenticated;
 COMMIT;

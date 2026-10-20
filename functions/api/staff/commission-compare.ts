@@ -23,7 +23,7 @@ export function commissionCompareHandler(fetcher: Fetcher = fetch) {
     if (typeof month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return reply(400, "invalid_month");
     const target = resolveServerEnvironment(env, url.hostname);
     const key = target.isolated ? env.VITE_TEST_SUPABASE_ANON_KEY : env.VITE_SUPABASE_ANON_KEY;
-    if (!target.configured || !target.secret.startsWith("sb_secret_") || !key?.startsWith("sb_publishable_"))
+    if (!target.configured || !key?.startsWith("sb_publishable_"))
       return reply(503, "connection_unavailable");
     async function rpc(name: string, apiKey: string, body: Record<string, unknown>, authorization: string) {
       const response = await fetcher(`${target.url}/rest/v1/rpc/${name}`, { method: "POST", redirect: "manual",
@@ -33,11 +33,13 @@ export function commissionCompareHandler(fetcher: Fetcher = fetch) {
       return { ok: true, status: 200, data: await response.json() as unknown };
     }
     try {
-      const auth = await rpc("crm_staff_authorized_v1", key, {}, bearer);
+      const auth = await rpc("staff_business_authorized_v1", key,
+        { p_business_id: target.businessId, p_operation: "ops.read" }, bearer);
       if (!auth.ok || auth.data !== true) return reply(auth.status === 401 ? 401 : 403, "forbidden");
-      const comparison = await rpc("commission_compare_from_orders_v1", target.secret,
-        { p_business_id: target.businessId, p_month: `${month}-01` }, `Bearer ${target.secret}`);
-      if (!comparison.ok) return reply(503, "comparison_unavailable");
+      const comparison = await rpc("commission_compare_from_orders_v1", key,
+        { p_business_id: target.businessId, p_month: `${month}-01` }, bearer);
+      if (!comparison.ok) return reply(comparison.status === 401 ? 401 : comparison.status === 403 ? 403 : 503,
+        comparison.status === 401 ? "unauthorized" : comparison.status === 403 ? "forbidden" : "comparison_unavailable");
       return reply(200, "ok", comparison.data);
     } catch { return reply(503, "comparison_unavailable"); }
   };

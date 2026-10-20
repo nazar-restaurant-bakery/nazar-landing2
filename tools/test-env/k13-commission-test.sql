@@ -44,6 +44,118 @@ BEGIN
  IF (other->>'qualifiedNetCents')::bigint<>10000 THEN RAISE EXCEPTION 'k13_tenant_isolation_failed'; END IF;
  IF EXISTS(SELECT 1 FROM core.commissions) THEN RAISE EXCEPTION 'k13_preview_persisted'; END IF;
 END $test$;
+-- Contract §4: generated local Auth identities, two tenants, no hosted users.
+CREATE TEMP TABLE k13_contract_users(name text PRIMARY KEY,id uuid NOT NULL DEFAULT gen_random_uuid());
+GRANT SELECT ON k13_contract_users TO authenticated;
+INSERT INTO k13_contract_users(name) VALUES
+ ('platformOnly'),('platformMember'),('ownerA'),('managerA'),('staffA'),
+ ('inactiveA'),('staffB'),('legacyOnly');
+INSERT INTO auth.users(id) SELECT id FROM k13_contract_users;
+INSERT INTO core.platform_operators(staff_id)
+ SELECT id FROM k13_contract_users WHERE name IN ('platformOnly','platformMember');
+INSERT INTO core.business_staff(business_id,staff_id,role,active)
+ SELECT CASE WHEN name='staffB' THEN '22222222-2222-4222-8222-222222222222'::uuid
+   ELSE '11111111-1111-4111-8111-111111111111'::uuid END,
+   id,CASE name WHEN 'ownerA' THEN 'owner' WHEN 'managerA' THEN 'manager' ELSE 'staff' END,
+   name<>'inactiveA'
+ FROM k13_contract_users WHERE name IN
+ ('platformMember','ownerA','managerA','staffA','inactiveA','staffB');
+INSERT INTO core.crm_staff(auth_user_id,active)
+ SELECT id,true FROM k13_contract_users WHERE name='legacyOnly';
+SET ROLE authenticated;
+SET test.jwt_role='authenticated';
+DO $scope$ DECLARE u record; actor uuid;
+ a uuid:='11111111-1111-4111-8111-111111111111';
+ b uuid:='22222222-2222-4222-8222-222222222222';
+BEGIN
+ FOR u IN SELECT * FROM k13_contract_users WHERE name IN
+  ('platformOnly','platformMember','ownerA','managerA','staffA') LOOP
+   PERFORM set_config('test.uid',u.id::text,false);
+   PERFORM public.commission_compare_from_orders_v1(a,'2026-09-01');
+ END LOOP;
+ SELECT id INTO actor FROM k13_contract_users WHERE name='staffB';
+ PERFORM set_config('test.uid',actor::text,false);
+ PERFORM public.commission_compare_from_orders_v1(b,'2026-09-01');
+ FOR u IN SELECT * FROM k13_contract_users WHERE name IN
+  ('ownerA','managerA','staffA','inactiveA','legacyOnly') LOOP
+   PERFORM set_config('test.uid',u.id::text,false);
+   BEGIN
+    PERFORM public.commission_compare_from_orders_v1(b,'2026-09-01');
+    RAISE EXCEPTION 'K13_WRONG_BUSINESS_ALLOWED %',u.name;
+   EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+ END LOOP;
+ SELECT id INTO actor FROM k13_contract_users WHERE name='staffB';
+ PERFORM set_config('test.uid',actor::text,false);
+ BEGIN
+  PERFORM public.commission_compare_from_orders_v1(a,'2026-09-01');
+  RAISE EXCEPTION 'K13_STAFF_B_READ_A_ALLOWED';
+ EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+ FOR u IN SELECT * FROM k13_contract_users WHERE name IN ('inactiveA','legacyOnly') LOOP
+   PERFORM set_config('test.uid',u.id::text,false);
+   BEGIN
+    PERFORM public.commission_compare_from_orders_v1(a,'2026-09-01');
+    RAISE EXCEPTION 'K13_INACTIVE_OR_LEGACY_ALLOWED %',u.name;
+   EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+ END LOOP;
+ SELECT id INTO actor FROM k13_contract_users WHERE name='platformOnly';
+ PERFORM set_config('test.uid',actor::text,false);
+ IF NOT public.staff_business_authorized_v1(a,'ops.read')
+   OR public.staff_business_authorized_v1(a,'ops.write')
+   OR public.staff_business_authorized_v1(a,'unknown.operation')
+   OR public.staff_business_authorized_v1(NULL,'ops.read')
+ THEN RAISE EXCEPTION 'K13_PLATFORM_READ_WRITE_BOUNDARY'; END IF;
+ SELECT id INTO actor FROM k13_contract_users WHERE name='platformMember';
+ PERFORM set_config('test.uid',actor::text,false);
+ IF NOT public.staff_business_authorized_v1(a,'ops.write')
+   OR public.staff_business_authorized_v1(b,'ops.write')
+ THEN RAISE EXCEPTION 'K13_PLATFORM_MEMBER_WRITE_BOUNDARY'; END IF;
+ PERFORM set_config('test.uid','',false);
+ BEGIN
+  PERFORM public.commission_compare_from_orders_v1(a,'2026-09-01');
+  RAISE EXCEPTION 'K13_NULL_ACTOR_ALLOWED';
+ EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+ SELECT id INTO actor FROM k13_contract_users WHERE name='legacyOnly';
+ PERFORM set_config('test.uid',actor::text,false);
+ BEGIN
+  PERFORM public.commission_compare_from_orders_v1(a,'2026-09-01',
+    (SELECT id FROM k13_contract_users WHERE name='ownerA'));
+  RAISE EXCEPTION 'K13_FAKE_ACTOR_ALLOWED';
+ EXCEPTION WHEN SQLSTATE '42883' THEN NULL; END;
+ BEGIN
+  PERFORM count(*) FROM core.business_staff;
+  RAISE EXCEPTION 'K13_DIRECT_TABLE_ALLOWED';
+ EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+END $scope$;
+RESET ROLE;
+UPDATE core.platform_operators SET active=false
+ WHERE staff_id=(SELECT id FROM k13_contract_users WHERE name='platformOnly');
+SET ROLE authenticated;
+DO $scope$ DECLARE actor uuid; BEGIN
+ SELECT id INTO actor FROM k13_contract_users WHERE name='platformOnly';
+ PERFORM set_config('test.uid',actor::text,false);
+ BEGIN
+  PERFORM public.commission_compare_from_orders_v1(
+    '11111111-1111-4111-8111-111111111111','2026-09-01');
+  RAISE EXCEPTION 'K13_INACTIVE_PLATFORM_OPERATOR_ALLOWED';
+ EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+END $scope$;
+RESET ROLE;
+UPDATE core.platform_operators SET active=true
+ WHERE staff_id=(SELECT id FROM k13_contract_users WHERE name='platformOnly');
+SET test.jwt_role='service_role';
+DO $scope$ BEGIN
+ BEGIN
+  PERFORM public.commission_compare_from_orders_v1(
+    '11111111-1111-4111-8111-111111111111','2026-09-01');
+  RAISE EXCEPTION 'K13_SERVICE_ONLY_READ_ALLOWED';
+ EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+ BEGIN
+  PERFORM public.commission_persist_from_orders_v1(
+    '11111111-1111-4111-8111-111111111111','2026-09-01');
+  RAISE EXCEPTION 'K13_SERVICE_ONLY_WRITE_ALLOWED';
+ EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+END $scope$;
+SET test.jwt_role='authenticated';
 DELETE FROM core.ops_metrics WHERE business_id='11111111-1111-4111-8111-111111111111'
  AND period_start='2026-09-01' AND metric='orders';
 DO $test$ DECLARE data jsonb; BEGIN
@@ -62,12 +174,24 @@ DO $test$ DECLARE data jsonb; BEGIN
  IF data->>'canPersist'<>'false' OR (data->>'refundUnverifiedCount')::int=0
  THEN RAISE EXCEPTION 'k13_unverified_refund_not_blocked'; END IF;
 END $test$;
-SET LOCAL test.jwt_role='service_role';
-DO $test$ BEGIN
+SET ROLE authenticated;
+SET test.jwt_role='authenticated';
+DO $test$ DECLARE actor uuid; BEGIN
+ SELECT id INTO actor FROM k13_contract_users WHERE name='platformOnly';
+ PERFORM set_config('test.uid',actor::text,false);
+ BEGIN
+  PERFORM public.commission_persist_from_orders_v1('11111111-1111-4111-8111-111111111111','2026-09-01');
+  RAISE EXCEPTION 'k13_platform_only_persist_allowed';
+ EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+ SELECT id INTO actor FROM k13_contract_users WHERE name='platformMember';
+ PERFORM set_config('test.uid',actor::text,false);
  BEGIN
   PERFORM public.commission_persist_from_orders_v1('11111111-1111-4111-8111-111111111111','2026-09-01');
   RAISE EXCEPTION 'k13_persist_should_reject';
  EXCEPTION WHEN SQLSTATE '55000' THEN NULL; END;
+END $test$;
+RESET ROLE;
+DO $test$ BEGIN
  IF EXISTS(SELECT 1 FROM core.commissions) THEN RAISE EXCEPTION 'k13_blocked_write_occurred'; END IF;
 END $test$;
 -- The New York month includes both sides of the fall DST transition and
