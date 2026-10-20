@@ -69,7 +69,12 @@ export function cloverOrderPullHandler(fetcher: Fetcher = fetch) {
         { p_business_id: config.businessId, p_operation: "crm.write" }, fetcher, bearer);
       if (allowed !== true) return failure(env, 403, "forbidden", "authorization");
       authorized = true;
-      const { orders, warnings, requestCount } = await collectOrders(config, window, fetcher, gate);
+      const budgeted: Fetcher = async (input, init) => {
+        const reserved = await rpc(config.url, config.secret, "daily_reserve_external_request", { p_business_id: config.businessId }, fetcher);
+        if (reserved !== true) throw new PullError("daily_budget_exhausted", "list");
+        return fetcher(input, init);
+      };
+      const { orders, warnings, requestCount } = await collectOrders(config, window, budgeted, gate);
       fetched = orders.length;
       const uniqueWarnings = [...new Map(warnings.map(warning => [warning.step, warning])).values()];
       for (const warning of uniqueWarnings) auditIssue(env, 200, warning.code, warning.step, warning.httpStatus, requestCount);

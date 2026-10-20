@@ -23,4 +23,9 @@ verify_jwt = true
 
 [functions.clover-webhook]
 # Clover sends X-Clover-Auth, not a Supabase JWT.
+
+verify_jwt = false
+
+# Machine-only HMAC endpoint; existing personnel JWT gates stay enabled.
+[functions.daily-ops-run]
 verify_jwt = false

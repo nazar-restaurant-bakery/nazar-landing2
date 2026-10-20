@@ -61,6 +61,7 @@ test('manual pull checks staff before Clover and writes once', async () => {
   const calls = [];
   const fakeFetch = async (input, options) => {
     const url = String(input); calls.push(url);
+    if (url.endsWith('/rpc/daily_reserve_external_request')) return Response.json(true);
     if (url.endsWith('/rpc/staff_business_authorized_v1')) {
       assert.deepEqual(JSON.parse(options.body), { p_business_id: env.TEST_BUSINESS_ID, p_operation: 'crm.write' });
       return Response.json(true);
@@ -92,13 +93,15 @@ test('manual pull checks staff before Clover and writes once', async () => {
   assert.equal(calls.filter(x => x.endsWith('/rpc/clover_order_ingest_v1')).length, 1);
   assert.equal(calls.filter(x => x.includes('/orders/ORDER123456')).length, 1);
   assert.ok(calls[0].endsWith('/rpc/staff_business_authorized_v1'));
-  assert.ok(calls[1].includes('apisandbox.dev.clover.com'));
+  assert.ok(calls[1].endsWith('/rpc/daily_reserve_external_request'));
+  assert.ok(calls[2].includes('apisandbox.dev.clover.com'));
 });
 
 test('Clover scope failure writes no snapshot', async () => {
   const calls = [];
   const fakeFetch = async (input) => {
     const url = String(input); calls.push(url);
+    if (url.endsWith('/rpc/daily_reserve_external_request')) return Response.json(true);
     if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
     return new Response('', { status: 403 });
   };
@@ -129,6 +132,7 @@ test('a denied business write scope stops before Clover and ingest', async () =>
 test('fatal Clover denial keeps provider HTTP separate from site wrapper', async () => {
   const fakeFetch = async input => {
     const url = String(input);
+    if (url.endsWith('/rpc/daily_reserve_external_request')) return Response.json(true);
     if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
     if (url.includes('/orders/ORDER123456')) return new Response('', { status: 403 });
     if (url.includes('/orders?')) return listResponse(url);
@@ -150,6 +154,7 @@ test('refunded order is ingested after three limited expansions', async () => {
   let ingested;
   const fakeFetch = async (input, options) => {
     const url = String(input);
+    if (url.endsWith('/rpc/daily_reserve_external_request')) return Response.json(true);
     if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
     if (url.endsWith('/rpc/clover_order_ingest_v1')) {
       ingested = JSON.parse(options.body).p_snapshot;
@@ -186,6 +191,7 @@ test('missing payment expansion returns a safe stage and never ingests', async (
   const auditedEnv = { ...env, CLOVER_PULL_AUDIT: { writeDataPoint: point => auditPoints.push(point) } };
   const fakeFetch = async (input) => {
     const url = String(input); calls.push(url);
+    if (url.endsWith('/rpc/daily_reserve_external_request')) return Response.json(true);
     if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
     if (url.endsWith('/rpc/clover_pull_attempt_record_v1')) return Response.json(true);
     if (url.includes('/orders/ORDER123456')) {
@@ -220,7 +226,8 @@ for (const denied of ['refunds', 'customers', 'none']) {
     const auditedEnv = { ...env, CLOVER_PULL_AUDIT: { writeDataPoint: point => auditPoints.push(point) } };
     const fakeFetch = async (input, options) => {
       const url = String(input);
-      if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
+      if (url.endsWith('/rpc/daily_reserve_external_request')) return Response.json(true);
+    if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
       if (url.endsWith('/rpc/clover_order_ingest_v1')) {
         snapshots.push(JSON.parse(options.body).p_snapshot);
         return Response.json({ orderId: 'test' });
@@ -310,6 +317,7 @@ test('batch expansion avoids core detail calls and an ingest retry upserts by Cl
   let cloverCalls = 0;
   const fakeFetch = async (input, options) => {
     const url = String(input);
+    if (url.endsWith('/rpc/daily_reserve_external_request')) return Response.json(true);
     if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
     if (url.endsWith('/rpc/clover_pull_attempt_record_v1')) {
       attempts.push(JSON.parse(options.body));

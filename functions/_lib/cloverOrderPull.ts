@@ -121,7 +121,7 @@ export class CloverRequestGate {
       try {
         response = await fetcher(url, { redirect: "manual", signal: AbortSignal.timeout(10000),
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "User-Agent": "NazarCRM/1.0" } });
-      } catch { throw new PullError("clover_request_failed", step); }
+      } catch (error) { if (error instanceof PullError) throw error; throw new PullError("clover_request_failed", step); }
       if (response.status !== 429) return response;
       if (!this.deadline) this.deadline = Date.now() + RETRY_BUDGET_MS;
       const header = response.headers.get("Retry-After");

@@ -43,7 +43,7 @@ export async function collect(ctx: CollectorContext): Promise<CollectorResult> {
         if (!object(data) || !Array.isArray(data.data) || !object(data.links) || !["string", "object"].includes(typeof data.links.next)
           || (data.links.next !== null && typeof data.links.next !== "string")) throw new CollectorError("klaviyo_invalid_page");
         rows.push(...data.data); if (rows.length > 3000) throw new CollectorError("klaviyo_pagination_incomplete");
-        url = data.links.next || "";
+        url = typeof data.links.next === "string" ? data.links.next : "";
       }
       return rows;
     }

@@ -3,7 +3,7 @@ import type { OpsConnection, OpsSource } from "../../../lib/opsData";
 import { opsCopy as c } from "../../../lib/staffCopy";
 import { staffDisplayDate } from "../../../lib/staffUi";
 
-const sources: [OpsSource, string][] = [["clover", "Clover"], ["klaviyo", "Klaviyo"], ["google_ads", "Google Ads"], ["meta", "Meta"], ["site", c.site], ["ga4", "GA4"], ["reviews", c.reviews], ["scheduler", c.scheduler], ["supabase", "Supabase"]];
+const sources: [OpsSource, string][] = [["clover", "Clover"], ["klaviyo", "Klaviyo"], ["google_ads", "Google Ads"], ["meta", "Meta"], ["site", c.site], ["ga4", "GA4"], ["reviews", c.reviews], ["supabase", "Supabase"]];
 export default function StatusStrip({ connections, loading, disabled, onRefresh, onCollect, collectConfirmation }: { connections: OpsConnection[] | null; loading: boolean; disabled: boolean; onRefresh: () => void; onCollect: () => void; collectConfirmation?: ReactNode }) {
   const canCollect = !!connections?.some(connection => connection.capabilities.includes("collect"));
   return <section className="staff-panel p-4" aria-label={c.statusTitle}>
