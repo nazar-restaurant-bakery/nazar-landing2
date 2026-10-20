@@ -177,7 +177,25 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   try{const bytes=await fs.readFile(path.join(realRoot,policy.path));if(sha256Lf(bytes.toString('utf8'))!==policy.sha)issue('CURRENT_MAIN_DELIVERY_BYTES',policy.path);}
   catch{issue('CURRENT_MAIN_DELIVERY_MISSING',policy.path);}
  }
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
+ // K10 is an inventory-only forward delivery over these exact K9 bytes. This
+ // records a reviewed dependency, not a global application order or permission
+ // to execute it. Neither K11 nor K15 is a prerequisite of the read-only check.
+ const k10Eligibility=manifest.k10_eligibility_delivery;
+ const k10Path='supabase/migrations/20261021000600_campaign_eligibility_check.sql';
+ const k10Sha='33c9b6d59b024ce325a5461c52b09e374f169d45228980bd11c8f8a974c99285';
+ if(k10Eligibility){
+  if(typeof k10Eligibility!=='object'||Object.keys(k10Eligibility).sort().join(',')!=='execution_enabled,included_in_k3_reset,path,requires,sha256_bytes'
+   ||k10Eligibility.path!==k10Path||k10Eligibility.sha256_bytes!==k10Sha
+   ||k10Eligibility.execution_enabled!==false||k10Eligibility.included_in_k3_reset!==false)
+   issue('K10_ELIGIBILITY_DELIVERY_CONTRACT','K10 must retain its exact non-executable identity outside K3 reset/replay, without an application order.');
+  const dependency=Array.isArray(k10Eligibility.requires)&&k10Eligibility.requires.length===1?k10Eligibility.requires[0]:null;
+  if(!dependency||typeof dependency!=='object'||Object.keys(dependency).sort().join(',')!=='path,sha256_bytes'
+   ||dependency.path!==k9Path||dependency.sha256_bytes!==k9Sha
+   ||!k9Delivery||k9Delivery.path!==k9Path||k9Delivery.sha256_bytes!==k9Sha)
+   issue('K10_ELIGIBILITY_DEPENDENCY','K10 requires the exact reviewed K9 path and bytes; no substituted or additional dependency is accepted.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k10Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k10Sha)issue('K10_ELIGIBILITY_DELIVERY_BYTES','K10 reviewed LF delivery bytes changed.');}catch{issue('K10_ELIGIBILITY_DELIVERY_MISSING','K10 eligibility file missing.');}
+ }
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k10Eligibility?[k10Path]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');
