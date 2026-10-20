@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
+import path from 'node:path';
+import os from 'node:os';
 import {auditMigrations,sha256Lf} from '../tools/test-env/audit-migrations.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -119,6 +121,73 @@ for(const key of ['k7_payment_day_delivery','k8_delivery'])test(`merged main ${k
 test('altered expected checksum fails closed',async()=>{
  const manifest=clone();manifest.sources[0].sha256_lf='0'.repeat(64);
  const result=await auditMigrations({root,manifest});assert.equal(result.integrity.ok,false);assert.ok(codes(result).includes('CHECKSUM_MISMATCH'));
+});
+
+test('K10 eligibility inventory pins exact bytes and only the reviewed K9 dependency without an application order',async()=>{
+ const entry=source.k10_eligibility_delivery;assert.ok(entry);
+ assert.equal(entry.path,'supabase/migrations/20261021000600_campaign_eligibility_check.sql');
+ const bytes=await fs.readFile(path.join(root,entry.path));
+ assert.equal(bytes.includes(13),false);
+ assert.equal(entry.sha256_bytes,'33c9b6d59b024ce325a5461c52b09e374f169d45228980bd11c8f8a974c99285');
+ assert.equal(sha256Lf(bytes.toString('utf8')),entry.sha256_bytes);
+ assert.deepEqual(entry.requires,[{path:source.k9_delivery.path,sha256_bytes:source.k9_delivery.sha256_bytes}]);
+ assert.equal(entry.execution_enabled,false);assert.equal(entry.included_in_k3_reset,false);
+ assert.equal(Object.hasOwn(entry,'application_order'),false);
+ const result=await auditMigrations({root});assert.equal(result.integrity.ok,true);
+ assert.equal(result.readiness.ready,false);assert.equal(result.readiness.execution_performed,false);
+ assert.ok(result.proposed_order.every(item=>item.path!==entry.path));
+ const missing=clone();delete missing.k10_eligibility_delivery;
+ assert.ok(codes(await auditMigrations({root,manifest:missing})).includes('UNINVENTORIED_CANONICAL_SQL'));
+});
+
+test('K10 inventory rejects altered identity, execution, replay inclusion and invented application order',async()=>{
+ for(const mutate of [
+  e=>{e.path='../unreviewed.sql';},e=>{e.sha256_bytes='f'.repeat(64);},
+  e=>{e.execution_enabled=true;},e=>{e.included_in_k3_reset=true;},
+  e=>{e.application_order=12;},e=>{e.application_tool='arbitrary-executable.py';},
+ ]){const manifest=clone();mutate(manifest.k10_eligibility_delivery);
+  assert.ok(codes(await auditMigrations({root,manifest})).includes('K10_ELIGIBILITY_DELIVERY_CONTRACT'));
+ }
+ const replay=clone();replay.proposed_order.push('k10_eligibility_delivery');
+ assert.ok(codes(await auditMigrations({root,manifest:replay})).includes('ORDER_UNKNOWN_SOURCE'));
+});
+
+test('K10 inventory rejects missing, substituted and extra dependencies including K11 or K15',async()=>{
+ for(const mutate of [
+  m=>{m.k10_eligibility_delivery.requires=[];},
+  m=>{m.k10_eligibility_delivery.requires[0].path='supabase/migrations/20261021000300_loyalty_referrals_metrics.sql';},
+  m=>{m.k10_eligibility_delivery.requires[0].sha256_bytes='0'.repeat(64);},
+  m=>{m.k10_eligibility_delivery.requires[0].execution_enabled=true;},
+  m=>{m.k10_eligibility_delivery.requires.push({path:'supabase/migrations/20261021000500_ops_write_gate.sql',sha256_bytes:'a'.repeat(64)});},
+  m=>{delete m.k9_delivery;},
+  m=>{m.k9_delivery.sha256_bytes='b'.repeat(64);m.k10_eligibility_delivery.requires[0].sha256_bytes='b'.repeat(64);},
+ ]){const manifest=clone();mutate(manifest);
+  assert.ok(codes(await auditMigrations({root,manifest})).includes('K10_ELIGIBILITY_DEPENDENCY'));
+ }
+});
+
+test('K10 raw SQL tampering, CRLF conversion and missing file fail on a disposable inventory copy',async t=>{
+ const prefix='nazar-k10-inventory-';const tempBase=path.resolve(os.tmpdir());
+ const fixtureRoot=await fs.mkdtemp(path.join(tempBase,prefix));
+ t.after(async()=>{
+  assert.equal(path.dirname(fixtureRoot),tempBase);
+  assert.ok(path.basename(fixtureRoot).startsWith(prefix));
+  await fs.rm(fixtureRoot,{recursive:true,force:true});
+ });
+ for(const relative of ['database','tools/test-env/legacy','supabase/migrations']){
+  await fs.cp(path.join(root,relative),path.join(fixtureRoot,relative),{recursive:true});
+ }
+ assert.equal((await auditMigrations({root:fixtureRoot,manifest:clone()})).integrity.ok,true);
+ const file=path.join(fixtureRoot,source.k10_eligibility_delivery.path);
+ const original=await fs.readFile(file);
+ await fs.writeFile(file,Buffer.concat([original,Buffer.from('-- unreviewed tamper\n')]));
+ assert.ok(codes(await auditMigrations({root:fixtureRoot,manifest:clone()})).includes('K10_ELIGIBILITY_DELIVERY_BYTES'));
+ await fs.writeFile(file,original.toString('utf8').replaceAll('\n','\r\n'));
+ assert.equal(sha256Lf(await fs.readFile(file,'utf8')),source.k10_eligibility_delivery.sha256_bytes,'normalization alone would accept CRLF; the delivery guard must not');
+ assert.ok(codes(await auditMigrations({root:fixtureRoot,manifest:clone()})).includes('K10_ELIGIBILITY_DELIVERY_BYTES'));
+ await fs.unlink(file);
+ assert.ok(codes(await auditMigrations({root:fixtureRoot,manifest:clone()})).includes('K10_ELIGIBILITY_DELIVERY_MISSING'));
+ assert.deepEqual(await fs.readFile(path.join(root,source.k10_eligibility_delivery.path)),original,'test must leave the actual migration untouched');
 });
 
 test('omitting a baseline SQL file is detected rather than producing a smaller green inventory',async()=>{

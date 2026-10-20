@@ -40,3 +40,15 @@
 /tools/test-env/k13-*.sql text eol=lf
 /supabase/migrations/20261021000450_commission_channel_label.sql text eol=lf
 /tools/test-env/k13b-*.sql text eol=lf
+
+# K10: reviewed read-only eligibility delivery and synthetic evidence sources.
+/.gitattributes text eol=lf
+/supabase/migrations/20261021000600_campaign_eligibility_check.sql text eol=lf
+/src/lib/campaignEligibility.ts text eol=lf
+/tests/campaignEligibility*.mjs text eol=lf
+/tests/campaignEligibilityBrowser/* text eol=lf
+/tests/fixtures/campaignEligibilityNative.mjs text eol=lf
+/docs/K10* text eol=lf
+/tools/test-env/migration-manifest.json text eol=lf
+/tools/test-env/audit-migrations.mjs text eol=lf
+/tests/testEnvMigrations.test.mjs text eol=lf

@@ -120,6 +120,12 @@ async function rpc(name, params) {
   if (name === 'loyalty_metrics_v1') return state.loyaltyResponse
     ? clone(state.loyaltyResponse) : result(null, { code: 'PGRST202' });
   if (state.mode === 'throws' && !writes.has(name)) throw new Error('Synthetic read connection failure');
+  if (name === 'campaign_eligibility_check_v1') {
+    if (params?.p_business_id !== 'a358eba4-b197-4309-805b-46f43a718454'
+      || params?.p_clover_order_id !== 'SYNTHETIC-ORDER') return unknown(name + ' parameters', params);
+    return result({ known: false, eligible: null, reason: 'order_not_synced', campaign: null,
+      remaining: null, candidates: [], checkedAt, snapshotAt: null });
+  }
   if (name === 'crm_overview_v2') {
     if (params?.p_search !== '' || !['all', 'test'].includes(params?.p_segment)) return unknown(name + ' parameters', params);
     return result(overview(params.p_segment));
