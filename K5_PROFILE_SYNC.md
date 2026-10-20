@@ -1,6 +1,6 @@
 # K5 — profile attributes only (review package)
 
-Status: review package. **The TEST migration was applied by Talip on 19 October: 17/17 rollback acceptance and 14/14 independent read-only postchecks passed. Authenticated hosted Preview/mock acceptance remains pending; no real Klaviyo write has been approved or performed.** This branch is based on merged #55, independently of held #52/#53. It neither applies those changes nor alters the existing VIP double-opt-in flow, notification functions, public forms or GA4 events.
+Status: review package. **The TEST migration was applied by Talip on 19 October: 17/17 rollback acceptance and 14/14 independent read-only postchecks passed. Authenticated hosted empty-mock Preview acceptance also passed: one manual command processed zero jobs and a read-only refresh preserved the valid empty queue. No real Klaviyo write has been approved or performed; overall K5 remains open.** This branch is based on merged #55, independently of held #52/#53. It neither applies those changes nor alters the existing VIP double-opt-in flow, notification functions, public forms or GA4 events.
 
 ## Operation and consent boundary
 
