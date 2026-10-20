@@ -91,7 +91,12 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
  let actualCanonical=[];
  try{actualCanonical=(await fs.readdir(path.join(realRoot,'supabase/migrations'))).filter(name=>name.endsWith('.sql')).map(name=>'supabase/migrations/'+name).sort();}
  catch{/* A pending canonical directory may not exist before preparation. */}
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string');
+ const opsDelivery=manifest.ops_delivery;
+ if(opsDelivery){
+  if(opsDelivery.path!=='supabase/migrations/20261020000100_ops_panel.sql'||opsDelivery.execution_enabled!==false||opsDelivery.included_in_k3_reset!==false)issue('OPS_DELIVERY_CONTRACT','Separate held Ops delivery must not enter historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,opsDelivery.path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==opsDelivery.sha256_bytes)issue('OPS_DELIVERY_BYTES','Ops LF delivery bytes changed.');}catch{issue('OPS_DELIVERY_MISSING','Ops file missing.');}
+ }
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[]);
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');

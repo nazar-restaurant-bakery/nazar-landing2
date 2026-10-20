@@ -8,10 +8,11 @@ type Props = {
   requests: CateringRequest[]; email: string; authorized: boolean;
   onResolve: (id: string) => Promise<boolean>;
   busy: boolean; writeBlocked: boolean;
+  section?: "all" | "errors" | "details"; aggregateOnly?: boolean;
 };
 
 export default function SystemView({ errors, loading, notifications, requests, email,
-  authorized, onResolve, busy, writeBlocked }: Props) {
+  authorized, onResolve, busy, writeBlocked, section = "all", aggregateOnly = false }: Props) {
   const visibleRequests = new Map(requests.map(request => [request.id, request]));
   const visibleNotifications = notifications?.filter(item => visibleRequests.has(item.request_id)) ?? [];
   const alertLabels: Record<string, string> = {
@@ -19,9 +20,8 @@ export default function SystemView({ errors, loading, notifications, requests, e
     claimed: c.alertClaimed, accepted: c.alertAccepted, failed: c.alertFailed,
   };
 
-  return <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(15rem,1fr)]">
-    <section className="staff-panel p-4 sm:p-5 min-w-0" aria-labelledby="staff-errors-title">
-      <h1 id="staff-errors-title" className="text-xl font-semibold">{c.formErrors}</h1>
+  const errorsPanel = <section className="staff-panel p-4 sm:p-5 min-w-0" aria-labelledby="staff-errors-title">
+      <h2 id="staff-errors-title" className="text-xl font-semibold">{c.formErrors}</h2>
       <p className="mt-2 text-sm text-stone-600">{c.errorScope}</p>
       {loading ? <div className="mt-4 space-y-3" role="status" aria-label={c.loading}>
         {[0, 1, 2].map(value => <div key={value} className="h-20 animate-pulse rounded-lg bg-brand-primarySoft" />)}
@@ -46,9 +46,8 @@ export default function SystemView({ errors, loading, notifications, requests, e
               </div>
             </article>)}</div>
           </>}
-    </section>
-
-    <div className="min-w-0 space-y-4">
+    </section>;
+  const detailsPanel = <div className="min-w-0 space-y-4">
       <section className="staff-panel p-4 sm:p-5" aria-labelledby="staff-session-title">
         <h2 id="staff-session-title" className="font-semibold">{c.session}</h2>
         <dl className="mt-3 space-y-3 text-sm">
@@ -67,6 +66,14 @@ export default function SystemView({ errors, loading, notifications, requests, e
         {loading ? <div role="status" aria-label={c.loading} className="mt-3 h-12 animate-pulse rounded-lg bg-brand-primarySoft" />
           : notifications === null ? <p role="status" className="mt-3 text-sm">{c.unavailable}</p>
             : visibleNotifications.length === 0 ? <p className="mt-3 text-sm">{c.noNotifications}</p>
+              : aggregateOnly ? <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                {[
+                  [c.notificationSent, visibleNotifications.filter(n => !!n.sent_at).length],
+                  [c.notificationFailed, visibleNotifications.filter(n => !n.sent_at && !!n.error).length],
+                  [c.notificationPending, visibleNotifications.filter(n => n.tracked && !n.sent_at && !n.error).length],
+                  [c.notificationUnknown, visibleNotifications.filter(n => !n.tracked).length],
+                ].map(([label, count]) => <div key={label}><dt className="text-xs text-stone-600">{label}</dt><dd className="mt-1 font-semibold">{count}</dd></div>)}
+              </dl>
               : <div className="mt-3 space-y-3">{visibleNotifications.map(notification => {
                 const request = visibleRequests.get(notification.request_id);
                 const label = !notification.tracked ? c.notificationUnknown : notification.sent_at
@@ -79,6 +86,7 @@ export default function SystemView({ errors, loading, notifications, requests, e
                 </article>;
               })}</div>}
       </section>
-    </div>
-  </div>;
+    </div>;
+  return section === "errors" ? errorsPanel : section === "details" ? detailsPanel
+    : <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(15rem,1fr)]">{errorsPanel}{detailsPanel}</div>;
 }
