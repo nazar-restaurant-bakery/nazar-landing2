@@ -58,7 +58,8 @@ test('manual pull checks staff before Clover and writes once', async () => {
       const expand = new URL(url).searchParams.get('expand').split(',');
       assert.ok(expand.length <= 3);
       const value = order();
-      if (expand.includes('refunds')) return Response.json({ id: value.id, customers: value.customers });
+      if (expand.includes('refunds')) return Response.json({ id: value.id, refunds: value.refunds });
+      if (expand.includes('customers')) return Response.json({ id: value.id, customers: value.customers });
       return Response.json({ id: value.id, createdTime: value.createdTime, orderType: value.orderType,
         lineItems: value.lineItems, payments: value.payments, total: value.total });
     }
@@ -71,9 +72,9 @@ test('manual pull checks staff before Clover and writes once', async () => {
       'Content-Type': 'application/json' }, body: '{"days":1}' });
   const response = await handler({ request, env });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { code: 'ok', fetched: 1, upserted: 1, periodDays: 1 });
+  assert.deepEqual(await response.json(), { code: 'ok', fetched: 1, upserted: 1, periodDays: 1, warnings: [] });
   assert.equal(calls.filter(x => x.endsWith('/rpc/clover_order_ingest_v1')).length, 1);
-  assert.equal(calls.filter(x => x.includes('/orders/ORDER123456')).length, 2);
+  assert.equal(calls.filter(x => x.includes('/orders/ORDER123456')).length, 3);
   assert.ok(calls[0].endsWith('/rpc/crm_staff_authorized_v1'));
   assert.ok(calls[1].includes('apisandbox.dev.clover.com'));
 });
@@ -91,7 +92,27 @@ test('Clover scope failure writes no snapshot', async () => {
   assert.equal(calls.length, 1);
 });
 
-test('refunded order is ingested after two limited expansions', async () => {
+test('fatal Clover denial keeps provider HTTP separate from site wrapper', async () => {
+  const fakeFetch = async input => {
+    const url = String(input);
+    if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+    if (url.includes('/orders/ORDER123456')) return new Response('', { status: 403 });
+    if (url.includes('/orders?')) return Response.json({ elements: [{ id: 'ORDER123456', createdTime: Date.now() }] });
+    throw new Error('unexpected request');
+  };
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let response;
+  try {
+    response = await cloverOrderPullHandler(fakeFetch)({ request: new Request('https://preview.pages.dev/api/staff/clover-order-pull', {
+      method: 'POST', headers: { Origin: 'https://preview.pages.dev', Authorization: `Bearer ${'a'.repeat(24)}`,
+        'Content-Type': 'application/json' }, body: '{"days":1}' }), env });
+  } finally { console.warn = originalWarn; }
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { code: 'clover_access_denied', step: 'order_core', providerStatus: 403 });
+});
+
+test('refunded order is ingested after three limited expansions', async () => {
   let ingested;
   const fakeFetch = async (input, options) => {
     const url = String(input);
@@ -102,9 +123,10 @@ test('refunded order is ingested after two limited expansions', async () => {
     }
     if (url.includes('/orders/ORDER123456')) {
       const value = order();
-      if (new URL(url).searchParams.get('expand') === 'refunds,customers')
-        return Response.json({ id: value.id, customers: value.customers,
-          refunds: { elements: [{ id: 'REFUND12345', amount: 900 }] } });
+      if (new URL(url).searchParams.get('expand') === 'refunds')
+        return Response.json({ id: value.id, refunds: { elements: [{ id: 'REFUND12345', amount: 900 }] } });
+      if (new URL(url).searchParams.get('expand') === 'customers')
+        return Response.json({ id: value.id, customers: value.customers });
       return Response.json({ id: value.id, createdTime: value.createdTime, orderType: value.orderType,
         lineItems: value.lineItems, payments: value.payments });
     }
@@ -116,6 +138,7 @@ test('refunded order is ingested after two limited expansions', async () => {
       'Content-Type': 'application/json' }, body: '{"days":1}' }), env });
   assert.equal(response.status, 200);
   assert.equal(ingested.refunds[0].amount, 900);
+  assert.equal(ingested.refundsVerified, true);
 });
 
 test('missing payment expansion returns a safe stage and never ingests', async () => {
@@ -127,7 +150,6 @@ test('missing payment expansion returns a safe stage and never ingests', async (
     if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
     if (url.includes('/orders/ORDER123456')) {
       const value = order();
-      if (new URL(url).searchParams.get('expand') === 'refunds,customers') return Response.json({ id: value.id });
       return Response.json({ id: value.id, createdTime: value.createdTime, orderType: value.orderType,
         lineItems: value.lineItems });
     }
@@ -150,3 +172,61 @@ test('missing payment expansion returns a safe stage and never ingests', async (
   assert.deepEqual(logs[0][1], { code: 'clover_collection_missing', step: 'order_core', status: 503 });
   assert.deepEqual(auditPoints, [{ blobs: ['clover_collection_missing', 'order_core'], doubles: [503, 0] }]);
 });
+
+for (const denied of ['refunds', 'customers', 'none']) {
+  test(`separate optional Clover reads: ${denied}`, async () => {
+    const snapshots = [];
+    const auditPoints = [];
+    const auditedEnv = { ...env, CLOVER_PULL_AUDIT: { writeDataPoint: point => auditPoints.push(point) } };
+    const fakeFetch = async (input, options) => {
+      const url = String(input);
+      if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+      if (url.endsWith('/rpc/clover_order_ingest_v1')) {
+        snapshots.push(JSON.parse(options.body).p_snapshot);
+        return Response.json({ orderId: 'test' });
+      }
+      if (url.includes('/orders/ORDER123456')) {
+        const value = order();
+        const expand = new URL(url).searchParams.get('expand');
+        if (expand === denied) return new Response('', { status: 403 });
+        if (expand === 'refunds') return Response.json({ id: value.id, refunds: value.refunds });
+        if (expand === 'customers') return Response.json({ id: value.id, customers: value.customers });
+        return Response.json({ id: value.id, createdTime: value.createdTime, orderType: value.orderType,
+          lineItems: value.lineItems, payments: value.payments, total: value.total });
+      }
+      if (url.includes('/orders?')) return Response.json({ elements: [{ id: 'ORDER123456', createdTime: Date.now() }] });
+      throw new Error('unexpected request');
+    };
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let response;
+    try {
+      response = await cloverOrderPullHandler(fakeFetch)({ request: new Request('https://preview.pages.dev/api/staff/clover-order-pull', {
+        method: 'POST', headers: { Origin: 'https://preview.pages.dev', Authorization: `Bearer ${'a'.repeat(24)}`,
+          'Content-Type': 'application/json' }, body: '{"days":1}' }), env: auditedEnv });
+    } finally { console.warn = originalWarn; }
+    assert.equal(response.status, 200);
+    assert.equal(snapshots.length, 1);
+    const result = await response.json();
+    assert.equal(result.code, 'ok');
+    if (denied === 'refunds') {
+      assert.equal(snapshots[0].refundsVerified, false);
+      assert.deepEqual(snapshots[0].refunds, []);
+      assert.equal(snapshots[0].customerEmail, 'Buyer@Example.invalid');
+      assert.deepEqual(result.warnings, [{ code: 'clover_refunds_access_denied', step: 'order_refunds', httpStatus: 403 }]);
+      assert.deepEqual(auditPoints, [{ blobs: ['clover_refunds_access_denied', 'order_refunds'], doubles: [200, 403] }]);
+    } else if (denied === 'customers') {
+      assert.equal(snapshots[0].refundsVerified, true);
+      assert.equal(snapshots[0].customerAccess, 'denied');
+      assert.equal(snapshots[0].customerEmail, null);
+      assert.deepEqual(result.warnings, [{ code: 'clover_customers_access_denied', step: 'order_customers', httpStatus: 403 }]);
+      assert.deepEqual(auditPoints, [{ blobs: ['clover_customers_access_denied', 'order_customers'], doubles: [200, 403] }]);
+    } else {
+      assert.equal(snapshots[0].refundsVerified, true);
+      assert.equal(snapshots[0].customerAccess, 'verified');
+      assert.equal(snapshots[0].customerEmail, 'Buyer@Example.invalid');
+      assert.deepEqual(result.warnings, []);
+      assert.deepEqual(auditPoints, []);
+    }
+  });
+}
