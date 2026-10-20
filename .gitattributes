@@ -8,3 +8,7 @@
 /tools/test-env/k5-*.sql text eol=lf
 /tools/test-env/k5-migrate.py text eol=lf
 /tests/test_k5_operator.py text eol=lf
+
+# K1c: identical LF delivery for sandbox and production.
+/supabase/migrations/20261020000100_ops_panel.sql text eol=lf
+/tools/test-env/k1c-verify.sql text eol=lf

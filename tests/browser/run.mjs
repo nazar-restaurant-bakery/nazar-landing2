@@ -5,6 +5,8 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { staffCopy as c } from '../../src/lib/staffCopy.ts';
+import { opsCopy as o } from '../../src/lib/opsCopy.ts';
+import { runOpsScenarios } from './opsScenarios.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../..');
@@ -231,7 +233,7 @@ try {
   await run('23 Default staff route opens Tasks', 'normal', async page => {
     await page.waitForURL('**/staff/tasks*'); await page.getByRole('heading', exact(c.tasks)).waitFor();
   }, '/staff');
-  for (const route of ['customers', 'crm', 'catering', 'tasks', 'offers', 'system']) {
+  for (const route of ['customers', 'crm', 'catering', 'tasks', 'offers', 'system', 'ops']) {
     await run('24 Denied direct route /staff/' + route, 'auth-denied', async page => {
       await visible(page, c.accessDenied); const s = await snapshot(page);
       assert.equal(s.calls.filter(call => call.name !== 'auth.getSession' && call.name !== 'crm_staff_authorized_v1').length, 0);
@@ -355,6 +357,7 @@ try {
     await page.evaluate(() => window.__staffMock.signOut());
     assert.equal(await link.count(), 0);
   }, '/staff/catering');
+  await runOpsScenarios({ run, visible, screenshot, exact, snapshot, calls, setMode, c });
 } finally {
   await browser.close(); await server.close();
   const report = { scope: 'Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.',
