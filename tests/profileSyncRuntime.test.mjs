@@ -131,14 +131,14 @@ test('mock rate-limit injection is test scoped and does not select Production ke
     {status: 429, body: null, headers: {'retry-after': '60'}});
 });
 
-test('RPC transport uses exact allowlisted target, staff bearer/public key and redirect:error', async () => {
+test('RPC transport uses exact allowlisted target, staff bearer/public key and manual redirects', async () => {
   const fake = recorder(() => new Response('true', {status: 200}));
   const config = profileSyncConfig(previewEnv(), previewHost);
   const bearer = 'Bearer synthetic_staff_token';
   assert.equal(await profileSyncRpc(config, 'crm_staff_authorized_v1', {}, bearer, fake.fetch), true);
   const sent = fake.calls[0];
   assert.equal(sent.url, `${testUrl}/rest/v1/rpc/crm_staff_authorized_v1`);
-  assert.equal(sent.init.method, 'POST'); assert.equal(sent.init.redirect, 'error');
+  assert.equal(sent.init.method, 'POST'); assert.equal(sent.init.redirect, 'manual');
   assert.equal(sent.init.body, '{}'); assert.ok(sent.init.signal instanceof AbortSignal);
   assert.deepEqual(sent.init.headers, {apikey: config.publicKey, Authorization: bearer, 'Content-Type': 'application/json'});
   assert.doesNotMatch(JSON.stringify(sent), /sb_secret_/);
@@ -158,12 +158,14 @@ test('service RPCs use the TEST service key only and cannot reach arbitrary name
 });
 
 test('RPC error bodies and malformed successes are never returned or echoed', async () => {
-  for (const status of [401, 403, 429, 503]) {
+  for (const status of [301, 302, 303, 307, 308, 401, 403, 429, 503]) {
     let bodyReads = 0;
     const fake = recorder(() => ({ok: false, status, json: async () => {bodyReads++; return {private: email};}}));
     await assert.rejects(profileSyncRpc(profileSyncConfig(previewEnv(), previewHost), 'crm_staff_authorized_v1', {}, 'Bearer synthetic', fake.fetch),
       error => error instanceof RpcUnavailable && error.status === status && error.message === 'database_unavailable');
     assert.equal(bodyReads, 0);
+    assert.equal(fake.calls.length, 1);
+    assert.equal(fake.calls[0].init.redirect, 'manual');
   }
   const malformed = recorder(() => new Response('raw private data', {status: 200}));
   await assert.rejects(profileSyncRpc(profileSyncConfig(previewEnv(), previewHost), 'crm_staff_authorized_v1', {}, 'Bearer synthetic', malformed.fetch),
@@ -176,7 +178,7 @@ test('live transport attaches its configured key only after all checks, preservi
     await liveProfileProvider(config, fake.fetch).request(req);
     const sent = fake.calls[0];
     assert.equal(sent.url, req.url); assert.equal(sent.init.method, method);
-    assert.equal(sent.init.redirect, 'error'); assert.equal(sent.init.signal, req.signal);
+    assert.equal(sent.init.redirect, 'manual'); assert.equal(sent.init.signal, req.signal);
     assert.equal(sent.init.body, req.body);
     assert.equal(sent.init.headers.Authorization, `Klaviyo-API-Key ${config.providerKey}`);
     assert.equal(sent.init.headers.revision, KLAVIYO_REVISION);
@@ -238,13 +240,14 @@ test('write transport rejects subscription, suppression, contact expansion and n
 });
 
 test('provider error bodies are never read or returned; only status and retry-after survive', async () => {
-  for (const status of [302, 400, 401, 403, 409, 429, 503]) {
+  for (const status of [301, 302, 303, 307, 308, 400, 401, 403, 409, 429, 503]) {
     let bodyReads = 0;
     const fake = recorder(() => ({ok: false, status, headers: new Headers({'retry-after': '60', location: 'https://evil.invalid'}),
       json: async () => {bodyReads++; return {errors: [`RAW key_private ${email}`]};}}));
     const result = await liveProfileProvider(liveConfig(), fake.fetch).request(request());
     assert.deepEqual(result, {status, body: null, headers: {'retry-after': '60'}});
     assert.equal(bodyReads, 0); assert.equal(fake.calls.length, 1);
+    assert.equal(fake.calls[0].init.redirect, 'manual');
     assert.doesNotMatch(JSON.stringify(result), /RAW|key_private|synthetic@example|evil/);
   }
 });

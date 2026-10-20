@@ -63,7 +63,7 @@ async function setup(t){
  h.fetch=async(input,init={})=>{
   const url=new URL(String(input));const headers=new Headers(init.headers);
   if(url.origin===target){
-   assert.equal(init.method,'POST');assert.equal(init.redirect,'error');
+   assert.equal(init.method,'POST');assert.equal(init.redirect,'manual');
    const name=url.pathname.replace('/rest/v1/rpc/','');const names=rpcParameters[name];
    assert.ok(names,`No unexpected SQL RPC ${name}`);
    const args=JSON.parse(init.body??'{}');assert.ok(Object.keys(args).every(key=>names.includes(key)));
@@ -84,7 +84,7 @@ async function setup(t){
    }catch(error){return reply({code:error.code??'SQL_FAILURE'},error.code==='42501'?(staffRequest?403:401):400);}
   }
   assert.equal(url.origin,'https://a.klaviyo.com','Injected transport must never fall through to real network');
-  assert.equal(init.redirect,'error');assert.equal(headers.get('Authorization'),`Klaviyo-API-Key ${fakeProviderKey}`);
+  assert.equal(init.redirect,'manual');assert.equal(headers.get('Authorization'),`Klaviyo-API-Key ${fakeProviderKey}`);
   assert.ok(['GET','POST'].includes(init.method));
   const call={method:init.method,url:url.href,body:init.body?JSON.parse(init.body):undefined};
   h.providerCalls.push(call);

@@ -75,7 +75,7 @@ function harness(overrides = {}) {
       assert.ok(['crm_staff_authorized_v1', 'crm_profile_sync_queue_v1', 'klaviyo_profile_sync_enqueue_v1',
         'klaviyo_profile_sync_claim_v1', 'klaviyo_profile_sync_context_v1', 'klaviyo_profile_sync_finish_v1'].includes(call.name));
       assert.equal(call.options.method, 'POST');
-      assert.equal(call.options.redirect, 'error');
+      assert.equal(call.options.redirect, 'manual');
       const staff = call.name.startsWith('crm_');
       assert.equal(call.options.headers.apikey, staff ? h.env.VITE_TEST_SUPABASE_ANON_KEY : h.env.TEST_SUPABASE_SECRET_KEY);
       assert.equal(call.options.headers.Authorization, staff ? auth : undefined);

@@ -31,7 +31,7 @@ export type ProviderRequest = {
 };
 export type ProviderResponse = { status: number; headers?: Record<string, string>; body: unknown };
 export interface SyncProvider {
-  /** Attach the account-scoped server key here; fetch must use redirect:error. */
+  /** Attach the account-scoped server key here; never follow a redirect. */
   request(request: ProviderRequest): Promise<ProviderResponse>;
 }
 type Profile = { id: string; attributes: Record<string, unknown> };

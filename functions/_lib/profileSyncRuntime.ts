@@ -51,7 +51,9 @@ export async function profileSyncRpc(config: ProfileSyncConfig, name: string,
     "klaviyo_profile_sync_claim_v1", "klaviyo_profile_sync_context_v1", "klaviyo_profile_sync_finish_v1"];
   if (!allowed.includes(name) || !config.readable || (!bearer && !config.serviceKey.startsWith("sb_secret_"))) throw new RpcUnavailable();
   const result = await fetcher(`${config.url}/rest/v1/rpc/${name}`, {
-    method: "POST", redirect: "error", signal: AbortSignal.timeout(5000),
+    // workerd rejects redirect:"error" before sending the request. Manual
+    // never forwards credentials to a Location; every non-2xx is rejected below.
+    method: "POST", redirect: "manual", signal: AbortSignal.timeout(5000),
     headers: { apikey: bearer ? config.publicKey : config.serviceKey,
       ...(bearer ? { Authorization: bearer } : {}), "Content-Type": "application/json" },
     body: JSON.stringify(args),
@@ -80,7 +82,9 @@ export function liveProfileProvider(config: ProfileSyncConfig, fetcher: Fetcher)
       : JSON.parse(request.body || "{}").data?.attributes?.email;
     if (typeof email !== "string") throw new Error("provider_transport_rejected");
     assertProfileRequest(request, email);
-    const result = await fetcher(endpoint.href, { method: request.method, redirect: "error", signal: request.signal,
+    // Do not follow redirects with the configured provider key. workerd only
+    // supports manual/follow; 3xx stays a rejected provider result with no body.
+    const result = await fetcher(endpoint.href, { method: request.method, redirect: "manual", signal: request.signal,
       headers: { ...request.headers, Authorization: `Klaviyo-API-Key ${config.providerKey}` },
       ...(request.body !== undefined ? { body: request.body } : {}) });
     // Never return provider error bodies, which may echo personal data or keys.
