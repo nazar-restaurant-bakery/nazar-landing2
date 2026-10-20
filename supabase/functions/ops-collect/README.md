@@ -74,7 +74,7 @@ Secrets are server-only; values must never enter Vite configuration, snapshots, 
 - Klaviyo: `KLAVIYO_OPS_READ_KEY`; optional `KLAVIYO_CONVERSION_METRIC_ID` for campaign statistics. Account/list identity and consent/test exclusion are checked.
 - Places: `GOOGLE_PLACES_API_KEY`. Rating/total reviews are direct reads. The seven-day value is a net snapshot difference, not a count of newly posted reviews.
 - GA4: `GA4_SERVICE_ACCOUNT_JSON` (read-only scoped) or temporary `GA4_ACCESS_TOKEN`; property `551076037` (`GA4_PROPERTY_ID` must match).
-- Google Ads: `GOOGLE_ADS_DEVELOPER_TOKEN`; either temporary `GOOGLE_ADS_ACCESS_TOKEN` or `GOOGLE_ADS_CLIENT_ID`/`GOOGLE_ADS_CLIENT_SECRET`/`GOOGLE_ADS_REFRESH_TOKEN`. Optional `GOOGLE_ADS_LOGIN_CUSTOMER_ID` and `GOOGLE_ADS_CUSTOMER_ID`; customer must be `6478477284`, USD/New York.
+- Google Ads: required `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_REFRESH_TOKEN`, and `GOOGLE_ADS_CUSTOMER_ID` (`6478477284` or dashed equivalent). Optional `GOOGLE_ADS_LOGIN_CUSTOMER_ID` for manager routing; USD/New York required. OAuth Cloud project needs production API access and the OAuth user needs read-only account access. Developer tokens were sunset on 2026-09-09; no developer-token header is sent and legacy access-token shortcuts are ignored.
 - Meta: `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID`, `META_API_VERSION`, optional `META_RESULT_ACTION_TYPE`. Read identity, currency and New York timezone are verified; this is not an ads-management write grant.
 - Clover API scaffold: `CLOVER_OPS_READ_TOKEN`, `CLOVER_MERCHANT_ID`, `CLOVER_OPS_API_ENABLED`. Credentials alone do not approve financial/refund/channel mapping or inventory writes; CSV is the first-release path.
 
