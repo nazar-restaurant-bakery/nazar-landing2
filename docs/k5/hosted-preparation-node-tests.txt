@@ -1,0 +1,42 @@
+✔ hosted acceptance script is LF-only rollback SQL and preserves the exact reviewed migration bytes (8.0232ms)
+✔ literal acceptance exercises actual baseline/K4/K5 and rolls back every synthetic row on repeated runs (3081.7386ms)
+✔ missing active existing staff is reported without account creation and all other fixtures still roll back (1776.029ms)
+✔ non-test business fails before fixtures or queue changes (1462.4257ms)
+✔ missing/invalid configured target fails closed without choosing the first business (1352.1869ms)
+{"event":"nazar_form_error","id":"71892deb-6ed0-4d35-b671-c070485a5a16","occurred_at":"2026-10-20T00:12:20.677Z","request_id":"22222222-2222-4222-8222-222222222222","form_kind":"vip","stage":"database","error_code":"database_unavailable","http_status":503}
+✔ production target guard remains exact and preview never falls back to it (1.6846ms)
+✔ explicit test config requires a different project and a configured valid business UUID (0.6097ms)
+✔ documented test Turnstile keys cannot enable a production form (0.2856ms)
+✔ misconfigured preview rejects signup before any outbound request (46.7978ms)
+✔ preview accepts the observed example.com dummy hostname only with explicit expected-host setting, then writes only test project (2.41ms)
+✔ test mode still rejects failed challenge or wrong verification hostname (1.2737ms)
+✔ preview database failure never invokes production error logging or email alerts (9.2997ms)
+✔ all existing staff provider routes fail closed in preview while production middleware passes through (0.8729ms)
+✔ preview browser never invokes public Klaviyo writer or emits analytics events (0.7927ms)
+✔ build-time isolation removes production GA4 while Production keeps its original static loader (1.5611ms)
+✔ exact configured mock route passes actual middleware into authorized read and manual handler (35.0994ms)
+✔ exact route still requires staff bearer and complete isolated target configuration (1.176ms)
+✔ default disabled mode is readable but cannot enqueue, claim or call a provider (1.1949ms)
+✔ unknown, trailing and existing provider routes remain blocked before any handler (1.3386ms)
+✔ Production middleware forwarding remains unchanged for K5 and existing routes (0.6108ms)
+✔ inventory verifies all 18 baseline SQL files and historical copy without claiming K3 readiness (48.2668ms)
+✔ checksum integrity accepts CRLF conversion only and detects changed content (0.299ms)
+✔ altered expected checksum fails closed (20.5052ms)
+✔ omitting a baseline SQL file is detected rather than producing a smaller green inventory (18.276ms)
+✔ K4 additive delivery must be inventoried separately and cannot become a K3 replay step (52.21ms)
+✔ K4 additive has an exact LF-only byte contract while legacy checksums still normalize CRLF (34.758ms)
+✔ K5 preparation stays inventoried, LF-pinned and separate from K3 replay or K4 execution (155.1882ms)
+✔ emergency pause cannot become a normal replay step (17.2648ms)
+✔ decision notifications must follow their queue dependency (17.7819ms)
+✔ duplicate steps and unknown dependencies are rejected (17.06ms)
+✔ unsafe paths and executable metadata cannot authorize source execution (62.5571ms)
+✔ editing blocker metadata to ready still cannot turn a source inventory into execution proof (16.4983ms)
+✔ CLI reports blocked readiness by default; integrity-only success remains explicitly blocked (314.1806ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9515.0495

@@ -1,0 +1,20 @@
+{
+  "passed": 11,
+  "failed": 0,
+  "syntheticOnly": true,
+  "actualAccountActions": 0,
+  "externalNetworkRequests": 0,
+  "scenarios": [
+    "Unsigned visitor makes no private queue or command request; no login is performed.",
+    "Existing isolated legacy staff provider block remains unchanged.",
+    "401 and 403 deny queue visibility and manual commands.",
+    "Disabled mode shows connection waiting rather than an invented healthy zero.",
+    "Synthetic queue shows short IDs, safe error, attempts and New York retry time; 375px has no horizontal overflow.",
+    "One explicit command is locked while pending and followed only by a read, never another write.",
+    "Unknown command outcome stays locked through a failed read; only a successful manual refresh unlocks it, with no automatic write retry.",
+    "An actual authorized empty active queue has a separate empty state.",
+    "Revoked authorization clears previously visible private queue and command result.",
+    "Malformed provider text is rejected without exposing it or inventing an empty queue.",
+    "Logout clears private data immediately and a late command response cannot restore it."
+  ]
+}
