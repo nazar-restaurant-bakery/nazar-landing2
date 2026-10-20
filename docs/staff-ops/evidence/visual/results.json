@@ -1,0 +1,22 @@
+{
+  "scope": "Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.",
+  "startedAt": "2026-10-19T04:23:34.037Z",
+  "finishedAt": "2026-10-19T04:23:38.062Z",
+  "browserExecutable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "passed": 2,
+  "failed": 0,
+  "checks": [
+    {
+      "case": "37 Ops legacy address redirects and ten tiles plus seven actions remain in place",
+      "passed": true
+    },
+    {
+      "case": "51 Ops mobile 375px has a single metric column and no horizontal overflow",
+      "passed": true
+    }
+  ],
+  "screenshots": [
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\visual\\staff-ops-desktop.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-ops-panel\\docs\\staff-ops\\evidence\\visual\\staff-ops-mobile.png"
+  ]
+}

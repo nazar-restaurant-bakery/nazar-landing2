@@ -24,6 +24,16 @@ export type ProfileSyncRun = {
   failed: number;
 };
 export type ProfileSyncResponse<T> = { status: "ok"; data: T } | { status: "denied" | "unavailable" };
+export type ProfileSyncConnectionCheck = {
+  code: "connection_verified";
+  readOnly: true;
+  checkedAt: string;
+  providerHttpStatus: 200;
+};
+export type ProfileSyncConnectionError = "connection_rate_limited" | "connection_auth_failed"
+  | "connection_unconfirmed" | "connection_unavailable";
+export type ProfileSyncConnectionResponse = ProfileSyncResponse<ProfileSyncConnectionCheck>
+  | { status: "failed"; code: ProfileSyncConnectionError };
 export type ProfileSyncFetch = (input: string, options: RequestInit) => Promise<Response>;
 
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
@@ -71,6 +81,47 @@ export const readProfileSyncQueue = (fetcher: ProfileSyncFetch, accessToken: str
   request(fetcher, accessToken, false, validProfileSyncQueue);
 export const runProfileSync = (fetcher: ProfileSyncFetch, accessToken: string) =>
   request(fetcher, accessToken, true, validProfileSyncRun);
+
+export function validProfileSyncConnectionCheck(value: unknown): value is ProfileSyncConnectionCheck {
+  return record(value) && value.code === "connection_verified" && value.readOnly === true
+    && value.providerHttpStatus === 200 && typeof value.checkedAt === "string"
+    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(value.checkedAt)
+    && date(value.checkedAt);
+}
+
+/** One explicit read-only provider check; never reuses the sync command or retries. */
+export async function checkProfileSyncConnection(fetcher: ProfileSyncFetch, accessToken: string): Promise<ProfileSyncConnectionResponse> {
+  if (!accessToken) return { status: "denied" };
+  try {
+    const response = await fetcher("/api/staff/profile-sync", {
+      method: "POST", cache: "no-store", signal: AbortSignal.timeout(20000),
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "check" }),
+    });
+    if (response.status === 401 || response.status === 403) return { status: "denied" };
+    const data: unknown = await response.json();
+    if (response.status === 200 && validProfileSyncConnectionCheck(data)) {
+      return { status: "ok", data: { code: "connection_verified", readOnly: true,
+        checkedAt: data.checkedAt, providerHttpStatus: 200 } };
+    }
+    if (record(data)) {
+      if (response.status === 429 && data.code === "connection_rate_limited") return { status: "failed", code: data.code };
+      if (response.status === 502 && (data.code === "connection_auth_failed" || data.code === "connection_unconfirmed")) return { status: "failed", code: data.code };
+      if (response.status === 503 && data.code === "connection_unavailable") return { status: "failed", code: data.code };
+    }
+    return { status: "unavailable" };
+  } catch { return { status: "unavailable" }; }
+}
+
+export function profileSyncConnectionErrorLabel(code: ProfileSyncConnectionError) {
+  const labels: Record<ProfileSyncConnectionError, string> = {
+    connection_rate_limited: "Bağlantı doğrulanamadı. Klaviyo istek sınırına ulaşıldı; daha sonra yeniden kontrol et.",
+    connection_auth_failed: "Bağlantı doğrulanamadı. Klaviyo anahtarı veya erişim yetkisi kontrol edilmeli.",
+    connection_unconfirmed: "Bağlantı sonucu doğrulanamadı. Daha sonra yeniden kontrol et.",
+    connection_unavailable: "Bağlantı kontrolü kullanılamıyor. Bağlantı ayarlarını kontrol et.",
+  };
+  return labels[code];
+}
 
 const statusLabels: Record<string, string> = {
   pending: "Bekliyor", queued: "Bekliyor", processing: "İşleniyor", running: "İşleniyor",

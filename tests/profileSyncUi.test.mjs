@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   validProfileSyncQueue, validProfileSyncRun, readProfileSyncQueue, runProfileSync,
-  profileSyncShortId, profileSyncStatusLabel, profileSyncDate,
+  profileSyncShortId, profileSyncStatusLabel, profileSyncDate, checkProfileSyncConnection,
+  validProfileSyncConnectionCheck, profileSyncConnectionErrorLabel,
 } from '../src/lib/profileSyncUi.ts';
 
 const queue = (overrides = {}) => ({ code: 'ok', mode: 'mock', jobs: [{
@@ -13,6 +14,8 @@ const queue = (overrides = {}) => ({ code: 'ok', mode: 'mock', jobs: [{
 const result = (overrides = {}) => ({ code: 'ok', mode: 'mock', processed: 3,
   succeeded: 1, blocked: 1, retry: 1, failed: 0, ...overrides });
 const reply = data => async () => new Response(JSON.stringify(data), { status: 200 });
+const connection = (overrides = {}) => ({ code: 'connection_verified', readOnly: true,
+  checkedAt: '2026-10-20T06:00:00.123Z', providerHttpStatus: 200, ...overrides });
 
 test('queue accepts an explicit disabled connection and an actual empty active queue', () => {
   assert.equal(validProfileSyncQueue(queue()), true);
@@ -116,4 +119,59 @@ test('display helpers use safe short ids, explicit unknown status and New York d
   assert.equal(profileSyncDate(null), '—');
   assert.equal(profileSyncDate('bad date'), 'Geçersiz tarih');
   assert.match(profileSyncDate('2026-10-19T14:05:00Z'), /19.*2026.*10:05/);
+});
+
+test('connection verification is exactly one same-origin check action, never a sync run', async () => {
+  const calls = [];
+  const response = await checkProfileSyncConnection(async (...args) => {
+    calls.push(args); return new Response(JSON.stringify(connection()));
+  }, 'synthetic-token');
+  assert.deepEqual(response, { status: 'ok', data: connection() });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], '/api/staff/profile-sync');
+  assert.equal(calls[0][1].method, 'POST');
+  assert.equal(calls[0][1].cache, 'no-store');
+  assert.deepEqual(calls[0][1].headers, { Authorization: 'Bearer synthetic-token', 'Content-Type': 'application/json' });
+  assert.deepEqual(JSON.parse(calls[0][1].body), { action: 'check' });
+  assert.ok(calls[0][1].signal instanceof AbortSignal);
+});
+
+test('connection success requires explicit read-only HTTP200 contract and ISO time', () => {
+  assert.equal(validProfileSyncConnectionCheck(connection()), true);
+  assert.equal(validProfileSyncConnectionCheck(connection({ checkedAt: '2026-10-20T02:00:00-04:00' })), true);
+  for (const patch of [{ code: 'ok' }, { readOnly: false }, { readOnly: undefined },
+    { providerHttpStatus: 201 }, { providerHttpStatus: '200' }, { checkedAt: '2026' },
+    { checkedAt: 'bad date' }, { checkedAt: '2026-10-20' }, { checkedAt: null },
+    { checkedAt: '2026-99-99T06:00:00Z' }]) {
+    assert.equal(validProfileSyncConnectionCheck(connection(patch)), false);
+  }
+});
+
+test('check strips extra provider data and only accepts exact status/error pairs', async () => {
+  const unsafe = 'SYNTHETIC_PRIVATE_PROVIDER_BODY_DO_NOT_DISPLAY';
+  assert.deepEqual(await checkProfileSyncConnection(reply(connection({ email: unsafe, authorization: unsafe })), 'token'),
+    { status: 'ok', data: connection() });
+  for (const [status, code] of [[429, 'connection_rate_limited'], [502, 'connection_auth_failed'],
+    [502, 'connection_unconfirmed'], [503, 'connection_unavailable']]) {
+    const result = await checkProfileSyncConnection(async () => new Response(JSON.stringify({ code, detail: unsafe }), { status }), 'token');
+    assert.deepEqual(result, { status: 'failed', code });
+    assert.equal(JSON.stringify(result).includes(unsafe), false);
+    assert.equal(profileSyncConnectionErrorLabel(code).includes(unsafe), false);
+  }
+  for (const [status, data] of [[429, { code: 'connection_auth_failed' }], [502, { code: unsafe }],
+    [503, { code: 'connection_verified' }], [200, connection({ readOnly: false })],
+    [201, connection()], [302, connection()], [500, { message: unsafe }]]) {
+    assert.deepEqual(await checkProfileSyncConnection(async () => new Response(JSON.stringify(data), { status }), 'token'), { status: 'unavailable' });
+  }
+});
+
+test('check denies missing/expired staff sessions and never retries a lost response', async () => {
+  let calls = 0;
+  const fetcher = async () => { calls += 1; throw new Error('synthetic response loss'); };
+  assert.deepEqual(await checkProfileSyncConnection(fetcher, ''), { status: 'denied' });
+  assert.equal(calls, 0);
+  assert.deepEqual(await checkProfileSyncConnection(fetcher, 'token'), { status: 'unavailable' });
+  assert.equal(calls, 1);
+  for (const status of [401, 403]) assert.deepEqual(await checkProfileSyncConnection(async () => new Response('unsafe provider body', { status }), 'token'), { status: 'denied' });
+  assert.deepEqual(await checkProfileSyncConnection(async () => new Response('unsafe invalid json'), 'token'), { status: 'unavailable' });
 });

@@ -17,3 +17,6 @@ major_version = 17
 [db.seed]
 enabled = false
 # Seed is generated explicitly from TEST_BUSINESS_ID after baseline validation.
+
+[functions.ops-collect]
+verify_jwt = true

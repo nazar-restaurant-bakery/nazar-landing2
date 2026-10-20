@@ -1,53 +1,71 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  checkProfileSyncConnection, profileSyncConnectionErrorLabel,
   profileSyncDate, profileSyncShortId, profileSyncStatusLabel, readProfileSyncQueue, runProfileSync,
-  type ProfileSyncFetch, type ProfileSyncQueue, type ProfileSyncRun,
+  type ProfileSyncConnectionCheck, type ProfileSyncFetch, type ProfileSyncQueue, type ProfileSyncRun,
 } from "../../lib/profileSyncUi";
 
-type ReadState = { status: "loading" | "denied" | "unavailable" } | { status: "ready"; data: ProfileSyncQueue };
+type ReadState = ({ status: "loading" | "denied" | "unavailable" } | { status: "ready"; data: ProfileSyncQueue })
+  & { accessToken: string; fetcher: ProfileSyncFetch };
 const defaultFetch: ProfileSyncFetch = (input, options) => fetch(input, options);
 
 export default function ProfileSyncPanel({ accessToken, fetcher = defaultFetch }: {
   accessToken: string;
   fetcher?: ProfileSyncFetch;
 }) {
-  const [state, setState] = useState<ReadState>({ status: "loading" });
+  const [state, setState] = useState<ReadState>({ status: "loading", accessToken, fetcher });
   const [running, setRunning] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const [runResult, setRunResult] = useState<ProfileSyncRun | null>(null);
+  const [checkResult, setCheckResult] = useState<ProfileSyncConnectionCheck | null>(null);
   const [message, setMessage] = useState("");
-  const sequence = useRef(0);
+  const generation = useRef(0);
   const active = useRef(false);
-  const writing = useRef(false);
+  const operation = useRef<{ kind: "refresh" | "run" | "check"; generation: number } | null>(null);
+  const sameScope = state.accessToken === accessToken && state.fetcher === fetcher;
+  const readStatus = sameScope ? state.status : "loading";
+  const ready = sameScope && state.status === "ready" ? state.data : null;
 
   const refresh = useCallback(async () => {
-    const current = ++sequence.current;
-    setState({ status: "loading" });
+    if (!active.current || operation.current) return;
+    const current = { kind: "refresh" as const, generation: generation.current };
+    operation.current = current;
+    setState({ status: "loading", accessToken, fetcher });
+    setCheckResult(null);
     const result = await readProfileSyncQueue(fetcher, accessToken);
-    if (!active.current || current !== sequence.current) return;
+    if (!active.current || operation.current !== current || current.generation !== generation.current) return;
+    operation.current = null;
     if (result.status === "ok") {
-      setState({ status: "ready", data: result.data }); setNeedsRefresh(false); setMessage("");
+      setState({ status: "ready", data: result.data, accessToken, fetcher }); setNeedsRefresh(false); setMessage("");
     } else {
-      setState({ status: result.status });
+      setState({ status: result.status, accessToken, fetcher });
       if (result.status === "denied") { setRunResult(null); setMessage(""); }
     }
   }, [accessToken, fetcher]);
 
   useEffect(() => {
     active.current = true;
-    queueMicrotask(() => { if (active.current) void refresh(); });
-    return () => { active.current = false; sequence.current += 1; };
+    const current = ++generation.current;
+    operation.current = null;
+    queueMicrotask(() => {
+      if (!active.current || current !== generation.current) return;
+      setRunning(false); setChecking(false); setNeedsRefresh(false); setRunResult(null); setCheckResult(null); setMessage("");
+      void refresh();
+    });
+    return () => { active.current = false; generation.current += 1; operation.current = null; };
   }, [refresh]);
 
   async function run() {
-    if (writing.current || running || needsRefresh || state.status !== "ready" || state.data.mode === "disabled") return;
-    writing.current = true; setRunning(true); setNeedsRefresh(true); setRunResult(null); setMessage("");
+    if (!active.current || operation.current || running || checking || needsRefresh || !ready || ready.mode === "disabled") return;
+    const current = { kind: "run" as const, generation: generation.current };
+    operation.current = current; setRunning(true); setNeedsRefresh(true); setRunResult(null); setCheckResult(null); setMessage("");
     const result = await runProfileSync(fetcher, accessToken);
-    writing.current = false;
-    if (!active.current) return;
+    if (!active.current || operation.current !== current || current.generation !== generation.current) return;
+    operation.current = null;
     setRunning(false);
     if (result.status === "denied") {
-      sequence.current += 1; setState({ status: "denied" }); setRunResult(null); setMessage("");
+      setState({ status: "denied", accessToken, fetcher }); setRunResult(null); setMessage("");
     } else if (result.status !== "ok") {
       setMessage("İşlem sonucu doğrulanamadı. Yeniden çalıştırmadan önce Yenile ile kuyruğu kontrol et.");
     } else {
@@ -57,8 +75,24 @@ export default function ProfileSyncPanel({ accessToken, fetcher = defaultFetch }
     }
   }
 
-  const ready = state.status === "ready" ? state.data : null;
-  const enabled = ready && ready.mode !== "disabled" && !running && !needsRefresh;
+  async function checkConnection() {
+    if (!active.current || operation.current || running || checking || !ready || ready.mode !== "live") return;
+    const current = { kind: "check" as const, generation: generation.current };
+    operation.current = current; setChecking(true); setCheckResult(null); setMessage("");
+    const result = await checkProfileSyncConnection(fetcher, accessToken);
+    if (!active.current || operation.current !== current || current.generation !== generation.current) return;
+    operation.current = null; setChecking(false);
+    if (result.status === "denied") {
+      setState({ status: "denied", accessToken, fetcher }); setRunResult(null); setMessage("");
+    } else if (result.status === "ok") {
+      setCheckResult(result.data);
+    } else {
+      setMessage(profileSyncConnectionErrorLabel(result.status === "failed" ? result.code : "connection_unavailable"));
+    }
+  }
+
+  const enabled = ready && ready.mode !== "disabled" && !running && !checking && !needsRefresh;
+  const checkEnabled = ready?.mode === "live" && !running && !checking;
   const knownCounts = ready ? Object.entries(ready.counts).filter(([key]) => ["pending", "queued", "processing", "running", "retry", "failed", "blocked", "succeeded"].includes(key)) : [];
 
   return <section aria-labelledby="profile-sync-heading" className="rounded-lg border border-brand-border bg-white p-4 sm:p-6">
@@ -66,15 +100,18 @@ export default function ProfileSyncPanel({ accessToken, fetcher = defaultFetch }
       <div><h1 id="profile-sync-heading" className="text-2xl font-bold">Profil senkronu</h1>
         <p className="mt-1 text-sm text-stone-600">Kalıcı senkron kuyruğu ve yeniden deneme durumu.</p></div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={running || state.status === "loading"} onClick={() => void refresh()}
+        <button type="button" disabled={running || checking || readStatus === "loading"} onClick={() => void refresh()}
           className="min-h-11 rounded-lg border border-brand px-4 py-2 font-semibold text-brand disabled:opacity-50">Yenile</button>
+        <button type="button" aria-describedby="profile-sync-connection-help" disabled={!checkEnabled} onClick={() => void checkConnection()}
+          className="min-h-11 rounded-lg border border-brand px-4 py-2 font-semibold text-brand disabled:opacity-50">{checking ? "Bağlantı kontrol ediliyor…" : "Bağlantıyı doğrula"}</button>
         <button type="button" disabled={!enabled} onClick={() => void run()}
           className="min-h-11 rounded-lg bg-brand px-4 py-2 font-semibold text-white disabled:opacity-50">{running ? "Senkron bekleniyor…" : "Şimdi senkronla"}</button>
       </div>
     </div>
-    {state.status === "loading" && <div role="status" className="mt-5 space-y-3"><span className="sr-only">Senkron kuyruğu yükleniyor.</span>{[0, 1, 2].map(row => <div key={row} aria-hidden="true" className="h-16 animate-pulse rounded-lg bg-brand-bg" />)}</div>}
-    {state.status === "denied" && <p role="alert" className="mt-5 rounded-lg border border-brand-border p-4">Erişim yok. Yalnız aktif, yetkili personel bu kuyruğu görebilir.</p>}
-    {state.status === "unavailable" && <p role="alert" className="mt-5 rounded-lg border border-brand-border p-4">Bağlantı bekliyor. Senkron kuyruğu yüklenemedi; kayıt sayısı doğrulanmadı. Yenile ile tekrar kontrol et.</p>}
+    <p id="profile-sync-connection-help" className="mt-3 text-sm text-stone-600">Bağlantıyı doğrula yalnız bağlantıyı kontrol eder; profil veya e-posta oluşturmaz.</p>
+    {readStatus === "loading" && <div role="status" className="mt-5 space-y-3"><span className="sr-only">Senkron kuyruğu yükleniyor.</span>{[0, 1, 2].map(row => <div key={row} aria-hidden="true" className="h-16 animate-pulse rounded-lg bg-brand-bg" />)}</div>}
+    {readStatus === "denied" && <p role="alert" className="mt-5 rounded-lg border border-brand-border p-4">Erişim yok. Yalnız aktif, yetkili personel bu kuyruğu görebilir.</p>}
+    {readStatus === "unavailable" && <p role="alert" className="mt-5 rounded-lg border border-brand-border p-4">Bağlantı bekliyor. Senkron kuyruğu yüklenemedi; kayıt sayısı doğrulanmadı. Yenile ile tekrar kontrol et.</p>}
     {ready && <>
       <p role="status" className="mt-4 rounded-lg border border-brand-border bg-brand-bg p-3 text-sm">{ready.mode === "disabled"
         ? "Bağlantı bekliyor. Profil senkronu etkin değil."
@@ -95,7 +132,8 @@ export default function ProfileSyncPanel({ accessToken, fetcher = defaultFetch }
         </li>)}</ul>}
       </>}
     </>}
-    {runResult && runResult.mode !== "disabled" && <p role="status" className="mt-4 rounded-lg border border-brand-border p-3 text-sm">Son işlem: {runResult.processed} işlendi · {runResult.succeeded} tamamlandı · {runResult.blocked} engellendi · {runResult.retry} tekrar bekliyor · {runResult.failed} başarısız.</p>}
-    {message && <p role="alert" className="mt-4 rounded-lg border border-brand-border p-3 text-sm">{message}</p>}
+    {ready && checkResult && <p role="status" className="mt-4 rounded-lg border border-brand-border p-3 text-sm">Klaviyo bağlantısı doğrulandı (HTTP 200). Profil veya e-posta oluşturulmadı. <span className="block">Kontrol: {profileSyncDate(checkResult.checkedAt)}</span></p>}
+    {sameScope && runResult && runResult.mode !== "disabled" && <p role="status" className="mt-4 rounded-lg border border-brand-border p-3 text-sm">Son işlem: {runResult.processed} işlendi · {runResult.succeeded} tamamlandı · {runResult.blocked} engellendi · {runResult.retry} tekrar bekliyor · {runResult.failed} başarısız.</p>}
+    {sameScope && message && <p role="alert" className="mt-4 rounded-lg border border-brand-border p-3 text-sm">{message}</p>}
   </section>;
 }

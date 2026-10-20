@@ -1,4 +1,5 @@
 import { runProfileSync, type SyncContext, type SyncLease, type SyncOutcome, type SyncStore } from "../../_lib/klaviyoProfileSync.ts";
+import { checkProfileSyncConnection } from "../../_lib/profileSyncConnection.ts";
 import { isRecord, isUuid, liveProfileProvider, mockProfileProvider, profileSyncConfig,
   profileSyncRpc, RpcUnavailable, type Fetcher, type ProfileSyncEnv } from "../../_lib/profileSyncRuntime.ts";
 
@@ -64,7 +65,11 @@ export function profileSyncHandler(fetcher: Fetcher = fetch) {
       if (text.length > 256) return reply(413, "too_large");
       let body: unknown;
       try { body = JSON.parse(text); } catch { return reply(400, "invalid_action"); }
-      if (!isRecord(body) || Object.keys(body).join() !== "action" || body.action !== "run") return reply(400, "invalid_action");
+      if (!isRecord(body) || Object.keys(body).join() !== "action" || (body.action !== "run" && body.action !== "check")) return reply(400, "invalid_action");
+      if (body.action === "check") {
+        const result = await checkProfileSyncConnection(config, fetcher);
+        return reply(result.status, result.body.code, result.body);
+      }
       if (config.mode === "disabled") return reply(503, "connection_unavailable");
 
       // One lease per explicit request bounds load and narrow live-test approval.
