@@ -23,7 +23,7 @@ test('inventory verifies all 18 baseline SQL files and historical copy without c
  assert.equal(result.reviewed_additive[0].included_in_k3_reset,false);
  assert.equal(result.reviewed_additive[0].application_tool,'tools/test-env/k4-migrate.py');
  assert.equal(result.reviewed_additive[1].included_in_k3_reset,false);
- assert.equal(result.reviewed_additive[1].application_tool,'psql18.6 K5 release pending');
+ assert.equal(result.reviewed_additive[1].application_tool,'tools/test-env/k5-migrate.py');
 });
 
 test('checksum integrity accepts CRLF conversion only and detects changed content',()=>{
@@ -79,7 +79,7 @@ test('K5 preparation stays inventoried, LF-pinned and separate from K3 replay or
  for(const mutate of [m=>{m.reviewed_additive[1].line_endings='CRLF';},m=>{m.reviewed_additive[1].sha256_bytes_at_capture='0'.repeat(64);}]){
   const manifest=clone();mutate(manifest);assert.ok(codes(await auditMigrations({root,manifest})).includes('ADDITIVE_LF_BYTES_REQUIRED'));
  }
- const k4Tool=clone();k4Tool.reviewed_additive[0].application_tool='psql18.6 K5 release pending';
+ const k4Tool=clone();k4Tool.reviewed_additive[0].application_tool='tools/test-env/k5-migrate.py';
  assert.ok(codes(await auditMigrations({root,manifest:k4Tool})).includes('ADDITIVE_DELIVERY_CONTRACT'));
 });
 

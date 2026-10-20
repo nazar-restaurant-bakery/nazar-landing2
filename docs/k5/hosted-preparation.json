@@ -1,0 +1,22 @@
+{
+  "scope": "K5_HOSTED_TEST_PREPARATION",
+  "migration_from_PR56_unchanged": true,
+  "migration_sha256": "d28672a87149839c71e44c72116ebbf3b96b2e76c7ec42a2a79c1f7b9f4fabc2",
+  "acceptance_sha256": "f975a867ccd9481cf1c44a51a91f9d0f619efe56c9a77fc4c7a8dbc51964df22",
+  "operator_sha256": "67b59ed3392a518b592bd4979511e0b46d236c46e5cd562bde4837719704202c",
+  "targeted_node_checks": 33,
+  "python_operator_mock_tests": 19,
+  "functions_strict_tsc": "pass",
+  "targeted_eslint": "pass",
+  "independent_operator_review": "no blocker",
+  "preview_fix": "exact new staff profile-sync endpoint passes K3 middleware; existing provider routes remain blocked",
+  "hosted_database_connection_started": false,
+  "real_provider_calls": 0,
+  "production_run_approved": false,
+  "prior_full_node_suite": {
+    "passed": 272,
+    "commit": "81105f5"
+  },
+  "test_operator": "tools/test-env/k5-migrate.py",
+  "rollback_acceptance_checks": 17
+}

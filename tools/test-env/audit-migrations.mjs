@@ -10,7 +10,7 @@ const sha=/^[a-f0-9]{64}$/;
 // code review; a manifest string can never select an arbitrary executable path.
 const additivePolicy=new Map([
  ['k4_suppression_consent_offers',{path:'supabase/migrations/20261019000200_suppression_consent_offers.sql',tool:'tools/test-env/k4-migrate.py'}],
- ['k5_klaviyo_profile_sync',{path:'supabase/migrations/20261019000300_klaviyo_profile_sync.sql',tool:'psql18.6 K5 release pending'}],
+ ['k5_klaviyo_profile_sync',{path:'supabase/migrations/20261019000300_klaviyo_profile_sync.sql',tool:'tools/test-env/k5-migrate.py'}],
 ]);
 export const sha256Lf=text=>createHash('sha256').update(text.replace(/\r\n/g,'\n'),'utf8').digest('hex');
 
