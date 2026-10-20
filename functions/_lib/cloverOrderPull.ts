@@ -7,6 +7,19 @@ const cloverId = /^[A-Za-z0-9]{8,32}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const object = (x: unknown): x is ObjectValue => x !== null && typeof x === "object" && !Array.isArray(x);
 const id = (x: unknown): x is string => typeof x === "string" && cloverId.test(x);
+export type PullStep = "configuration" | "authorization" | "list" | "order_core" | "order_refunds" | "ingest";
+
+export class PullError extends Error {
+  readonly code: string;
+  readonly step: PullStep;
+  readonly providerStatus?: number;
+  constructor(code: string, step: PullStep, providerStatus?: number) {
+    super(code);
+    this.code = code;
+    this.step = step;
+    this.providerStatus = providerStatus;
+  }
+}
 
 export function orderPullConfig(env: PullEnv, hostname: string) {
   const target = resolveServerEnvironment(env, hostname);
@@ -24,10 +37,10 @@ export function orderPullConfig(env: PullEnv, hostname: string) {
     cloverBase: target.isolated ? "https://apisandbox.dev.clover.com" : "https://api.clover.com" };
 }
 
-function elements(value: unknown): ObjectValue[] {
-  if (Array.isArray(value)) return value.filter(object);
-  if (object(value) && Array.isArray(value.elements)) return value.elements.filter(object);
-  throw new Error("incomplete_collection");
+function elements(value: unknown, step: PullStep): ObjectValue[] {
+  const rows = Array.isArray(value) ? value : object(value) ? value.elements : null;
+  if (!Array.isArray(rows) || rows.some(row => !object(row))) throw new PullError("clover_collection_missing", step);
+  return rows as ObjectValue[];
 }
 
 function contact(customer: ObjectValue | undefined, single: string, plural: string): string | null {
@@ -38,19 +51,19 @@ function contact(customer: ObjectValue | undefined, single: string, plural: stri
   return object(first) && typeof first[single] === "string" ? first[single] : null;
 }
 
-/** Every required expansion is present before any database write. */
+/** Payments must be present; a successful order response may omit empty optional collections. */
 export function snapshot(detail: unknown, merchant: string, onlineTypes: string[]): ObjectValue {
-  if (!object(detail) || !id(detail.id) || !Number.isSafeInteger(detail.createdTime)) throw new Error("invalid_order");
+  if (!object(detail) || !id(detail.id) || !Number.isSafeInteger(detail.createdTime)) throw new PullError("clover_order_invalid", "order_core");
   const orderType = detail.orderType;
   const typeId = object(orderType) && id(orderType.id) ? orderType.id : null;
-  if (!typeId) throw new Error("missing_order_type");
-  const items = elements(detail.lineItems);
-  const payments = elements(detail.payments);
-  const refunds = elements(detail.refunds);
-  const customers = elements(detail.customers);
-  for (const row of [...items, ...payments, ...refunds]) if (!id(row.id)) throw new Error("invalid_child_id");
-  for (const row of payments) if (!Number.isSafeInteger(row.amount) || Number(row.amount) < 0) throw new Error("invalid_payment");
-  for (const row of refunds) if (!Number.isSafeInteger(row.amount) || Number(row.amount) < 0) throw new Error("invalid_refund");
+  if (!typeId) throw new PullError("clover_order_type_missing", "order_core");
+  const items = elements(detail.lineItems, "order_core");
+  const payments = elements(detail.payments, "order_core");
+  const refunds = detail.refunds === undefined ? [] : elements(detail.refunds, "order_refunds");
+  const customers = detail.customers === undefined ? [] : elements(detail.customers, "order_refunds");
+  for (const row of [...items, ...payments, ...refunds]) if (!id(row.id)) throw new PullError("clover_child_invalid", "order_core");
+  for (const row of payments) if (!Number.isSafeInteger(row.amount) || Number(row.amount) < 0) throw new PullError("clover_payment_invalid", "order_core");
+  for (const row of refunds) if (!Number.isSafeInteger(row.amount) || Number(row.amount) < 0) throw new PullError("clover_refund_invalid", "order_refunds");
   const isOnline = onlineTypes.includes(typeId);
   const customer = isOnline ? customers[0] : undefined;
   return { id: detail.id, merchantId: merchant, orderTypeId: typeId, online: isOnline,
@@ -61,12 +74,17 @@ export function snapshot(detail: unknown, merchant: string, onlineTypes: string[
     items, payments, refunds, raw: detail };
 }
 
-async function cloverJson(url: URL, token: string, fetcher: Fetcher): Promise<ObjectValue> {
-  const response = await fetcher(url, { redirect: "manual", signal: AbortSignal.timeout(10000),
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "User-Agent": "NazarCRM/1.0" } });
-  if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "clover_scope_or_auth" : "clover_unavailable");
-  const body: unknown = await response.json();
-  if (!object(body)) throw new Error("invalid_clover_response");
+async function cloverJson(url: URL, token: string, fetcher: Fetcher, step: PullStep): Promise<ObjectValue> {
+  let response: Response;
+  try {
+    response = await fetcher(url, { redirect: "manual", signal: AbortSignal.timeout(10000),
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "User-Agent": "NazarCRM/1.0" } });
+  } catch { throw new PullError("clover_request_failed", step); }
+  if (!response.ok) throw new PullError(response.status === 401 || response.status === 403
+    ? "clover_access_denied" : "clover_http_error", step, response.status);
+  let body: unknown;
+  try { body = await response.json(); } catch { throw new PullError("clover_response_invalid", step); }
+  if (!object(body)) throw new PullError("clover_response_invalid", step);
   return body;
 }
 
@@ -83,19 +101,25 @@ export async function collectOrders(config: ReturnType<typeof orderPullConfig>, 
     url.searchParams.set("orderBy", "createdTime DESC");
     url.searchParams.set("limit", "100");
     url.searchParams.set("offset", String(offset));
-    const rows = elements(await cloverJson(url, config.token, fetcher));
+    const rows = elements(await cloverJson(url, config.token, fetcher, "list"), "list");
     for (const row of rows) {
-      if (!id(row.id) || !Number.isSafeInteger(row.createdTime)) throw new Error("invalid_order_list");
+      if (!id(row.id) || !Number.isSafeInteger(row.createdTime)) throw new PullError("clover_order_invalid", "list");
       listed.set(row.id, row);
     }
     if (rows.length < 100) break;
-    if (offset === 1000) throw new Error("pull_limit_exceeded");
+    if (offset === 1000) throw new PullError("clover_pull_limit", "list");
   }
   const output: ObjectValue[] = [];
   for (const [orderId] of listed) {
     const url = new URL(`${config.cloverBase}/v3/merchants/${config.merchant}/orders/${orderId}`);
-    url.searchParams.set("expand", "lineItems,payments,refunds,customers,orderType");
-    output.push(snapshot(await cloverJson(url, config.token, fetcher), config.merchant, config.onlineTypes));
+    url.searchParams.set("expand", "lineItems,payments,orderType");
+    const core = await cloverJson(url, config.token, fetcher, "order_core");
+    if (core.id !== orderId) throw new PullError("clover_order_invalid", "order_core");
+    url.searchParams.set("expand", "refunds,customers");
+    const optional = await cloverJson(url, config.token, fetcher, "order_refunds");
+    if (optional.id !== orderId) throw new PullError("clover_order_invalid", "order_refunds");
+    output.push(snapshot({ ...core, refunds: optional.refunds, customers: optional.customers },
+      config.merchant, config.onlineTypes));
   }
   return output;
 }

@@ -23,10 +23,20 @@ test('online contact is preserved for matching; store order stays unlinked', () 
   assert.equal(walkIn.customerPhone, null);
 });
 
-test('missing financial expansion fails before any write', () => {
+test('an absent refund collection means no refund; a populated refund is preserved', () => {
+  const noRefund = order();
+  delete noRefund.refunds;
+  assert.deepEqual(snapshot(noRefund, 'MERCHANT123', ['ONLINE12345']).refunds, []);
+  const refunded = order();
+  refunded.refunds = { elements: [{ id: 'REFUND12345', amount: 900 }] };
+  assert.equal(snapshot(refunded, 'MERCHANT123', ['ONLINE12345']).refunds[0].amount, 900);
+});
+
+test('missing payment collection still fails', () => {
   const incomplete = order();
-  delete incomplete.refunds;
-  assert.throws(() => snapshot(incomplete, 'MERCHANT123', ['ONLINE12345']), /incomplete_collection/);
+  delete incomplete.payments;
+  assert.throws(() => snapshot(incomplete, 'MERCHANT123', ['ONLINE12345']),
+    error => error.code === 'clover_collection_missing' && error.step === 'order_core');
 });
 
 test('preview rejects production fallback', () => {
@@ -44,7 +54,14 @@ test('manual pull checks staff before Clover and writes once', async () => {
     const url = String(input); calls.push(url);
     if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
     if (url.endsWith('/rpc/clover_order_ingest_v1')) return Response.json({ orderId: 'test' });
-    if (url.includes('/orders/ORDER123456')) return Response.json(order());
+    if (url.includes('/orders/ORDER123456')) {
+      const expand = new URL(url).searchParams.get('expand').split(',');
+      assert.ok(expand.length <= 3);
+      const value = order();
+      if (expand.includes('refunds')) return Response.json({ id: value.id, customers: value.customers });
+      return Response.json({ id: value.id, createdTime: value.createdTime, orderType: value.orderType,
+        lineItems: value.lineItems, payments: value.payments, total: value.total });
+    }
     if (url.includes('/orders?')) return Response.json({ elements: [{ id: 'ORDER123456', createdTime: Date.now() }] });
     throw new Error('unexpected request');
   };
@@ -56,6 +73,7 @@ test('manual pull checks staff before Clover and writes once', async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { code: 'ok', fetched: 1, upserted: 1, periodDays: 1 });
   assert.equal(calls.filter(x => x.endsWith('/rpc/clover_order_ingest_v1')).length, 1);
+  assert.equal(calls.filter(x => x.includes('/orders/ORDER123456')).length, 2);
   assert.ok(calls[0].endsWith('/rpc/crm_staff_authorized_v1'));
   assert.ok(calls[1].includes('apisandbox.dev.clover.com'));
 });
@@ -68,6 +86,67 @@ test('Clover scope failure writes no snapshot', async () => {
     return new Response('', { status: 403 });
   };
   const config = orderPullConfig(env, 'preview.pages.dev');
-  await assert.rejects(collectOrders(config, 1, fakeFetch), /clover_scope_or_auth/);
+  await assert.rejects(collectOrders(config, 1, fakeFetch),
+    error => error.code === 'clover_access_denied' && error.step === 'list' && error.providerStatus === 403);
   assert.equal(calls.length, 1);
+});
+
+test('refunded order is ingested after two limited expansions', async () => {
+  let ingested;
+  const fakeFetch = async (input, options) => {
+    const url = String(input);
+    if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+    if (url.endsWith('/rpc/clover_order_ingest_v1')) {
+      ingested = JSON.parse(options.body).p_snapshot;
+      return Response.json({ orderId: 'test' });
+    }
+    if (url.includes('/orders/ORDER123456')) {
+      const value = order();
+      if (new URL(url).searchParams.get('expand') === 'refunds,customers')
+        return Response.json({ id: value.id, customers: value.customers,
+          refunds: { elements: [{ id: 'REFUND12345', amount: 900 }] } });
+      return Response.json({ id: value.id, createdTime: value.createdTime, orderType: value.orderType,
+        lineItems: value.lineItems, payments: value.payments });
+    }
+    if (url.includes('/orders?')) return Response.json({ elements: [{ id: 'ORDER123456', createdTime: Date.now() }] });
+    throw new Error('unexpected request');
+  };
+  const response = await cloverOrderPullHandler(fakeFetch)({ request: new Request('https://preview.pages.dev/api/staff/clover-order-pull', {
+    method: 'POST', headers: { Origin: 'https://preview.pages.dev', Authorization: `Bearer ${'a'.repeat(24)}`,
+      'Content-Type': 'application/json' }, body: '{"days":1}' }), env });
+  assert.equal(response.status, 200);
+  assert.equal(ingested.refunds[0].amount, 900);
+});
+
+test('missing payment expansion returns a safe stage and never ingests', async () => {
+  const calls = [];
+  const auditPoints = [];
+  const auditedEnv = { ...env, CLOVER_PULL_AUDIT: { writeDataPoint: point => auditPoints.push(point) } };
+  const fakeFetch = async (input) => {
+    const url = String(input); calls.push(url);
+    if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+    if (url.includes('/orders/ORDER123456')) {
+      const value = order();
+      if (new URL(url).searchParams.get('expand') === 'refunds,customers') return Response.json({ id: value.id });
+      return Response.json({ id: value.id, createdTime: value.createdTime, orderType: value.orderType,
+        lineItems: value.lineItems });
+    }
+    if (url.includes('/orders?')) return Response.json({ elements: [{ id: 'ORDER123456', createdTime: Date.now() }] });
+    throw new Error('unexpected request');
+  };
+  const originalWarn = console.warn;
+  const logs = [];
+  console.warn = (...args) => logs.push(args);
+  let response;
+  try {
+    response = await cloverOrderPullHandler(fakeFetch)({ request: new Request('https://preview.pages.dev/api/staff/clover-order-pull', {
+      method: 'POST', headers: { Origin: 'https://preview.pages.dev', Authorization: `Bearer ${'a'.repeat(24)}`,
+        'Content-Type': 'application/json' }, body: '{"days":1}' }), env: auditedEnv });
+  } finally { console.warn = originalWarn; }
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { code: 'clover_collection_missing', step: 'order_core' });
+  assert.equal(calls.filter(x => x.endsWith('/rpc/clover_order_ingest_v1')).length, 0);
+  assert.equal(logs.length, 1);
+  assert.deepEqual(logs[0][1], { code: 'clover_collection_missing', step: 'order_core', status: 503 });
+  assert.deepEqual(auditPoints, [{ blobs: ['clover_collection_missing', 'order_core'], doubles: [503, 0] }]);
 });

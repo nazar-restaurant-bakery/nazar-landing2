@@ -4,8 +4,16 @@ import { staffDateInput } from "../lib/staffUi";
 import { staffClient } from "../lib/crmData";
 import { browserDeployment } from "../lib/supabase";
 
-type PullResult = { code?: string; fetched?: number; upserted?: number };
+type PullResult = { code?: string; step?: string; fetched?: number; upserted?: number };
 type DayTotals = { orderCount?: number; netCents?: number };
+const safeCode = /^[a-z][a-z0-9_]{1,48}$/;
+const safeSteps = new Set(["configuration", "authorization", "list", "order_core", "order_refunds", "ingest"]);
+
+function pullFailure(status: number, result: PullResult | null) {
+  const code = typeof result?.code === "string" && safeCode.test(result.code) ? result.code : "unknown_error";
+  const step = typeof result?.step === "string" && safeSteps.has(result.step) ? result.step : "request";
+  return `Çekme başarısız · Adım: ${step} · Kod: ${code} · HTTP: ${status}. Tekrar denemeden önce kontrol edin.`;
+}
 
 function yesterday() {
   const today = staffDateInput(new Date().toISOString()).slice(0, 10);
@@ -35,7 +43,7 @@ export default function CloverOrderPullPanel({ accessToken }: { accessToken: str
       const pulled = await response.json() as PullResult;
       if (!response.ok || pulled.code !== "ok" || !Number.isSafeInteger(pulled.fetched)
         || !Number.isSafeInteger(pulled.upserted) || pulled.fetched !== pulled.upserted) {
-        setMessage(response.status === 403 ? "Bu hesap sipariş çekemez." : "Çekme doğrulanamadı. Kayıtların durumunu kontrol edin.");
+        setMessage(pullFailure(response.status, pulled));
         return;
       }
       const { data, error } = await staffClient.rpc("clover_order_day_totals_v1", {
@@ -44,12 +52,12 @@ export default function CloverOrderPullPanel({ accessToken }: { accessToken: str
       const result = data as DayTotals | null;
       if (error || !result || !Number.isSafeInteger(result.orderCount)
         || !Number.isSafeInteger(result.netCents) || result.orderCount! < 0) {
-        setMessage("Siparişler çekildi, fakat gün toplamı doğrulanamadı. Yeniden çekmeden önce kontrol edin.");
+        setMessage("Siparişler çekildi; Adım: day_totals · Kod: day_totals_unconfirmed. Yeniden çekmeden önce kontrol edin.");
         return;
       }
       setTotals({ day, orderCount: result.orderCount!, netCents: result.netCents! });
       setMessage(`${pulled.fetched} sipariş kontrol edildi; seçilen günün toplamı aşağıda.`);
-    } catch { setMessage("Çekme doğrulanamadı. Kayıtların durumunu kontrol edin."); }
+    } catch { setMessage("Çekme başarısız · Adım: request · Kod: network_or_response. Tekrar denemeden önce kontrol edin."); }
     finally { setBusy(false); }
   }
 
