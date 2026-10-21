@@ -22,3 +22,6 @@ SHA256: `8eae6c4407bc33cbc710bb5c9e2ac56cfe1fb36f573b8be47fa0146871cf57e0` (UTF-
 Kuru test tarifi bu PR'a eklendi/güncellendi: ileri migration sonrası beklenen **1 toplam / 0 siparişe bağlı / 1 personel beyanı**, ikinci deneme ve $29.99 reddinde değişmez. Tekrar oranı bu yalnız beyanlı provada — kalır. Sandbox site linki ayrı nazar-catering-sandbox projesine yönlendirildi. Tarif hosted kabul sayılmaz.
 
 Draft PR, taban main; birleştirme Talip'te. Canlı DB, dış hesap, e-posta, secret, kasa davranışı veya komisyon formülü değişmedi.
+
+
+PR: [#85 Draft](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/85), taban main; ilk kod başlığı a48ab64. GitHub kontrolü 1/1 başarılı. Sıra 16 önerisi ve dosya/SHA Koordinasyon sohbetine bildirildi; sıra kaydı/hosted uygulama bu teslimde yapılmadı.
