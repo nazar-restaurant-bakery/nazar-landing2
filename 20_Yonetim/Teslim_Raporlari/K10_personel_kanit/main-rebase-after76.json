@@ -1,0 +1,20 @@
+{
+  "main": "51a9228ff5149e63c851674a874720a57e129282",
+  "pr": 78,
+  "unit_and_actual_sql_passed": 79,
+  "staff_browser_passed": 78,
+  "coupon_browser_passed": 16,
+  "menu_route_round_trip": "/staff/coupons -> /staff/team -> /staff/coupons; 375px; both scoped permission checks",
+  "migration_sha256": "1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68",
+  "migration_order": 15,
+  "sql_changed": false,
+  "typecheck_eslint_production_parity": "passed",
+  "parity_files": [
+    213,
+    213
+  ],
+  "byte_identical_files": 209,
+  "css_public_form_auth_ga4_unchanged": true,
+  "hosted_changes": false,
+  "draft": true
+}

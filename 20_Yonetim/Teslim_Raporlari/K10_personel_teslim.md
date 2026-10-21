@@ -59,3 +59,10 @@ Node62/62, yerel PG18.6 10/10 grup, gerçek StaffPage tarayıcı75/75 yeniden ge
 Main 76f057e üzerine taşındı. Gerçek 14b staff.manage migration ve sıra 15 ile byte-eşit consumer entegrasyonu yeniden geçti (23 kontrol; consumer ve bu dalın migration dosyası byte/SHA eşitliği testte zorunlu). Owner/platform+üye kabulü; platform-only, staff/manager, yanlış işletme ve sahte aktör 42501 reddi; son owner ve eşzamanlı düşürme korumaları doğrulandı. Toplam Node 59/59; ek sentetik PG paketi 10/10; CRM/Ops/Personel tarayıcı 75/75 (375px dahil). Zamanlayıcının yeni salt okunur durum çağrısı ve ayrı ekranı test fixture’ında güncellendi. TypeScript, hedefli ESLint ve Production parity geçti: 212/212 dosya, 209 byte-eşit; ortak CSS/form/Auth/GA4 aynı.
 
 20261021000900 SQL değişmedi: SHA256 1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68. Sıra 15, 14b sonrası. #78 Draft kalır; canlı DB/davet/deploy yok. Kanıt: K10_personel_kanit/main-rebase-final.json.
+
+
+## 21 Ekim — #76 birleşmesi sonrası
+
+#78 main 51a9228 üzerine taşındı. Kupon ve Personel menüleri, /staff/coupons ile /staff/team rotaları birlikte korundu; testte 375px Kupon → Personel → Kupon geçişi ve iki ayrı yetki kontrolü doğrulandı. Eski yalnız campaign.staff_mark çağrısı bekleyen test staff.manage menü kontrolünü de hesaba katacak şekilde düzeltildi. Gerçek 14/14a ve 14b/15 SQL entegrasyonu dahil 79/79; birleşik CRM/Ops/Kupon/Personel tarayıcı 78/78; kasa QR/kamera 16/16 geçti. TypeScript, hedefli ESLint ve Production parity geçti: 213/213 dosya, 209 byte-eşit; CSS/public form/Auth/GA4 aynı.
+
+Sıra 15 SQL dosyasına dokunulmadı; SHA256 1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68. Canlı işlem yok; Draft korunur. Kanıt: K10_personel_kanit/main-rebase-after76.json.

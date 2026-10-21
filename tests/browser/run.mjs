@@ -365,7 +365,16 @@ try {
     await page.setViewportSize({ width: 375, height: 812 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     await screenshot(page, 'coupon-shell-375-synthetic');
-    assert.ok((await calls(page, 'staff_business_authorized_v1')).every(call => call.params.p_operation === 'campaign.staff_mark'));
+    const permissions = await calls(page, 'staff_business_authorized_v1');
+    assert.ok(permissions.some(call => call.params.p_operation === 'campaign.staff_mark'));
+    assert.ok(permissions.some(call => call.params.p_operation === 'staff.manage'));
+    assert.ok(permissions.every(call => ['campaign.staff_mark','staff.manage'].includes(call.params.p_operation)));
+    await page.getByRole('link', exact('Personel')).click();
+    await page.getByRole('heading', exact('İşletme üyeleri')).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/staff/team');
+    await page.getByRole('link', exact('Kupon')).click();
+    await page.getByLabel('Kupon kodu', { exact: true }).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/staff/coupons');
     assert.equal(await writeCount(page), 0);
     await page.getByLabel('Kupon kodu', { exact: true }).fill('2345-6789-ABCD-EFGH');
     await page.evaluate(() => window.__staffMock.signOut());

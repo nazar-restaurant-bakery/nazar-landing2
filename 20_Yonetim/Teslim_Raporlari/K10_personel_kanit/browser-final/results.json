@@ -1,9 +1,9 @@
 {
   "scope": "Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.",
-  "startedAt": "2026-10-21T21:41:55.458Z",
-  "finishedAt": "2026-10-21T21:44:09.704Z",
+  "startedAt": "2026-10-21T21:56:46.201Z",
+  "finishedAt": "2026-10-21T21:58:38.127Z",
   "browserExecutable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
-  "passed": 75,
+  "passed": 78,
   "failed": 0,
   "checks": [
     {
@@ -183,6 +183,18 @@
       "passed": true
     },
     {
+      "case": "44 Coupon menu opens scoped checkout and logout clears it",
+      "passed": true
+    },
+    {
+      "case": "45 Denied direct coupon route never opens lookup",
+      "passed": true
+    },
+    {
+      "case": "46 CRM reader without campaign.staff_mark cannot use coupon screen",
+      "passed": true
+    },
+    {
       "case": "37 Ops menu route has nine tiles, scheduler status and seven actions; System stays separate",
       "passed": true
     },
@@ -311,6 +323,7 @@
     "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-members\\20_Yonetim\\Teslim_Raporlari\\K10_personel_kanit\\browser-final\\staff-customers-desktop.png",
     "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-members\\20_Yonetim\\Teslim_Raporlari\\K10_personel_kanit\\browser-final\\staff-customers-mobile-list.png",
     "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-members\\20_Yonetim\\Teslim_Raporlari\\K10_personel_kanit\\browser-final\\staff-customers-mobile-record.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-members\\20_Yonetim\\Teslim_Raporlari\\K10_personel_kanit\\browser-final\\coupon-shell-375-synthetic.png",
     "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-members\\20_Yonetim\\Teslim_Raporlari\\K10_personel_kanit\\browser-final\\staff-ops-desktop.png",
     "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-members\\20_Yonetim\\Teslim_Raporlari\\K10_personel_kanit\\browser-final\\staff-ops-collect-confirmation-desktop.png",
     "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-members\\20_Yonetim\\Teslim_Raporlari\\K10_personel_kanit\\browser-final\\staff-ops-mobile.png",
