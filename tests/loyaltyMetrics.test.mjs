@@ -45,3 +45,10 @@ test('Malformed values, duplicate campaigns and error text never become trusted 
   for(const patch of [{generated_at:'invalid'},{timezone:'invalid'},{customer_counts:{known:true,new:'1',repeat:1,reason:null}},{messages:{known:true,sent:NaN,reason:null}},{attribution:{known:false,orders:null,reason:'private customer@example.invalid'}}]) assert.equal(validLoyaltyMetrics({...data,...patch},scope),false);
   assert.equal(validLoyaltyMetrics({...data,campaigns:{...data.campaigns,items:[data.campaigns.items[0],data.campaigns.items[0]]}},scope),false);
 });
+
+
+test('Usage breakdown must sum to total; cohort denominator cannot include staff attestations',()=>{
+ const data=fixture(),item=data.campaigns.items[0];Object.assign(item,{order_linked:2,staff_attested:0});assert.equal(validLoyaltyMetrics(data,scope),true);
+ for(const patch of [{order_linked:1},{staff_attested:1},{order_linked:-1},{order_linked:'2'},{staff_attested:undefined}])assert.equal(validLoyaltyMetrics({...data,campaigns:{...data.campaigns,items:[{...item,...patch}]}},scope),false);
+ const old=fixture();assert.equal(validLoyaltyMetrics(old,scope),true);
+});

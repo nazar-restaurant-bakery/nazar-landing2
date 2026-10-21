@@ -1,0 +1,15 @@
+{
+  "passed": 7,
+  "checks": [
+    "same RPC signature, ACL, SECURITY DEFINER, empty search_path; immutable old migration untouched",
+    "only staff-attested source is known: 1=0+1, repeat unknown",
+    "actual Clover-linked and null-order coupon redemption: 2=1+1; second use adds nothing",
+    "test campaign/customer data excluded when include_tests=false",
+    "other tenant denied before data",
+    "historical linked cohort remains 1/2; null-order uses excluded from repeat cohort",
+    "migration replay/predecessor mismatch fails closed"
+  ],
+  "migration_sha256": "8eae6c4407bc33cbc710bb5c9e2ac56cfe1fb36f573b8be47fa0146871cf57e0",
+  "hosted": false,
+  "provider_calls": 0
+}

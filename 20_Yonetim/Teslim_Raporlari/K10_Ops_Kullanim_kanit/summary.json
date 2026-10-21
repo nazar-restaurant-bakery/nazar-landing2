@@ -1,0 +1,13 @@
+{
+  "base_main": "4123b238aa374f1b1c43ca5583e8bcf57fc7d976",
+  "unit_native_tests_passed": 45,
+  "new_native_assertion_groups": 7,
+  "browser_passed": 11,
+  "typecheck_eslint": "passed",
+  "migration_file": "20261021001000_ops_campaign_usage_split.sql",
+  "migration_sha256": "8eae6c4407bc33cbc710bb5c9e2ac56cfe1fb36f573b8be47fa0146871cf57e0",
+  "proposed_order": 16,
+  "hosted_changes": false,
+  "provider_calls": 0,
+  "original_k11_migration_changed": false
+}
