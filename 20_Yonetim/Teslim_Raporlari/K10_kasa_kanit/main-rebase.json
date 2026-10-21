@@ -1,0 +1,9 @@
+{
+  "base": "0449e1ea493397ce182c4881d5213b968b0bf78d",
+  "unit_passed": 47,
+  "cashier_browser_passed": 16,
+  "staff_browser_passed": 64,
+  "sql_changed": false,
+  "hosted_changes": false,
+  "pr": 76
+}

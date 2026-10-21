@@ -1,6 +1,6 @@
 # K10 — personel kupon kasa ekranı
 
-20 Ekim 2026 · [Draft PR #76](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/76) · Dal: `feat/staff-coupon-checkout`; **Draft**, taban #72/#65 (`066bdd0`). Yalnız personel ekranı; kupon çekirdeği / ihraç / e-posta Koordinasyon'dadır. Kaynak: `K10_Kupon_Sozlesme.md` v1, `K10_Kampanya_Kararlari.md`.
+20 Ekim 2026 · [Draft PR #76](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/76) · Dal: `feat/staff-coupon-checkout`; **Draft**, taban main (`0449e1e`). Yalnız personel ekranı; kupon çekirdeği / ihraç / e-posta Koordinasyon'dadır. Kaynak: `K10_Kupon_Sozlesme.md` v1, `K10_Kampanya_Kararlari.md`.
 
 ## Kapsam ve dosyalar
 
@@ -34,3 +34,9 @@ Kanıt: `K10_kasa_kanit/{browser-summary,synthetic-summary,production-parity}.js
 3. Kabul sonrası Talip normal frontend yayınını yapar; HTTPS `/staff/coupons` ekranında kamera izni ve yazılı kod yolu kontrol edilir. Bu teslim kampanya, kupon dağıtımı, Welcome flow veya gerçek e-posta etkinleştirmez.
 
 Tariften sapma yok. Ek açık karar sorusu yok; çekirdek bağımlılığı ve donanım/sandbox kabulü yukarıda ayrıldı. Bitirildi; sonraki kaleme geçilmedi.
+
+## 21 Ekim — main rebase kabulü
+
+#76 yalnız iki ekran commitini güncel main 0449e1e üzerine taşıdı; hedef main, Draft korunur. Güncel seçilmiş birim paketi 47/47 (couponCheckout, staffUi, crmUi, crmQueue, opsUi), gerçek kasa/QR/kamera paketi16/16 ve StaffPage CRM/Ops64/64 geçti. Önceki112/112 tarihsel teslim paketidir; #72 dalına ait testler bu main tabanına dahil değildir. TypeScript, hedefli ESLint, Production build/parity yeniden geçti:212→213 dosya,209 byte-eşit, CSS ve korunan form/Auth/GA4/K5 kaynakları aynı. Güncel tekrar: python tests/couponCheckoutBuildParity.py ardından python tests/couponCheckoutParity.py.
+
+SQL/migration eklenmedi veya değiştirilmedi; çekirdek #72/#77 bağımlılığı ayrıdır. /staff/coupons ve Kupon menüsü korundu. #78 de ayrı main tabanına taşındı; birleşimde /staff/team Personel menüsüyle birlikte korunacak. Canlı DB/hesap işlemi yok.
