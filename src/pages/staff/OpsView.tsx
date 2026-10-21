@@ -1,4 +1,5 @@
 import DailySchedulerStatus from "../../components/staff/ops/DailySchedulerStatus";
+import WriteGateDemo from "../../components/staff/ops/WriteGateDemo";
 import { useState, type ReactNode } from "react";
 import type { OpsAction, OpsActionName, OpsConnection, OpsDashboard, OpsMetric, OpsSource } from "../../lib/opsData";
 import { selectOpsMetric } from "../../lib/opsUi";
@@ -83,6 +84,7 @@ export default function OpsView({ identity, dashboard, connections, actions, loa
       <div className="min-w-0 space-y-4"><ActionColumn dashboard={dashboard} connections={connections} actions={actions} selectedAction={selectedAction === "collect" ? null : selectedAction} onSelectAction={setSelectedAction} onRequest={onRequest} busy={busy} blocked={writeBlocked} backendPending={backendPending} /><ActionLog actions={actions} loading={loading} onDownload={onDownload} onResume={onResume} identity={identity} busy={busy} /></div>
     </div>
     {children}
+    {dashboard && <WriteGateDemo businessId={dashboard.business_id} />}
     <section className="staff-panel p-4" aria-label={c.tools}><h2 className="text-sm font-semibold">{c.tools}</h2><div className="mt-3 flex flex-wrap gap-x-5 gap-y-3">{Object.entries(staffLinks).map(([key, link]) => <a key={key} className="text-xs font-medium text-brand-dark underline" href={link.href} target="_blank" rel="noopener noreferrer">{link.label} ↗</a>)}</div><p className="mt-3 text-xs text-stone-500">{c.toolAccount}</p></section>
   </div>;
 }

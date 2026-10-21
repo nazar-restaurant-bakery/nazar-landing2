@@ -50,3 +50,8 @@
 
 /functions/_lib/cloverOrderPull.ts text eol=lf
 /src/lib/deploymentEnvironment.ts text eol=lf
+# K15: byte-pinned LF migration and native SQL fixture.
+/supabase/migrations/20261021000500_ops_write_gate.sql text eol=lf
+/tests/ops-write-gate.sql text eol=lf
+
+/tests/fixtures/staff-contract-v1.sql text eol=lf

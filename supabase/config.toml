@@ -29,3 +29,6 @@ verify_jwt = false
 # Machine-only HMAC endpoint; existing personnel JWT gates stay enabled.
 [functions.daily-ops-run]
 verify_jwt = false
+
+[functions.ops-write]
+verify_jwt = true

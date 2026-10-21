@@ -12,6 +12,7 @@ const additivePolicy=new Map([
  ['k4_suppression_consent_offers',{path:'supabase/migrations/20261019000200_suppression_consent_offers.sql',tool:'tools/test-env/k4-migrate.py'}],
  ['k5_klaviyo_profile_sync',{path:'supabase/migrations/20261019000300_klaviyo_profile_sync.sql',tool:'tools/test-env/k5-migrate.py'}],
  ['daily_scheduler',{path:'supabase/migrations/20261021000700_daily_scheduler.sql',tool:'tools/test-env/daily-operations/Operations-Runner.ps1'}],
+ ['ops_write_gate',{path:'supabase/migrations/20261021000500_ops_write_gate.sql',tool:'tools/test-env/daily-operations/Operations-Runner.ps1'}],
  ['k6_message_send_gate',{path:'supabase/migrations/20261020000800_message_send_gate.sql',tool:'tools/test-env/k6-migrate.py'}],
 ]);
 export const sha256Lf=text=>createHash('sha256').update(text.replace(/\r\n/g,'\n'),'utf8').digest('hex');
