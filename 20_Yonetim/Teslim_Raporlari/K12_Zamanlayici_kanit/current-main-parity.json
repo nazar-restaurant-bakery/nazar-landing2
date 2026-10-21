@@ -1,6 +1,6 @@
 {
-  "base": "0449e1ea493397ce182c4881d5213b968b0bf78d",
-  "candidate": "6d0dd8a00dcf0fbc6f075a561204079944b1fd1c",
+  "base": "2bbbcdf4338987249ca137d6ee65593a8c4c0e09",
+  "candidate": "b8d526bab4251577e368e3bfc312bf8454ba5455",
   "APP_ENV_present": false,
   "TEST_variables_present": false,
   "hosted_secrets_read": false,
@@ -19,10 +19,11 @@
     "functions/api/staff/profile-sync.ts",
     "functions/_lib/profileSyncRuntime.ts"
   ],
+  "staff_presentation_isolation": null,
   "intended_differences": [
     "staff Ops UI",
     "new private scheduler path and quota for existing manual K7"
   ],
-  "gzip_total_delta": 1214,
-  "checked_at": "2026-10-21T17:25:18.195630+00:00"
+  "gzip_total_delta": 1226,
+  "checked_at": "2026-10-21T17:56:02.174924+00:00"
 }

@@ -23,7 +23,7 @@ Paket `20_Yonetim/Teslim_Raporlari/DailyOperations_kanit/` konumuna kopyalanır.
 
 ## 3. Kutuların sınırı ve durdurma
 
-Zamanlayıcı mevcut **Google Ads, GA4, Klaviyo aggregate, Places, site, Meta** okuyucularını çağırır. Yalnız anahtarı/erişimi olan kaynak dolar; bağlantısız kutu **Bağlantı bekliyor** kalır. Ads kutusu mevcut **son 7 gün** ölçüsünü günlük yeniler; bu PR onu aylık muhasebe defterine dönüştürmez. Clover siparişleri `core.orders`'a K7 idempotent yoluyla girer. İçe aktarım finansal mutabakat veya komisyon kapanışı değildir; K13b kanal düzeltmesi ayrı PR'dır.
+Zamanlayıcı mevcut **Google Ads, GA4, Klaviyo aggregate, Places, site, Meta** okuyucularını çağırır. Yalnız anahtarı/erişimi olan kaynak dolar; bağlantısız kutu **Bağlantı bekliyor** kalır. Ads kutusu main #82 ile **önceki tamamlanmış günün** gösterim/tıklama/harcama/Ads dönüşümünü günlük yeniler; bunlar doğrulanmış satış değildir. Bu PR aylık muhasebe defteri eklemez. Clover siparişleri `core.orders`'a K7 idempotent yoluyla girer. İçe aktarım finansal mutabakat veya komisyon kapanışı değildir; K13b kanal düzeltmesi ayrı PR'dır.
 
 Tüm manuel + scheduled + OAuth + sayfa + 429 denemeleri işletme/NY günü ortak **30 dış istek** sınırındadır. Kota ya da sağlayıcı erişimi yetmezse tamlık iddia edilmez; eski snapshot korunur. İlk hosted gerçek gün kapasitesi ayrıca ölçülür; bu hazırlık kotayı artırmaz.
 
