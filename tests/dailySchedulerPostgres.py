@@ -46,6 +46,12 @@ try:
  budget=f"SET ROLE service_role;SELECT public.daily_reserve_external_request('{b}');"
  with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:quota=list(pool.map(lambda _:sql(budget).splitlines()[-1],range(2)))
  assert sorted(quota)==['f','t'],quota
+ # The shipped recovery proof checks all 30 NY dates, not just one month total.
+ sql("CREATE TABLE core.orders(business_id uuid,clover_order_id text,created_at timestamptz);")
+ sql(f"INSERT INTO core.orders VALUES('{b}','ORDER123456','2026-11-01T05:30Z'),('{b}','ORDER123457','2026-11-01T06:30Z'),('{b}','OUTSIDE1234','2026-12-01T05:00Z'),('{manifest['businesses']['b']}','FOREIGN1234','2026-11-01T05:30Z');")
+ coverage=json.loads(run('psql','-X','-h','127.0.0.1','-p',port,'-U','postgres','-At','-v','ON_ERROR_STOP=1','-v','from_day=2026-11-01','-v','to_day=2026-11-30','-v','business_id='+b,'-f',root/'tools/test-env/daily-operations/recovery-coverage.sql'))
+ assert len(coverage)==30 and coverage[0]['count']==2 and all(d['count']==0 for d in coverage[1:]),coverage
+ assert coverage[0]['digest']==hashlib.md5(b'ORDER123456,ORDER123457').hexdigest()
  receipt={'local_only':True,'postgres':run('psql','--version'),'sql_assertions_passed':True,'two_tenant_isolation':True,'concurrent_tick_calls':2,'http_jobs_for_two_tenants':sum(results),'concurrent_run_starts':2,'successful_run_starts':1,'concurrent_budget_reservations':2,'successful_reservations_at_29':1,'dst_march_and_november':True,'provider_calls':0,'hosted_changes':False,'logs':str(folder),'fixture':manifest,'shared_contract_fixture_sha256':hashlib.sha256((root/'tests/fixtures/staff-contract-v1.sql').read_bytes()).hexdigest(),'integration_limit':'pg_net and Vault use local synthetic contract fixtures; no live dispatch, cron extension or HMAC key configured' }
  (folder/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n',encoding='utf-8');print(json.dumps(receipt))
 finally:

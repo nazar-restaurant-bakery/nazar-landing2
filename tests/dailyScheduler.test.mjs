@@ -29,7 +29,7 @@ test('scheduled K7 path uses exact closed-day window, shared quota, same ingest 
    throw Error('unexpected DB method');
   }
   assert.equal(u.hostname,'apisandbox.dev.clover.com');providers++;
-  if(u.pathname.endsWith('/orders')){assert.deepEqual(u.searchParams.getAll('filter'),['createdTime>='+start,'createdTime<'+end]);return Response.json({elements:[{id:'ORDER123456',createdTime:start+1000}]});}
+  if(u.pathname.endsWith('/orders')){assert.deepEqual(u.searchParams.getAll('filter'),['createdTime>='+start,'createdTime<='+(end-1)]);return Response.json({elements:[{id:'ORDER123456',createdTime:start+1000}]});}
   const expand=u.searchParams.get('expand');
   if(expand==='refunds')return Response.json({id:'ORDER123456',refunds:{elements:[]}});
   if(expand==='customers')return Response.json({id:'ORDER123456',customers:{elements:[]}});

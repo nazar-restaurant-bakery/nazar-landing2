@@ -13,13 +13,13 @@ const codes=result=>result.integrity.issues.map(issue=>issue.code);
 test('inventory verifies all 18 baseline SQL files and historical copy without claiming K3 readiness',async()=>{
  const result=await auditMigrations({root});
  assert.equal(result.integrity.ok,true,JSON.stringify(result.integrity.issues));
- assert.equal(result.integrity.database_sources,18);assert.equal(result.integrity.historical_sources,1);assert.equal(result.integrity.pending_canonical_sources,1);assert.equal(result.integrity.reviewed_additive_sources,3);assert.equal(result.integrity.verified_sources,23);
+ assert.equal(result.integrity.database_sources,18);assert.equal(result.integrity.historical_sources,1);assert.equal(result.integrity.pending_canonical_sources,1);assert.equal(result.integrity.reviewed_additive_sources,4);assert.equal(result.integrity.verified_sources,24);
  assert.equal(result.readiness.ready,false);assert.equal(result.readiness.execution_performed,false);assert.equal(result.readiness.state,'BLOCKED');
  assert.ok(result.readiness.blockers.some(b=>b.id==='NEUTRAL_BASELINE_MISSING'));
  assert.ok(result.proposed_order.every(entry=>entry.executable===false));
  assert.deepEqual(result.excluded.map(entry=>entry.id),['intake_pause']);
  assert.deepEqual(result.pending_canonical.map(entry=>entry.id),['test_record_markers']);
- assert.deepEqual(result.reviewed_additive.map(entry=>entry.id),['k4_suppression_consent_offers','k5_klaviyo_profile_sync','k6_message_send_gate']);
+ assert.deepEqual(result.reviewed_additive.map(entry=>entry.id),['k4_suppression_consent_offers','k5_klaviyo_profile_sync','k6_message_send_gate','daily_scheduler']);
  assert.equal(result.reviewed_additive[0].included_in_k3_reset,false);
  assert.equal(result.reviewed_additive[0].application_tool,'tools/test-env/k4-migrate.py');
  assert.equal(result.reviewed_additive[1].included_in_k3_reset,false);

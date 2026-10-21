@@ -1,0 +1,82 @@
+[
+  {
+    "file": ".gitignore",
+    "sha256": "5f2952e4244d8cc75db075acdf7e2406dd122a0104aa3449f826a897db5d5964"
+  },
+  {
+    "file": "Configure-DailyScheduler.ps1",
+    "sha256": "d0be8d70fdf07b37d193fd12e70511e4896df69d1a35f6c29af5f3e927392f69"
+  },
+  {
+    "file": "K7-DbRunner.ps1",
+    "sha256": "f33d200727a327ee5f2732922010ee79e9b079172faeffa41dc4e74a98252f3a"
+  },
+  {
+    "file": "migration-plans.json",
+    "sha256": "f706491fef8c19c33d13884a21c17bd1bac4a5eb2fc4df16282eae5e8905a2e2"
+  },
+  {
+    "file": "Operations-Runner.ps1",
+    "sha256": "d212405135d9e0c2efd480bd41ab369f468f1a13d626f3fb0a4e6760e6f1bd69"
+  },
+  {
+    "file": "Prepare-Targets.ps1",
+    "sha256": "077845996a6985ebf056f2fdcd69c67d8d1baa72a8fe799641a413f7172be93e"
+  },
+  {
+    "file": "README.md",
+    "sha256": "615bdff67191f441c7897321da401cbfe8730f5cb39ba3580bd321380c9e7860"
+  },
+  {
+    "file": "recovery-config.example.json",
+    "sha256": "e3dcc19d77805af750cd550f899287e404a857492681c279ad91ac91f38e8f37"
+  },
+  {
+    "file": "recovery-coverage.sql",
+    "sha256": "d68a0c0248a6167c00f829d906b78c0aead37698177f2bbc33b1d148dff5ff3c"
+  },
+  {
+    "file": "recovery-source-sha256.json",
+    "sha256": "46556c3a2c7ad23f6f88003486e132c0c7039fd98e646fa39e5658544d5d34b2"
+  },
+  {
+    "file": "scheduler-settings.example.json",
+    "sha256": "1a1834d1e6e830b7034bc7ee31ad0435407b1166edaad9f33e4e5bddba2b1c94"
+  },
+  {
+    "file": "sql/20261021000500_ops_write_gate.sql",
+    "sha256": "0796c2fdf8db2e4c68f74976aad16dfec387b44a6ea687ff6545e4b3d30fbbca"
+  },
+  {
+    "file": "sql/20261021000700_daily_scheduler.sql",
+    "sha256": "b54b4a5b5786133d63e2567c6a9724125f230948a794b8cfa509f6673edb6793"
+  },
+  {
+    "file": "Start-Clover-Recovery.ps1",
+    "sha256": "d9df9125cc6b6a8d9eb667d6c618d331b491334ac62e7b8cbd0bfb37bfdab38c"
+  },
+  {
+    "file": "Start-DailyScheduler-Production.ps1",
+    "sha256": "673df6d4bee3aafa5de77b9a029b64f2b9a0fac1380852ea0490407566e4240f"
+  },
+  {
+    "file": "Start-DailyScheduler-Sandbox.ps1",
+    "sha256": "b3ec5a31e8a61787f89195d0d42b1f3cd093709528b74080d3945c58e7c91ebd"
+  },
+  {
+    "file": "Start-K15-Production.ps1",
+    "sha256": "33be88e94746150c7cd94cdf6895d3f24a316f0d2866c23f868b94f0c7d4e83a"
+  },
+  {
+    "file": "Start-K15-Sandbox.ps1",
+    "sha256": "61af60341e8c0dc532b6bf386290cd2ac5e3e7f32ac0b3842b510ff0c5ada645"
+  },
+  {
+    "file": "targets.example.json",
+    "sha256": "38e06ba5db7cdcf5f67bac3ef1ac001176ba4be048ee80cb69d5aeff8fc4df45"
+  },
+  {
+    "file": "tests/Test-Offline.ps1",
+    "sha256": "e012874f974c32407be63a358f0640b79784a0b2d18e3747084702d1f8ead304"
+  }
+]
