@@ -141,13 +141,13 @@ const adsRouter = (url, init) => {
   assert.equal('developer-token' in init.headers, false);
   assert.equal(url.href, 'https://googleads.googleapis.com/v26/customers/6478477284/googleAds:searchStream'); const query = JSON.parse(init.body).query;
   if (query.includes('customer.time_zone')) return json([{ results: [{ customer: { id: '6478477284', timeZone: 'America/New_York', currencyCode: 'USD' } }] }]);
-  if (query.includes('metrics.cost_micros')) return json([{ results: [{ metrics: { costMicros: '1200000', clicks: '4', conversions: 2 } }] }]);
+  if (query.includes('metrics.cost_micros')) return json([{ results: [{ metrics: { costMicros: '1200000', impressions: '90', clicks: '4', conversions: 2 } }] }]);
   if (query.includes('campaign.status')) return json([{ results: [{ campaign: { id: 'A', status: 'ENABLED' } }, { campaign: { id: 'B', status: 'PAUSED' } }, { campaign: { id: 'A', status: 'ENABLED' } }] }]);
   throw new Error('Unexpected synthetic GAQL');
 };
 test('Google Ads read-only queries fixed account, verifies scope and does not double-count campaigns', async () => {
   const ctx = make(adsEnv, adsRouter); const result = await ads(ctx);
-  assert.equal(result.status, 'connected'); assert.equal(val(result, 'spend_7d'), 1.2); assert.equal(val(result, 'clicks_7d'), 4); assert.equal(val(result, 'conversions_7d'), 2);
+  assert.equal(result.status, 'connected'); assert.equal(val(result, 'spend_yesterday'), 1.2); assert.equal(val(result, 'clicks_yesterday'), 4); assert.equal(val(result, 'conversions_yesterday'), 2);
   assert.equal(val(result, 'active_campaigns'), 1); assert.equal(val(result, 'paused_campaigns'), 1); assert.equal(ctx.calls.length, 4);
   assert.equal(ctx.calls.some(call => /mutate/.test(call.url)), false);
 });
