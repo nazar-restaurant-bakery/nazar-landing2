@@ -38,24 +38,21 @@
 /supabase/migrations/20261021000350_nazar_commission_engine.sql text eol=lf
 /supabase/migrations/20261021000400_commission_from_orders.sql text eol=lf
 /tools/test-env/k13-*.sql text eol=lf
+/supabase/migrations/20261021000450_commission_channel_label.sql text eol=lf
+/tools/test-env/k13b-*.sql text eol=lf
 
 # Daily scheduler: preserve migration and operator SQL delivery bytes.
 /supabase/migrations/20261021000700_daily_scheduler.sql text eol=lf
 /tools/test-env/daily-scheduler-install.sql text eol=lf
 /tests/daily-scheduler.sql text eol=lf
-
 /tools/test-env/daily-operations/** text eol=lf
 /tools/test-env/*clover-recovery* text eol=lf
 /tests/cloverRecovery.test.mjs text eol=lf
-
 /functions/_lib/cloverOrderPull.ts text eol=lf
 /src/lib/deploymentEnvironment.ts text eol=lf
 # K15: byte-pinned LF migration and native SQL fixture.
 /supabase/migrations/20261021000500_ops_write_gate.sql text eol=lf
 /tests/ops-write-gate.sql text eol=lf
-
 /tests/fixtures/staff-contract-v1.sql text eol=lf
-
 /tools/test-env/staff-management/** text eol=lf
-
 /tests/fixtures/staffManageAuthorizationOperator.sql text eol=lf

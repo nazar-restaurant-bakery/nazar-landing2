@@ -22,6 +22,8 @@ try {
     'tools/test-env/k13-local-settings.sql',
     'tools/test-env/k13-shared-staff.fixture.sql',
     'supabase/migrations/20261021000400_commission_from_orders.sql',
+    'supabase/migrations/20261021000450_commission_channel_label.sql',
+    'tools/test-env/k13b-channel-label-test.sql',
     'tools/test-env/k13-commission-test.sql'
   )
   foreach ($file in $files) {

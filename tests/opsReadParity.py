@@ -2,7 +2,7 @@
 import pathlib,os,subprocess,json,hashlib,re
 root=pathlib.Path.cwd();base=root.parent/'nazar-staff-members-base'
 node=pathlib.Path.home()/'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe'
-out=root/'20_Yonetim/Teslim_Raporlari/K12_Ads_Gunluk_kanit';out.mkdir(parents=True,exist_ok=True)
+out=root/'20_Yonetim/Teslim_Raporlari'/os.environ.get('OPS_PARITY_EVIDENCE','K12_Ads_Gunluk_kanit');out.mkdir(parents=True,exist_ok=True)
 env={k:v for k,v in os.environ.items() if not k.startswith(('VITE_','SUPABASE_','CF_'))}
 env.update(CF_PAGES_BRANCH='main',VITE_APP_ENV='production',VITE_SUPABASE_URL='https://khgczybubufouraqyrcj.supabase.co',VITE_SUPABASE_ANON_KEY='sb_publishable_synthetic_parity_only',VITE_NAZAR_BUSINESS_ID='a358eba4-b197-4309-805b-46f43a718454',VITE_TURNSTILE_SITE_KEY='synthetic_parity_only')
 def run(args,cwd):
