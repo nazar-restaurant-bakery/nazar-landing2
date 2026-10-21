@@ -1,11 +1,11 @@
 rolldown-vite v7.2.5 building client environment for production...
 [2K
-transforming...✓ 144 modules transformed.
+transforming...✓ 147 modules transformed.
 rendering chunks...
 computing gzip size...
 dist/index.html                       4.04 kB │ gzip:   1.47 kB
 dist/assets/StaffPage-BpYwMRUX.css    1.28 kB │ gzip:   0.50 kB
-dist/assets/index-D1WnxfOK.css       33.20 kB │ gzip:   6.83 kB
-dist/assets/StaffPage-qKw0FYky.js   114.56 kB │ gzip:  29.33 kB
-dist/assets/index-Cad75n58.js       621.38 kB │ gzip: 178.21 kB
-✓ built in 16.61s
+dist/assets/index-7VnndsoO.css       33.32 kB │ gzip:   6.84 kB
+dist/assets/StaffPage-Dn-098lI.js   124.17 kB │ gzip:  32.07 kB
+dist/assets/index-CMlJI2Mm.js       622.73 kB │ gzip: 178.67 kB
+✓ built in 5.27s

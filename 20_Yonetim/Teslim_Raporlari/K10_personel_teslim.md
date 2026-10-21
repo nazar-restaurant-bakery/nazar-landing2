@@ -1,6 +1,6 @@
 # K10 — işletme personel yönetimi
 
-20 Ekim 2026 · [Draft PR #78](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/78). Dal `feat/staff-members-management`; taban **main, 5412eb9**. Birleşme Talip'te. Kaynak: Talip'in 22:53 kararı ve `Personel_Kapsam_Sozlesme.md` v1; yeni `staff.manage` işlemi için **önerilen v1.1 varsayımı**.
+20 Ekim 2026 · [Draft PR #78](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/78). Dal `feat/staff-members-management`; taban **main, 0449e1e**. Birleşme Talip'te. Kaynak: Talip'in 22:53 kararı ve `Personel_Kapsam_Sozlesme.md` v1; yeni `staff.manage` işlemi için **önerilen v1.1 varsayımı**.
 
 ## Kapsam ve dosyalar
 
@@ -46,3 +46,9 @@ Kanıt: `K10_personel_kanit/postgres-synthetic.json`, `production-parity.json`, 
 Kapsamda kod ve sentetik test tamamlandı. Gerçek davet, veri/rol değişikliği veya deploy yapılmadı; başka kaleme geçilmedi.
 
 21 Ekim güncellemesi: #65 main''e 5412eb9 ile birleşti; #78 dalı bu main üzerine yeniden temellendirildi. Clover webhook JWT ayarı korundu. Node 62/62, tarayıcı 75/75, yerel PG 10/10 ve Production parity yeniden geçti. Sözleşme değişikliği bu PR''a eklenmedi; sıra önerisi 15 ve migration SHA aynı.
+
+## 21 Ekim — #81 sonrası main rebase kabulü
+
+#78 güncel main0449e1e üzerine yeniden temellendirildi. #79 sözleşmesi main içinde; staff.manage çalışma zamanı için ayrı #80 / sıra14b migration beklenir. Bu PR kanonik sözleşmeyi/helper’ı değiştirmez. Sıra15,14b sonrası aynen. SQL byte ve SHA256 değişmedi:1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68. Bu nedenle Koordinasyon’un aynı SQL’le yaptığı #80 entegrasyonunun girdi dosyası değişmedi; burada o23/23 testi yeniden çalıştırıldığı iddia edilmez.
+
+Node62/62, yerel PG18.6 10/10 grup, gerçek StaffPage tarayıcı75/75 yeniden geçti. TypeScript/hedefli ESLint/build ve main0449e1e Production parity212/212,209 byte-eşit, CSS/form/Auth/GA4 aynı. /staff/team ve Personel menüsü korundu; #76’nın /staff/coupons Kupon menüsüyle birleşimde ikisi korunmalıdır. K11/K13 ve Personel LF kuralları birlikte korundu. Hosted DB/davet/deploy yapılmadı.
