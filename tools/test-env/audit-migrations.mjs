@@ -11,6 +11,7 @@ const sha=/^[a-f0-9]{64}$/;
 const additivePolicy=new Map([
  ['k4_suppression_consent_offers',{path:'supabase/migrations/20261019000200_suppression_consent_offers.sql',tool:'tools/test-env/k4-migrate.py'}],
  ['k5_klaviyo_profile_sync',{path:'supabase/migrations/20261019000300_klaviyo_profile_sync.sql',tool:'tools/test-env/k5-migrate.py'}],
+ ['daily_scheduler',{path:'supabase/migrations/20261021000700_daily_scheduler.sql',tool:'tools/test-env/daily-operations/Operations-Runner.ps1'}],
  ['ops_write_gate',{path:'supabase/migrations/20261021000500_ops_write_gate.sql',tool:'tools/test-env/daily-operations/Operations-Runner.ps1'}],
  ['k6_message_send_gate',{path:'supabase/migrations/20261020000800_message_send_gate.sql',tool:'tools/test-env/k6-migrate.py'}],
 ]);
@@ -166,6 +167,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
  // Newly merged main deliveries remain inventory-only. Verify their canonical
  // Git/LF identity without rewriting Windows CRLF checkouts of existing SQL.
  const currentMainDeliveries=[
+  {"key":"k10_coupon_delivery_receipts","order":"14a","path":"supabase/migrations/20261021000825_coupon_delivery_reconciliation.sql","sha":"f6e45de3d48f09b154534a902f2ad531d3d99c46000e253cafc4fba1110e1789"},
   {key:'k7_payment_day_delivery',order:'6b',path:'supabase/migrations/20261020001000_clover_payment_day_totals.sql',sha:'2b5b31f9539d04b08a3ca7e85baf8bb7ded828d498ad051c43c83d2f664515cc'},
   {key:'k8_delivery',order:7,path:'supabase/migrations/20261021000100_clover_webhook.sql',sha:'1d305756deba4b614c6e60198ef7c954bca9008bc944be7e4bea52f4ff29a94e'},
  ];
@@ -189,7 +191,46 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   try{const bytes=await fs.readFile(path.join(realRoot,policy.path));if(sha256Lf(bytes.toString('utf8'))!==policy.sha)issue('CURRENT_MAIN_DELIVERY_BYTES',policy.path);}
   catch{issue('CURRENT_MAIN_DELIVERY_MISSING',policy.path);}
  }
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
+ // K10 is an inventory-only forward delivery over these exact K9 bytes. This
+ // records a reviewed dependency, not a global application order or permission
+ // to execute it. Neither K11 nor K15 is a prerequisite of the read-only check.
+ const k10Eligibility=manifest.k10_eligibility_delivery;
+ const k10Path='supabase/migrations/20261021000600_campaign_eligibility_check.sql';
+ const k10Sha='33c9b6d59b024ce325a5461c52b09e374f169d45228980bd11c8f8a974c99285';
+ if(k10Eligibility){
+  if(typeof k10Eligibility!=='object'||Object.keys(k10Eligibility).sort().join(',')!=='execution_enabled,included_in_k3_reset,path,requires,sha256_bytes'
+   ||k10Eligibility.path!==k10Path||k10Eligibility.sha256_bytes!==k10Sha
+   ||k10Eligibility.execution_enabled!==false||k10Eligibility.included_in_k3_reset!==false)
+   issue('K10_ELIGIBILITY_DELIVERY_CONTRACT','K10 must retain its exact non-executable identity outside K3 reset/replay, without an application order.');
+  const dependency=Array.isArray(k10Eligibility.requires)&&k10Eligibility.requires.length===1?k10Eligibility.requires[0]:null;
+  if(!dependency||typeof dependency!=='object'||Object.keys(dependency).sort().join(',')!=='path,sha256_bytes'
+   ||dependency.path!==k9Path||dependency.sha256_bytes!==k9Sha
+   ||!k9Delivery||k9Delivery.path!==k9Path||k9Delivery.sha256_bytes!==k9Sha)
+   issue('K10_ELIGIBILITY_DEPENDENCY','K10 requires the exact reviewed K9 path and bytes; no substituted or additional dependency is accepted.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k10Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k10Sha)issue('K10_ELIGIBILITY_DELIVERY_BYTES','K10 reviewed LF delivery bytes changed.');}catch{issue('K10_ELIGIBILITY_DELIVERY_MISSING','K10 eligibility file missing.');}
+ }
+ // K10 signup-reward preparation is held at reviewed order 14. The exact
+ // reviewed K9 and read-only K10 sources are its dependencies; inventory does
+ // not install it, activate a campaign/flow, or add it to K3 reset/replay.
+ const k10Coupons=manifest.k10_coupon_delivery;
+ const k10CouponPath='supabase/migrations/20261021000800_signup_reward_coupons.sql';
+ const k10CouponSha='b0d27ed1a76763ff79ac28fec7d443b87daf425ecc7bb15b0273c49b46548626';
+ if(k10Coupons){
+  if(typeof k10Coupons!=='object'||Object.keys(k10Coupons).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires,sha256_bytes'
+   ||k10Coupons.path!==k10CouponPath||k10Coupons.sha256_bytes!==k10CouponSha
+   ||k10Coupons.application_order!==14||k10Coupons.execution_enabled!==false||k10Coupons.included_in_k3_reset!==false)
+   issue('K10_COUPON_DELIVERY_CONTRACT','Held signup-reward coupons must keep their reviewed identity/order without execution or K3 replay inclusion.');
+  const dependencies=Array.isArray(k10Coupons.requires)?k10Coupons.requires:[];
+  const expected=[{path:k9Path,sha256_bytes:k9Sha},{path:k10Path,sha256_bytes:k10Sha}];
+  if(dependencies.length!==expected.length||dependencies.some((d,index)=>!d||typeof d!=='object'
+   ||Object.keys(d).sort().join(',')!=='path,sha256_bytes'
+   ||d.path!==expected[index]?.path||d.sha256_bytes!==expected[index]?.sha256_bytes)
+   ||!k9Delivery||k9Delivery.path!==k9Path||k9Delivery.sha256_bytes!==k9Sha
+   ||!k10Eligibility||k10Eligibility.path!==k10Path||k10Eligibility.sha256_bytes!==k10Sha)
+   issue('K10_COUPON_DEPENDENCY','Signup-reward coupons require exactly the reviewed K9 and K10 eligibility sources.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k10CouponPath));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k10CouponSha)issue('K10_COUPON_DELIVERY_BYTES','Signup-reward coupon reviewed LF delivery bytes changed.');}catch{issue('K10_COUPON_DELIVERY_MISSING','Signup-reward coupon file missing.');}
+ }
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],k10Eligibility?[k10Path]:[],k10Coupons?[k10CouponPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');
