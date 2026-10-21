@@ -1,7 +1,7 @@
 {
   "scope": "Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.",
-  "startedAt": "2026-10-21T19:35:47.299Z",
-  "finishedAt": "2026-10-21T19:37:33.961Z",
+  "startedAt": "2026-10-21T21:41:39.534Z",
+  "finishedAt": "2026-10-21T21:43:48.313Z",
   "browserExecutable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "passed": 64,
   "failed": 0,
@@ -195,7 +195,7 @@
       "passed": true
     },
     {
-      "case": "37 Ops menu route has ten tiles and seven actions; System stays separate",
+      "case": "37 Ops menu route has nine tiles, scheduler status and seven actions; System stays separate",
       "passed": true
     },
     {

@@ -1,0 +1,18 @@
+{
+  "main": "76f057eb127df6b1ecdc64afeb716e4211b05f19",
+  "pr": 76,
+  "unit_and_actual_14_14a_sql_tests_passed": 56,
+  "coupon_browser_passed": 16,
+  "staff_browser_passed": 64,
+  "actual_rpc_ui_validator_test": "tests/couponCheckoutRpc.test.mjs",
+  "migration_sha256": {
+    "20261021000800_signup_reward_coupons.sql": "b0d27ed1a76763ff79ac28fec7d443b87daf425ecc7bb15b0273c49b46548626",
+    "20261021000825_coupon_delivery_reconciliation.sql": "f6e45de3d48f09b154534a902f2ad531d3d99c46000e253cafc4fba1110e1789",
+    "20261021000850_staff_manage_authorization.sql": "e6de5aa8ec80abc2ce2444d60a26e95c84ebded2451b8e7be24e67fe18008afe"
+  },
+  "sql_changed": false,
+  "hosted_changes": false,
+  "draft": true,
+  "typecheck_eslint_production_parity": "passed",
+  "fixture_adjustment": "scheduler status read mocked explicitly; nine tiles plus separate scheduler section"
+}

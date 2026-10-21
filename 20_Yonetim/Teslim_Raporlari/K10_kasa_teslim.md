@@ -46,3 +46,8 @@ SQL/migration eklenmedi veya değiştirilmedi; çekirdek #72/#77 bağımlılığ
 #76, #71/#72 ve Ads/Meta içeren main45e9c37 üzerine yeniden temellendirildi. package.json ve package-lock.json eşleşiyor; jsqr1.4.0 runtime bağımlılığı ve lock kaydı dev=false korunuyor. İlk tur:112/112 birim/yerel K9-hak kontrolü,16/16 kasa/QR,64/64 CRM/Ops; TypeScript/build/Production parity ve hedefli ESLint geçti.212→213 dosya,209 byte-eşit; ortak CSS,public form/Auth/GA4/K5 aynı. SQL değişmedi, canlı işlem yok.
 
 Bu yalnız ilk güncellemedir: #73 ve #77 main’e girdikten sonra güncel main üzerinde bir tur daha ve gerçek sıra14+14a kupon RPC lookup/redeem/hata eşlemesi entegrasyonu beklenir. Mevcut16/16 UI testi sentetik RPC kullanır; gerçek kupon SQL entegrasyonu sayılmaz. #78 için #80 main sonrası aynı tekrar ve14b→15 sırası korunur. #76 Draft kalır.
+
+
+## 21 Ekim — #73/#77/#80 sonrası son uyum turu
+
+Main 76f057e üzerine taşındı. Gerçek sıra 14 ve 14a SQL’iyle lookup → UI validCoupon/receiptNote → dört argümanlı redeem → ikinci kullanım reddi → used readback geçti. Gerçek kupon ve teslim çekirdeği dahil 56/56; kasa/QR 16/16; CRM/Ops 64/64. Güncel zamanlayıcının salt okunur çağrısı test fixture’ına eklendi; eski 10 kutu beklentisi 9 kutu + ayrı zamanlayıcı durumuna uyarlandı. TypeScript, hedefli ESLint, Production parity geçti: 212→213 dosya, 209 byte-eşit; ortak CSS ve public form/Auth/GA4 kaynakları aynı. qrcode-generator korundu, jsqr runtime/lock uyumlu. SQL değişmedi; canlı işlem yok. #76 Draft kalır. Önceki bekleyen entegrasyon notu bu turla tamamlandı. Kanıt: K10_kasa_kanit/main-rebase-final.json.
