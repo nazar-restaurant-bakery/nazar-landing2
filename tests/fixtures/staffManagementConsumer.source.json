@@ -1,0 +1,7 @@
+{
+  "source_commit": "2d409df613ef5627892961c04ff4f27f9a0c58f0",
+  "path": "supabase/migrations/20261021000900_staff_management.sql",
+  "sha256": "1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68",
+  "test_only": true,
+  "hosted_execution": false
+}

@@ -1,6 +1,7 @@
 {
   "version": 1,
   "mode": "read_only_inventory",
+  "staff_manage_delivery": {"path":"supabase/migrations/20261021000850_staff_manage_authorization.sql","sha256_bytes":"e6de5aa8ec80abc2ce2444d60a26e95c84ebded2451b8e7be24e67fe18008afe","application_order":"14b","included_in_k3_reset":false,"execution_enabled":false},
   "baseline": {
     "ref": "origin/main",
     "commit": "aa53f6d5fb5c02f814cfbba13a1b57df08874e62",

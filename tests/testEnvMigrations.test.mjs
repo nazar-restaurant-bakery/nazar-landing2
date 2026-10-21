@@ -101,7 +101,7 @@ test('held K9 delivery keeps exact reviewed bytes and waits for K8 without enter
  assert.equal((await auditMigrations({root})).readiness.ready,false);
 });
 
-for(const key of ['k7_payment_day_delivery','k8_delivery'])test(`merged main ${key} stays canonical, non-executable and outside historical replay`,async()=>{
+for(const key of ['k7_payment_day_delivery','k8_delivery','staff_manage_delivery'])test(`reviewed ${key} stays canonical, non-executable and outside historical replay`,async()=>{
  const entry=source[key];assert.ok(entry);
  const bytes=await fs.readFile(new URL('../'+entry.path,import.meta.url));
  assert.equal(sha256Lf(bytes.toString('utf8')),entry.sha256_bytes);
