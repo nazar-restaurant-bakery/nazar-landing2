@@ -1,0 +1,12 @@
+{
+  "stage": "initial_rebase_after_71_72",
+  "main": "45e9c379ebea380cf6b4668c44acc9858036b7be",
+  "unit_and_local_database_passed": 112,
+  "coupon_browser_passed": 16,
+  "staff_browser_passed": 64,
+  "runtime_jsqr": "1.4.0",
+  "lock_consistent": true,
+  "sql_changed": false,
+  "hosted_changes": false,
+  "remaining": "after #73+#77 merge, rebase and actual 14/14a coupon RPC integration; #78 after #80"
+}

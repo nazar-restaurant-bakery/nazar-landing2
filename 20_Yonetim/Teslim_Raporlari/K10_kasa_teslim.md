@@ -40,3 +40,9 @@ Tariften sapma yok. Ek açık karar sorusu yok; çekirdek bağımlılığı ve d
 #76 yalnız iki ekran commitini güncel main 0449e1e üzerine taşıdı; hedef main, Draft korunur. Güncel seçilmiş birim paketi 47/47 (couponCheckout, staffUi, crmUi, crmQueue, opsUi), gerçek kasa/QR/kamera paketi16/16 ve StaffPage CRM/Ops64/64 geçti. Önceki112/112 tarihsel teslim paketidir; #72 dalına ait testler bu main tabanına dahil değildir. TypeScript, hedefli ESLint, Production build/parity yeniden geçti:212→213 dosya,209 byte-eşit, CSS ve korunan form/Auth/GA4/K5 kaynakları aynı. Güncel tekrar: python tests/couponCheckoutBuildParity.py ardından python tests/couponCheckoutParity.py.
 
 SQL/migration eklenmedi veya değiştirilmedi; çekirdek #72/#77 bağımlılığı ayrıdır. /staff/coupons ve Kupon menüsü korundu. #78 de ayrı main tabanına taşındı; birleşimde /staff/team Personel menüsüyle birlikte korunacak. Canlı DB/hesap işlemi yok.
+
+## 21 Ekim — kurulum sonrası ilk main güncellemesi
+
+#76, #71/#72 ve Ads/Meta içeren main45e9c37 üzerine yeniden temellendirildi. package.json ve package-lock.json eşleşiyor; jsqr1.4.0 runtime bağımlılığı ve lock kaydı dev=false korunuyor. İlk tur:112/112 birim/yerel K9-hak kontrolü,16/16 kasa/QR,64/64 CRM/Ops; TypeScript/build/Production parity ve hedefli ESLint geçti.212→213 dosya,209 byte-eşit; ortak CSS,public form/Auth/GA4/K5 aynı. SQL değişmedi, canlı işlem yok.
+
+Bu yalnız ilk güncellemedir: #73 ve #77 main’e girdikten sonra güncel main üzerinde bir tur daha ve gerçek sıra14+14a kupon RPC lookup/redeem/hata eşlemesi entegrasyonu beklenir. Mevcut16/16 UI testi sentetik RPC kullanır; gerçek kupon SQL entegrasyonu sayılmaz. #78 için #80 main sonrası aynı tekrar ve14b→15 sırası korunur. #76 Draft kalır.

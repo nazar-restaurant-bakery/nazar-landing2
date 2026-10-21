@@ -1,6 +1,6 @@
 {
-  "baseline": "0449e1ea493397ce182c4881d5213b968b0bf78d (main)",
-  "current_main_source_comparison": "0449e1ea493397ce182c4881d5213b968b0bf78d",
+  "baseline": "45e9c379ebea380cf6b4668c44acc9858036b7be (main)",
+  "current_main_source_comparison": "45e9c379ebea380cf6b4668c44acc9858036b7be",
   "environment": "same Production target/mode, same synthetic publishable/site-key placeholders; hosted values not read",
   "baseline_files": 212,
   "candidate_files": 213,
@@ -9,13 +9,13 @@
     "index.html"
   ],
   "removed_hashed_files": [
-    "assets/StaffPage-Dn-098lI.js",
-    "assets/index-CMlJI2Mm.js"
+    "assets/StaffPage-DyrAa8gY.js",
+    "assets/index-lzYiiZ-a.js"
   ],
   "added_hashed_files": [
-    "assets/StaffPage-DM6tG5G3.js",
-    "assets/index-BbmEm9lW.js",
-    "assets/jsQR-_DCm1Fq1.js"
+    "assets/StaffPage-h3DAD8P5.js",
+    "assets/index-D04H-K18.js",
+    "assets/jsQR-DwzgPewQ.js"
   ],
   "normalized_index_html_identical": true,
   "existing_css_identical": true,
