@@ -1,5 +1,6 @@
 /** K10 server preparation. No route, scheduler or flow is activated by this module. */
 import { resolveServerEnvironment } from "../../src/lib/deploymentEnvironment.ts";
+import {liveReceiptProvider,reconcileCouponDelivery} from './couponDelivery.ts';
 
 export const COUPON_KLAVIYO_REVISION = "2026-07-15";
 export const COUPON_WELCOME_METRIC = "Nazar Coupon Welcome Authorized";
@@ -16,7 +17,7 @@ export type CouponResult = { status: "confirmed" | "provider_accepted" | "blocke
 export type CouponConfig = {
   mode: "disabled" | "mock" | "live"; isolated: boolean; url: string; businessId: string;
   serviceKey: string; processKey: string; accountId: string; readKey: string; eventKey: string;
-  qrOrigin: string; approvalId: string;
+  qrOrigin: string; approvalId: string; receiptKey?: string;
 };
 const obj = (x: unknown): x is Json => !!x && typeof x === "object" && !Array.isArray(x);
 const uuid = (x: unknown): x is string => typeof x === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
@@ -47,16 +48,18 @@ export function couponConfig(env: Record<string, string | undefined>, hostname: 
     if (target.isolated && requested === "mock") mode = "mock";
     if (!target.isolated && requested === "live" && /^[A-Za-z0-9_.:-]{8,120}$/.test(approvalId)
       && /^pk_[A-Za-z0-9_-]{10,200}$/.test(readKey) && /^pk_[A-Za-z0-9_-]{10,200}$/.test(eventKey)
-      && readKey !== eventKey) mode = "live";
+      && /^pk_[A-Za-z0-9_-]{10,200}$/.test(read('COUPON_KLAVIYO_RECEIPT_KEY'))
+      && read('COUPON_KLAVIYO_RECEIPT_KEY')!==eventKey && readKey !== eventKey) mode = "live";
   }
   return { mode, isolated: target.isolated, url: target.url, businessId: target.businessId,
-    serviceKey: target.secret, processKey, accountId, readKey, eventKey, qrOrigin, approvalId };
+    serviceKey: target.secret, processKey, accountId, readKey, eventKey, qrOrigin, approvalId,receiptKey:read('COUPON_KLAVIYO_RECEIPT_KEY') };
 }
 
 const RPCS = new Set(["coupon_confirmation_context_v1", "coupon_record_confirmed_vip_v1", "coupon_issue_confirmed_v1",
   "coupon_welcome_claim_v1", "coupon_welcome_context_v1", "coupon_welcome_finish_v1",
   "coupon_record_negative_v1",
-  "message_send_reserve_v1", "message_send_claim_v1", "message_send_context_v1", "message_send_finalize_v1"]);
+  "message_send_reserve_v1", "message_send_claim_v1", "message_send_context_v1", "message_send_finalize_v1",
+  "coupon_delivery_preflight_v1","coupon_delivery_bind_v1","coupon_delivery_context_v1","coupon_delivery_record_v1"]);
 export function couponStore(config: CouponConfig, fetcher: Fetcher): CouponStore {
   return { async rpc(name, args) {
     if (config.mode === "disabled" || !RPCS.has(name)) throw new Error("coupon_rpc_unavailable");
@@ -219,6 +222,10 @@ export async function processCouponWelcome({ store, provider, businessId, accoun
     j = structuredClone(claimed);
     const p = properties(j, qrOrigin);
     if (!p) return finish("blocked", "invalid_coupon_properties");
+    if(provider.mode==='live'){
+      const ready=await store.rpc('coupon_delivery_preflight_v1',{p_business_id:businessId,p_job_id:j.jobId});
+      if(!obj(ready)||ready.allowed!==true||ready.accountId!==accountId)return finish('blocked','delivery_setup_required');
+    }
     const payloadHash = await digest(JSON.stringify(p));
     const r = await store.rpc("message_send_reserve_v1", { p_business_id: businessId, p_customer_id: j.customerId,
       p_message_key: j.messageKey, p_message_kind: "flow", p_payload_sha256: payloadHash });
@@ -231,7 +238,8 @@ export async function processCouponWelcome({ store, provider, businessId, accoun
     lease = c.leaseId;
     await account(provider, accountId);
     await account(provider, accountId, true);
-    const current = marketing(await profile(provider, j.recipient));
+    const currentProfile=await profile(provider,j.recipient);
+    const current = marketing(currentProfile);
     if (!clear(current)) {
       const denied = negative(current);
       if (denied) {
@@ -253,6 +261,10 @@ export async function processCouponWelcome({ store, provider, businessId, accoun
       || ctx.email !== j.recipient || ctx.emailStatus !== "subscribed" || ctx.isTest !== false
       || ctx.suppressedAt !== null || ctx.providerBlockedStatus !== null || !date(ctx.dispatchExpiresAt)
       || ctx.dispatchExpiresAt !== c.dispatchExpiresAt || Date.parse(ctx.dispatchExpiresAt) <= now()) return finish("blocked", "gate_context_denied");
+    if(provider.mode==='live'){
+      const binding=await store.rpc('coupon_delivery_bind_v1',{p_business_id:businessId,p_job_id:j.jobId,p_job_lease_id:j.jobLeaseId,p_reservation_id:reservation,p_profile_id:currentProfile.id});
+      if(!obj(binding)||binding.allowed!==true||binding.code!=='delivery_bound')return finish('blocked','delivery_binding_unconfirmed');
+    }
     const body: Json = { data: { type: "event", attributes: { properties: p,
       metric: { data: { type: "metric", attributes: { name: COUPON_WELCOME_METRIC } } },
       profile: { data: { type: "profile", attributes: { email: j.recipient } } }, unique_id: j.eventUniqueId } } };
@@ -277,9 +289,14 @@ export async function handleCouponProcessRequest(request: Request, config: Coupo
   try {
     const raw = await request.text(); if (raw.length > 1024) return reply(400, { code: "invalid_input" });
     const b: unknown = JSON.parse(raw); if (!obj(b) || b.businessId !== config.businessId || dependencies.provider.mode !== config.mode) return reply(403, { code: "forbidden" });
+    if(b.action==='reconcile'&&Object.keys(b).sort().join()==='action,businessId,couponId'&&uuid(b.couponId)){
+      if(config.mode!=='live'||!config.receiptKey)return reply(503,{code:'receipt_reader_not_configured',activationReady:false});
+      const reconciled=await reconcileCouponDelivery({store:dependencies.store,provider:liveReceiptProvider(config.receiptKey),businessId:config.businessId,couponId:b.couponId,accountId:config.accountId});
+      return reply(reconciled.status==='delivered'?200:202,reconciled);
+    }
     let r: CouponResult;
     if (b.action === "confirm" && Object.keys(b).sort().join() === "action,businessId,customerId,signupId" && uuid(b.customerId) && uuid(b.signupId)) r = await confirmCouponVip({ ...dependencies, businessId: config.businessId, customerId: b.customerId, signupId: b.signupId, accountId: config.accountId });
-    else if (b.action === "welcome" && Object.keys(b).sort().join() === "action,businessId,couponId" && (b.couponId === null || uuid(b.couponId))) r = await processCouponWelcome({ ...dependencies, businessId: config.businessId, accountId: config.accountId, qrOrigin: config.qrOrigin, couponId: b.couponId });
+    else if (b.action === "welcome" && Object.keys(b).sort().join() === "action,businessId,couponId" && (b.couponId === null || uuid(b.couponId))) r = await processCouponWelcome({ ...dependencies, businessId: config.businessId, accountId: config.accountId, qrOrigin: config.qrOrigin, couponId: b.couponId as string|null });
     else return reply(400, { code: "invalid_input" });
     return reply(r.status === "unknown" ? 503 : 200, r);
   } catch { return reply(503, { code: "processing_unconfirmed" }); }

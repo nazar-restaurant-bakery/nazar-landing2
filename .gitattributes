@@ -56,3 +56,9 @@
 /functions/api/coupon-qr/* text eol=lf
 /tests/coupon*.mjs text eol=lf
 /tests/fixtures/coupon*.mjs text eol=lf
+
+/supabase/migrations/20261021000825_coupon_delivery_reconciliation.sql text eol=lf
+/functions/_lib/couponDelivery.ts text eol=lf
+/tests/couponDelivery*.mjs text eol=lf
+
+/tools/test-env/coupon-delivery/** text eol=lf

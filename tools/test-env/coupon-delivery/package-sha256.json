@@ -1,0 +1,46 @@
+[
+  {
+    "file": ".gitignore",
+    "sha256": "dfb6c26e25745d0d6dd036d37f2c48d3d3a63b6fc44d93ba769b43aa84f18e49"
+  },
+  {
+    "file": "CouponDelivery-Runner.ps1",
+    "sha256": "daf7d5c9536cacf86ff4eb6228e204ea679ba8719959e38c2d437ea7f55d0930"
+  },
+  {
+    "file": "K7-DbRunner.ps1",
+    "sha256": "f33d200727a327ee5f2732922010ee79e9b079172faeffa41dc4e74a98252f3a"
+  },
+  {
+    "file": "migration-plans.json",
+    "sha256": "cf8620ec3bea8eb723daa3508835f0ad7ab4fa520b90e121a088d1f4ba2245c9"
+  },
+  {
+    "file": "Prepare-Targets.ps1",
+    "sha256": "77671488c4a648f2f7bf2cff94ca447216a9dd5b0b1629bfc021e8e573ce900f"
+  },
+  {
+    "file": "README.md",
+    "sha256": "c98029b5e1192c02307b7d1d44b684e0b065371cac7a9bee9ed4f95608880810"
+  },
+  {
+    "file": "sql/20261021000825_coupon_delivery_reconciliation.sql",
+    "sha256": "f6e45de3d48f09b154534a902f2ad531d3d99c46000e253cafc4fba1110e1789"
+  },
+  {
+    "file": "Start-CouponDelivery-Production.ps1",
+    "sha256": "9018628f82f2ea893684d8d34c4636501e4b6574ab7abf13558bede2a7964761"
+  },
+  {
+    "file": "Start-CouponDelivery-Sandbox.ps1",
+    "sha256": "52b152c719dcd341e1dc7c0d8e3fadb3222eb4b636fc274dc5316e427324e5ca"
+  },
+  {
+    "file": "targets.example.json",
+    "sha256": "7361987a7dad897cf3ce4a56fe73088a2508233404aa3c8750ead2af818fdcd8"
+  },
+  {
+    "file": "tests/Test-Offline.ps1",
+    "sha256": "ef227b4dcfafa43a6949781b3279fbf18c2ae1cbfdc1761247a6bb4785e2ba1f"
+  }
+]

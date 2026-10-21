@@ -1,0 +1,70 @@
+{
+  "14a": {
+    "file": "20261021000825_coupon_delivery_reconciliation.sql",
+    "sha256": "F6E45DE3D48F09B154534A902F2AD531D3D99C46000E253CAFC4FBA1110E1789",
+    "module": "CouponDelivery",
+    "dependencies": [
+      {
+        "order": "14",
+        "file": "20261021000800_signup_reward_coupons.sql",
+        "sha256": "B0D27ED1A76763FF79AC28FEC7D443B87DAF425ECC7BB15B0273C49B46548626",
+        "checks": "migration_order_14",
+        "receipt": "Sirali_Kurulum_kanit/receipts/14-{target}-success.json",
+        "requireOrder": true,
+        "legacy": true
+      }
+    ],
+    "preconditions": [
+      "(SELECT md5(prosrc)='9797285322b3082dfb0715e307862686' FROM pg_proc WHERE oid='core.message_send_window_blocked_v1(uuid,uuid,uuid)'::regprocedure)",
+      "to_regclass('core.coupon_welcome_outbox') IS NOT NULL",
+      "to_regclass('core.coupon_delivery_settings') IS NULL",
+      "NOT has_schema_privilege('anon','core','USAGE')",
+      "NOT has_schema_privilege('authenticated','core','USAGE')"
+    ],
+    "postconditions": [
+      "(SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('core.coupon_delivery_settings'))",
+      "NOT has_table_privilege('anon','core.coupon_delivery_settings','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('authenticated','core.coupon_delivery_settings','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('service_role','core.coupon_delivery_settings','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "(SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('core.coupon_delivery_bindings'))",
+      "NOT has_table_privilege('anon','core.coupon_delivery_bindings','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('authenticated','core.coupon_delivery_bindings','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('service_role','core.coupon_delivery_bindings','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "(SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('core.coupon_delivery_receipts'))",
+      "NOT has_table_privilege('anon','core.coupon_delivery_receipts','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('authenticated','core.coupon_delivery_receipts','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('service_role','core.coupon_delivery_receipts','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "(SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('core.coupon_delivery_reviews'))",
+      "NOT has_table_privilege('anon','core.coupon_delivery_reviews','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('authenticated','core.coupon_delivery_reviews','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('service_role','core.coupon_delivery_reviews','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "to_regprocedure('public.coupon_delivery_preflight_v1(uuid,uuid)') IS NOT NULL",
+      "has_function_privilege('service_role','public.coupon_delivery_preflight_v1(uuid,uuid)','EXECUTE')",
+      "NOT has_function_privilege('anon','public.coupon_delivery_preflight_v1(uuid,uuid)','EXECUTE')",
+      "NOT has_function_privilege('authenticated','public.coupon_delivery_preflight_v1(uuid,uuid)','EXECUTE')",
+      "(SELECT prosecdef AND proconfig @> ARRAY['search_path=\"\"'] FROM pg_proc WHERE oid=to_regprocedure('public.coupon_delivery_preflight_v1(uuid,uuid)'))",
+      "to_regprocedure('public.coupon_delivery_bind_v1(uuid,uuid,uuid,uuid,text)') IS NOT NULL",
+      "has_function_privilege('service_role','public.coupon_delivery_bind_v1(uuid,uuid,uuid,uuid,text)','EXECUTE')",
+      "NOT has_function_privilege('anon','public.coupon_delivery_bind_v1(uuid,uuid,uuid,uuid,text)','EXECUTE')",
+      "NOT has_function_privilege('authenticated','public.coupon_delivery_bind_v1(uuid,uuid,uuid,uuid,text)','EXECUTE')",
+      "(SELECT prosecdef AND proconfig @> ARRAY['search_path=\"\"'] FROM pg_proc WHERE oid=to_regprocedure('public.coupon_delivery_bind_v1(uuid,uuid,uuid,uuid,text)'))",
+      "to_regprocedure('public.coupon_delivery_context_v1(uuid,uuid)') IS NOT NULL",
+      "has_function_privilege('service_role','public.coupon_delivery_context_v1(uuid,uuid)','EXECUTE')",
+      "NOT has_function_privilege('anon','public.coupon_delivery_context_v1(uuid,uuid)','EXECUTE')",
+      "NOT has_function_privilege('authenticated','public.coupon_delivery_context_v1(uuid,uuid)','EXECUTE')",
+      "(SELECT prosecdef AND proconfig @> ARRAY['search_path=\"\"'] FROM pg_proc WHERE oid=to_regprocedure('public.coupon_delivery_context_v1(uuid,uuid)'))",
+      "to_regprocedure('public.coupon_delivery_record_v1(uuid,uuid,text,timestamptz,text)') IS NOT NULL",
+      "has_function_privilege('service_role','public.coupon_delivery_record_v1(uuid,uuid,text,timestamptz,text)','EXECUTE')",
+      "NOT has_function_privilege('anon','public.coupon_delivery_record_v1(uuid,uuid,text,timestamptz,text)','EXECUTE')",
+      "NOT has_function_privilege('authenticated','public.coupon_delivery_record_v1(uuid,uuid,text,timestamptz,text)','EXECUTE')",
+      "(SELECT prosecdef AND proconfig @> ARRAY['search_path=\"\"'] FROM pg_proc WHERE oid=to_regprocedure('public.coupon_delivery_record_v1(uuid,uuid,text,timestamptz,text)'))",
+      "to_regprocedure('public.coupon_review_not_sent_v1(uuid,uuid,text,text,timestamptz)') IS NOT NULL",
+      "has_function_privilege('authenticated','public.coupon_review_not_sent_v1(uuid,uuid,text,text,timestamptz)','EXECUTE')",
+      "NOT has_function_privilege('anon','public.coupon_review_not_sent_v1(uuid,uuid,text,text,timestamptz)','EXECUTE')",
+      "NOT has_function_privilege('service_role','public.coupon_review_not_sent_v1(uuid,uuid,text,text,timestamptz)','EXECUTE')",
+      "(SELECT prosecdef AND proconfig @> ARRAY['search_path=\"\"'] FROM pg_proc WHERE oid=to_regprocedure('public.coupon_review_not_sent_v1(uuid,uuid,text,text,timestamptz)'))",
+      "(SELECT md5(prosrc)='191442013508ead6578999b4238837aa' FROM pg_proc WHERE oid='core.message_send_window_blocked_v1(uuid,uuid,uuid)'::regprocedure)",
+      "NOT EXISTS(SELECT FROM core.coupon_delivery_settings WHERE enabled)"
+    ]
+  }
+}

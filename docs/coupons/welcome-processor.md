@@ -14,6 +14,7 @@ Production adları aşağıdadır; izole Preview aynı adların **TEST_** önekl
 | `COUPON_KLAVIYO_ACCOUNT_ID` | İki anahtarın da salt okunur Accounts yanıtında birebir eşleşmesi gereken hesap. |
 | `COUPON_KLAVIYO_READ_KEY` | Ayrı anahtar; `accounts:read`, `profiles:read`, `lists:read`. |
 | `COUPON_KLAVIYO_EVENT_KEY` | Farklı anahtar; yalnız `accounts:read`, `events:write`. Profil/izin yazma kapsamı verilmez. |
+| `COUPON_KLAVIYO_RECEIPT_KEY` | Ayrı salt okunur anahtar: `accounts:read`, `events:read`, `metrics:read`. Live için zorunlu; event yazma anahtarıyla aynı olamaz. |
 | `COUPON_QR_ORIGIN` | Güvenilir kendi HTTPS origin'i; QR resmi `/api/coupon-qr/<128-bit-opaque-token>.gif`. |
 | `COUPON_QR_ENABLED` | QR resim yolu yalnız tam `true` ile açılır; eksik/false kapalı. Preview adı `TEST_COUPON_QR_ENABLED`. Resim okumak kupon kullanmaz. |
 | `COUPON_LIVE_APPROVAL_ID` | Canlı işleme için açık kabul kaydının kimliği; eksikse kapalı. |
@@ -42,13 +43,17 @@ Outbox claim → K6 reserve/claim → her iki anahtarın hesap kontrolü + sağl
 
 **202 = olay kabul edildi; e-posta gönderildi anlamına gelmez.** Outbox `provider_accepted`; K6 `unknown` olur. Dönen sonuç `activationReady:false`, `pending_delivery_receipt_reconciliation` taşır. Timeout, kayıp yanıt, hatalı receipt veya sağlayıcı hatasında otomatik ikinci gönderim yoktur. Sabit `unique_id` ve kupon/message tekillikleri korunur.
 
-Mevcut K6'da `unknown` terminal/immutable'dır ve o kişinin gelecekteki pazarlama mesajlarını **süresiz** kapatır; yalnız 168 saatlik bekleme değildir. Bu teslim bu kuralı gevşetmez. Güvenilir delivery receipt eşleştirmesi ve güvenli çözüm yolu kabul edilmeden flow etkinleştirilmemelidir. Klaviyo'nun asenkron flow email'i ile DB kararı atomik değildir; özel event'in `unique_id` değerinin Received Email olayına taşındığı varsayılmamıştır. `sent` kanıtı üretilmez.
+Yeni ileri migration 14a önerisi, immutable K6 geçmişini koruyup ek kanıt tabloları getirir. Live dispatch öncesinde gözden geçirilmiş kapalı varsayılan ayar ve kişi/flow/message için tek kalıcı eşleme gerekir; setup yoksa K6 rezervasyonu ve provider POST yapılmaz. Yeni dar `reconcile` komutu native **Received Email** metriğini GET ile okur: hesap, orijinal provider profil ID, metric ID, flow ID, message ID ve dispatch sonrası tarih eşleşmeli; tek sonuç ve tamamlanmış sayfa gerekir. Özel tetik olayının `unique_id` değerinin teslimata taşındığı varsayılmaz. Başarılı kanıtın özeti/ID/tarihi ayrı tabloya yazılır; `message_log` unknown satırı değişmez. 168 saat gerçek teslimat tarihinden hesaplanır. `activationReady:true` ancak canlı GET eşleşmesi, DB acknowledgement ve halen açık güncel yerel kapılarla döner; flow'u kendiliğinden açmaz.
+
+`{"action":"reconcile","businessId":"<ayar>","couponId":"<uuid>"}` aynı maskeli makine kimliğiyle çağrılır; farklı işletme/browser Origin ve ek alanlar reddedilir. Reader yalnız Accounts/Metric/Events GET yapar; profil/abonelik/suppression/event yazısı yoktur. Bu komut yeni gönderim başlatmaz. Okuma/ack kaybı veya boş/ambiguous/sayfası eksik sonuç bekler; ikinci event POST yapılmaz.
+
+Gönderilmediği ve sağlayıcı kuyruğunun kapandığı dış kanıtla doğrulanırsa, yalnız aktif platform operatörü + işletme üyeliği olan Talip `coupon_review_not_sent_v1` ile immutable inceleme kaydı bırakabilir. Kanıt referansı ve SHA gerekir; boş event sonucu kanıt sayılmaz. Sonrasında da tenant'ın 168 saatlik muhafazakâr beklemesi vardır. Sonradan gerçek teslimat gelirse onun sınırı uygulanır. Böylece kanıtla çözülmüş unknown süresiz kilit olmaz; kanıtsız belirsizlik otomatik silinmez. Ayrıntı: [Talip adımları](Talip_Klaviyo_Akis_Kurulumu.md).
 
 ## Talip'in etkinleştirme öncesi kontrol sırası
 
 1. Aynı ileri migration'ı testte uygulayıp DOI/kupon/K6 ve kasa sentetik kabulünü tamamla; Production uygulaması ayrı kabul.
 2. Kaynak hesap/liste, doğru ürün, kendi kanal eşlemeleri ve gerçek DOI kanıtını okuyan güvenilir `confirm` tetik bağlantısını doğrula; mevcut kanıtlı müşteriler için issuer idempotent telafi kullanır.
-3. Yukarıdaki terminal `unknown` ve delivery receipt çözümünü ayrı, açık kabul ile tamamla. Bu engel çözülmeden live işlem veya flow açılmaz.
+3. M14a ileri migration ve receipt ayar/anahtarını Sandbox'ta kabul et; sonra ayrı Production kararı. Gönderim eşleştirmesinin gerçek provider kabulü olmadan flow açılmaz. Başlatıcılar `tools/test-env/coupon-delivery/` altında; sıra 14a öneridir.
 4. `welcome-flow-draft.json` içindeki ayarları mevcut **Nazar VIP — Welcome** taslağına geçir: özel metric tetik, liste/segment tetik yok; tek gecikmesiz email, yeniden giriş yok. Her email'in Draft olduğu ayrıca kontrol edilir. Bu JSON resmi Flow API import payload'u değildir.
 5. HTML/text şablonunu, gönderici alanını ve zorunlu şirket altbilgisini Klaviyo'da denetle. QR GIF kendi altyapısından gelir; `COUPON_QR_ENABLED=true` yalnız doğru ortamda ayrıca ayarlanır ve resim yüklenmesi salt okunur kanıtlanır. Kod okunabilir metin olarak da bulunur. Harici QR servisi ve analitik takibi yoktur.
 6. Flow dışındaki campaign/flow yollarının K6'yı aşmadığını doğrula; ayrı onaylı gerçek kabulden sonra yalnız Talip etkinleştirir. Kartlar ancak bundan sonra dağıtılır.

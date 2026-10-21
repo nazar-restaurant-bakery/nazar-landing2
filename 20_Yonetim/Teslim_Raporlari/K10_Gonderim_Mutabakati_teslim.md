@@ -1,0 +1,11 @@
+# K10 — gönderim mutabakatı hazırlığı (21 Ekim)
+
+**Yapıldı:** #77 güncel main tabanına taşındı; #72 bağımlılığı korundu. 202 olay kabulü olarak kalır. Yeni dar GET okuyucu hesap + orijinal profil + native Received Email + flow + mesaj + dispatch tarihi için tek kanıt arar. Live öncesi kalıcı kişi/flow/mesaj eşlemesi gerekir. API custom metrik, yanlış hesap/kişi/mesaj, eksik sayfa ve çoklu aday kapalı kalır.
+
+**K6 çözümü:** message_log geçmişi değiştirilmez. Doğrulanan gerçek teslimat ek kanıt tablosuna girer; 167 saat engel / 169 saat yeni uygun mesaj. Kanıtlı sağlayıcı iptali için yalnız aktif platform operatörü + işletme üyeliği olan Talip inceleme kaydı bırakabilir; ayrıca 168 saat koruyucu bekleme vardır. Kanıtsız unknown sırf yaşlandı diye temizlenmez; aynı Welcome yeniden gönderilmez. activationReady ancak canlı GET + DB acknowledgement + güncel izin/kapılarla true olabilir; mock/202 true vermez. Bu sonuç kampanya/flow açma kararı değildir.
+
+**Kanıt:** 100/100 Node (adapter/QR/envanter); PostgreSQL18.6 gerçek K4/K6/K10 zinciri: mevcut 32/32 ve yeni 8/8. Maskeli başlatıcı 21/21 negatif/çevrimdışı; TypeScript ve hedefli ESLint geçti. Production karşılaştırması ayrıca kanıt klasöründe. Sağlayıcı test adaptörüdür; gerçek hesap veya email kabulü yapılmadı.
+
+**Migration:** önerilen sıra 14a, 20261021000825_coupon_delivery_reconciliation.sql, LF SHA256 f6e45de3d48f09b154534a902f2ad531d3d99c46000e253cafc4fba1110e1789. Eski K6/M14 baytları aynı. Eski K6 pencere gövdesi MD5 9797285322b3082dfb0715e307862686 korunmadan ileri SQL başlamaz. Başlatıcı 43 nesne/yetki/RLS denetimi, aynı hedef M14 ve Production'a kendi Sandbox kaydını ister; bugün M14 kaydını bekliyor.
+
+**Talip:** Draft #77 incelemesi; sıra kabulü → aynı psql18.6 aracıyla Sandbox → hosted kabul → ayrıca Production. Yeni key adı COUPON_KLAVIYO_RECEIPT_KEY; scopes Accounts/Events/Metrics READ, değerler yalnız Talip'te. Tık tık belge K10_Talip_Klaviyo_Akis_Kurulumu.md; başlatıcılar CouponDelivery_kanit. Güvenilir DOI→confirm tetik bağlantısının hosted kabulü ve ayrıca onaylı gerçek email testi halen gerekir. Flow, secret, kampanya veya canlı DB değişmedi; K10 canlı kapanışı verilmedi. Yeni işletme kararı eklenmedi.

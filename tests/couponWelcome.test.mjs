@@ -54,6 +54,11 @@ test('dated exact-list double opt-in writes trusted hashed evidence, never provi
   assert.equal(JSON.stringify(saved.p_evidence).includes(EMAIL),false);assert.equal(h.events.length,0);
   assert.deepEqual(h.calls.filter(c=>c[0]==='GET').map(c=>c[1]),['/accounts','/lists/VIP_LIST','/profiles','/lists/VIP_LIST/profiles']);
 });
+
+test('live welcome requires durable delivery setup before K6 reservation or provider POST',async()=>{
+ const h=harness({rpc:name=>name==='coupon_delivery_preflight_v1'?{allowed:false,code:'delivery_setup_required'}:undefined});h.provider.mode='live';
+ const r=await h.welcome();assert.equal(r.code,'delivery_setup_required');assert.equal(h.events.length,0);assert.equal(h.calls.some(c=>c[0]==='message_send_reserve_v1'),false);
+});
 for(const [name,options] of [
   ['checkbox/local test',{confirmContext:{isTest:true}}],['wrong business',{confirmContext:{businessId:C}}],
   ['future signup',{confirmContext:{requestedAt:'2026-10-21T21:00:00Z'}}],
@@ -113,10 +118,11 @@ test('HTTP entry is machine-only, exact command-shaped, no browser Origin or arb
 });
 test('production runtime is disabled unless all explicit approval and distinct narrow keys are set',()=>{
   assert.equal(couponConfig({},'www.nazarrestaurantandbakery.com').mode,'disabled');
-  const env={SUPABASE_SECRET_KEY:'sb_secret_test',COUPON_PROCESS_MODE:'live',COUPON_PROCESS_ENABLED:'true',COUPON_PROCESS_KEY:'x'.repeat(40),COUPON_KLAVIYO_ACCOUNT_ID:'ACCOUNT_ONE',COUPON_KLAVIYO_READ_KEY:'pk_read_1234567890',COUPON_KLAVIYO_EVENT_KEY:'pk_event_1234567890',COUPON_QR_ORIGIN:'https://owned.invalid',COUPON_LIVE_APPROVAL_ID:'talip:approved:future'};
+  const env={SUPABASE_SECRET_KEY:'sb_secret_test',COUPON_PROCESS_MODE:'live',COUPON_PROCESS_ENABLED:'true',COUPON_PROCESS_KEY:'x'.repeat(40),COUPON_KLAVIYO_ACCOUNT_ID:'ACCOUNT_ONE',COUPON_KLAVIYO_READ_KEY:'pk_read_1234567890',COUPON_KLAVIYO_EVENT_KEY:'pk_event_1234567890',COUPON_KLAVIYO_RECEIPT_KEY:'pk_receipt_1234567890',COUPON_QR_ORIGIN:'https://owned.invalid',COUPON_LIVE_APPROVAL_ID:'talip:approved:future'};
   assert.equal(couponConfig(env,'www.nazarrestaurantandbakery.com').mode,'live');
   assert.equal(couponConfig({...env,COUPON_LIVE_APPROVAL_ID:''},'www.nazarrestaurantandbakery.com').mode,'disabled');
   assert.equal(couponConfig({...env,COUPON_KLAVIYO_EVENT_KEY:env.COUPON_KLAVIYO_READ_KEY},'www.nazarrestaurantandbakery.com').mode,'disabled');
+  assert.equal(couponConfig({...env,COUPON_KLAVIYO_RECEIPT_KEY:''},'www.nazarrestaurantandbakery.com').mode,'disabled');
   assert.equal(couponConfig(env,'branch.nazar-restaurant-website.pages.dev').mode,'disabled');
 });
 test('live transport only sends event and readonly identity calls; blocks arbitrary paths before network',async()=>{

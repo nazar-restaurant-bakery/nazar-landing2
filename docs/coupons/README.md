@@ -5,6 +5,7 @@ Kod ve sentetik prova teslimidir; canlı kampanya, anahtar, migration veya flow 
 - [Çekirdek/kasa sözleşmesi](coupon-contract.md): Kol 2'nin lookup/redeem imzaları ve JSON sonuçları.
 - [Onay ve hoş geldin işleyicisi](welcome-processor.md): ortam adları, K6 kapısı, sağlayıcı kanıtı ve etkinleştirme engelleri.
 - [Draft flow kontrol listesi](welcome-flow-draft.json): resmi API import dosyası değildir; mevcut Klaviyo hesabına uygulanmadı.
+- [Talip için adım adım Klaviyo kurulumu](Talip_Klaviyo_Akis_Kurulumu.md): tek taslak email, kimlikler, salt okunur receipt anahtarı ve belirsiz sonuç incelemesi.
 - [HTML e-posta](welcome-email.html) / [düz metin](welcome-email.txt): kupon kodu, kendi altyapısından QR ve abonelikten ayrılma altbilgisi.
 
 ## Migration ve işletme ayarları
@@ -17,10 +18,10 @@ Migration kampanya açmaz veya gerçek personel tohumu yüklemez. Kampanya satı
 
 Hak güvenilir çift onayla kazanılır; kullanım sonraki vergi/bahşiş hariç en az $30 siparişte, kampanya boyunca bir kez olur. Sonradan pazarlama izni iptali kazanılmış kuponu tüketmez; e-postayı engeller. İadede kullanım void edilmez ve hak geri verilmez. Clover kaydı olmayan kasada tutar/kanal/tarih/fiş personel beyanıdır; doğrulanmış Clover siparişi gibi gösterilmez.
 
-## Etkinleştirme için henüz tamamlanmamış iki teknik koşul
+## Etkinleştirme kabulü
 
 1. Gerçek çift onayı doğrulayan `confirm` çağrısının güvenilir tetikleyiciye bağlanması ve uçtan uca kanıtlanması. Yeni makine uç noktası hazırdır; timer/webhook/form bağlantısı kurulmadı.
-2. Klaviyo'nun asenkron kabulü ile gerçek gönderim sonucunun güvenilir mutabakatı. `202` yalnız olay kabulüdür. Mevcut K6 `unknown` terminal kaydı gelecekteki pazarlamayı da durdurur; güvenli çözüm yolu bu teslimde uygulanmadı. İşleyici `activationReady:false` döndürür.
+2. Gönderim mutabakatının kodu yeni `20261021000825_coupon_delivery_reconciliation.sql` ile hazırdır (14a sıra önerisi). `202` halen yalnız olay kabulüdür. Kalıcı kişi/flow/mesaj eşlemesi ve gerçek native Received Email GET kanıtı ile çözülür; eski `message_log` satırı değiştirilmez. Yalnız canlı doğrulanmış receipt + güncel yerel kapılar `activationReady:true` üretebilir. Mock/202 bunu yapamaz. Hosted kimlikler, read-only receipt key, ayar ve canlı kabul henüz uygulanmadı. Gönderilmediği kanıtlanmış/sağlayıcı kuyruğundan iptal edilmiş iş için Talip'e audit'li inceleme + 168 saat muhafazakâr bekleme yolu vardır; kanıtsız otomatik temizleme yoktur.
 
 Bu koşullar çözülmeden `live` işleyici veya **Nazar VIP — Welcome** flow'u açılmaz. Bu teslimde gerçek Klaviyo profili/olayı/e-postası oluşturulmaz. Kasa arayüzü Kol 2'nin ayrı işidir; bu PR yalnız sözleşme ve çekirdeği sağlar.
 
@@ -28,6 +29,8 @@ Bu koşullar çözülmeden `live` işleyici veya **Nazar VIP — Welcome** flow'
 
 ```text
 node --test tests/couponWelcome.test.mjs tests/couponQr.test.mjs
+node --test tests/couponDelivery.test.mjs
+node --test tests/couponDeliveryDb.test.mjs
 node --test --test-concurrency=1 tests/signupRewardCouponsDb.test.mjs tests/couponWelcomeDbIntegration.test.mjs
 node --test tests/testEnvMigrations.test.mjs
 ```
