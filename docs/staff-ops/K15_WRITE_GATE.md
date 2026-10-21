@@ -52,3 +52,7 @@ The local SQL suite uses minimal contract fixtures, not a hosted baseline copy.
 It executes the actual migration and functions on PostgreSQL 18.6, including two
 simultaneous authenticated dry-run executions (one succeeds), two generated tenants and all contract user types. Shared foundation fixture is pinned under tests/fixtures; test sessions are trusted synthetic claims, not a live JWT proof. Full hosted baseline
 compatibility and live UI acceptance remain future sandbox checks.
+
+## 21 October current-main preparation
+
+Rebased onto main 0449e1e for the November scheduler preparation. SQL remains byte-identical SHA256 0796c2fdf8db2e4c68f74976aad16dfec387b44a6ea687ff6545e4b3d30fbbca. Current tests: 25/25 Node (inventory included), 1/1 React/browser; PostgreSQL 18.6 synthetic permissions/concurrent execution passed. Hosted JWT acceptance and deployment remain pending. Guarded order11 launchers are shipped with #73 under tools/test-env/daily-operations; no account, secret or live database change was made. PR base remains main; Draft status and merge decision stay with Talip.
