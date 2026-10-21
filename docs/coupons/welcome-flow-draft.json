@@ -1,0 +1,61 @@
+{
+  "artifactKind": "reviewed-configuration-not-an-api-import-payload",
+  "activationReady": false,
+  "name": "Nazar VIP \u2014 Welcome",
+  "status": "draft",
+  "apiRevision": "2026-07-15",
+  "trigger": {
+    "type": "metric",
+    "name": "Nazar Coupon Welcome Authorized",
+    "reentry": "never",
+    "nativeListOrSegmentTriggerAllowed": false
+  },
+  "actions": [
+    {
+      "type": "email",
+      "status": "draft",
+      "delaySeconds": 0,
+      "subject": "Welcome to Nazar VIP \u2014 your simit coupon",
+      "htmlFile": "welcome-email.html",
+      "textFile": "welcome-email.txt",
+      "filters": [
+        "Current explicit email marketing consent is SUBSCRIBED",
+        "Current email suppression is absent",
+        "Current VIP-list suppression is absent"
+      ]
+    }
+  ],
+  "eventProperties": [
+    "coupon_code",
+    "coupon_qr_payload",
+    "coupon_qr_image_url",
+    "campaign_id",
+    "coupon_id",
+    "minimum_amount_cents",
+    "channels",
+    "expires_at",
+    "message_key"
+  ],
+  "activationBlockers": [
+    "No flow activation or provider event/profile/email write is authorized by this delivery.",
+    "Connect and verify the trusted confirmation processor with dated actual double-opt-in evidence.",
+    "Review exact source account, VIP list, product/channel mapping and current provider email action statuses.",
+    "Install and accept forward delivery reconciliation (proposed order 14a), exact account/profile/native metric/flow/message binding, GET Events readback and bounded audited resolution. HTTP 202 alone remains unconfirmed.",
+    "Prove one authorized live acceptance separately before distributing cards."
+  ],
+  "deliveryReconciliation": {
+    "command": "reconcile",
+    "readOnlyProvider": true,
+    "nativeMetric": "Received Email",
+    "identity": [
+      "account_id",
+      "profile_id",
+      "metric_id",
+      "flow_id",
+      "message_id",
+      "after_dispatch"
+    ],
+    "oneDurableIntentPerProfileMessage": true,
+    "automaticUnknownExpiry": false
+  }
+}

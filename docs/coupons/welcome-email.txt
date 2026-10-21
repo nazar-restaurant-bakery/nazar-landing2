@@ -1,0 +1,20 @@
+Welcome to Nazar VIP
+
+Your email confirmation is complete. Here is your personal coupon for one complimentary plain simit.
+
+Coupon: {{ event.coupon_code }}
+
+Use it once on your next qualifying order of $30 or more before tax and tip, through Nazar's own dine-in, website pickup, or website delivery channels.
+
+Show this code to Nazar staff. Staff will check the coupon and your qualifying order before recording its one-time use.
+
+One coupon per person for this campaign; one simit per qualifying order. The coupon cannot be used again after redemption.
+
+Thank you,
+Nazar Restaurant & Bakery
+
+{{ organization.name }}
+{{ organization.full_address }}
+
+You received this email after confirming your Nazar VIP email subscription.
+{% unsubscribe %}

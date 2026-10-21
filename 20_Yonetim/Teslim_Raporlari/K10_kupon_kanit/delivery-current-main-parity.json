@@ -1,0 +1,38 @@
+{
+  "base": "2bbbcdf4338987249ca137d6ee65593a8c4c0e09",
+  "candidate": "6a05c56d25adf49605b952605f5041d4b9e91679",
+  "APP_ENV_present": false,
+  "TEST_variables_present": false,
+  "hosted_secrets_read": false,
+  "network_or_DB": false,
+  "builds_passed": true,
+  "base_files": 212,
+  "candidate_files": 212,
+  "byte_equal": 209,
+  "normalized_public_main_equal": false,
+  "normalized_html_equal": true,
+  "critical_source_equal": [
+    "functions/api/signup.ts",
+    "src/lib/analytics.ts",
+    "src/pages/staff/StaffShell.tsx",
+    "src/lib/crmData.ts",
+    "functions/api/staff/profile-sync.ts",
+    "functions/_lib/profileSyncRuntime.ts"
+  ],
+  "staff_presentation_isolation": {
+    "purpose": "isolate existing #72 staff UI/copy additions only; actual production bundle is not byte-equal",
+    "substituted_sources": [
+      "src/components/CloverOrdersPanel.tsx",
+      "src/lib/staffCopy.ts"
+    ],
+    "all_other_candidate_source_retained": true,
+    "base_dist_byte_equal": true,
+    "files_equal": 212
+  },
+  "intended_differences": [
+    "existing #72 readonly staff orders/copy additions",
+    "default-off coupon API/delivery reconciliation"
+  ],
+  "gzip_total_delta": 1648,
+  "checked_at": "2026-10-21T17:56:09.825589+00:00"
+}

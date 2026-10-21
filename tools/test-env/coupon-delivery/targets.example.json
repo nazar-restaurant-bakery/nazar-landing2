@@ -1,0 +1,4 @@
+{
+  "Sandbox": "<existing-sandbox-project-ref>",
+  "Production": "<existing-production-project-ref>"
+}
