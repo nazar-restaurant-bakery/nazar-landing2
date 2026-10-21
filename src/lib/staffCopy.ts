@@ -1,5 +1,6 @@
 // Staff-only copy. Public-page language selection and translations are unchanged.
 export const staffCopy = {
+  campaignCheckLabel: "Simit hakkı", campaignCheckGeneric: "İkram hakkı", campaignCheckYes: "Var", campaignCheckNo: "Yok", campaignCheckUnknown: "Doğrulanamadı", campaignCheckLoading: "Kontrol ediliyor…", campaignCheckDenied: "Bu işletme için erişim yok", campaignCheckUnavailable: "Bağlantı veya veri doğrulanamadı", campaignCheckPersonRemaining: "Kişi kalan kullanım", campaignCheckTotalRemaining: "Toplam kalan adet", campaignCheckPerOrder: "Sipariş başına adet sınırı", campaignCheckUnlimited: "Sınırsız", campaignCheckCaution: "Bu kontrol kullanım ayırmaz; son aktarılan sipariş verisini kullanır. Hazırlamadan önce güncel sonucu kontrol edin.", campaignCheckSnapshot: "Sipariş aktarımı · New York", campaignCheckAt: "Hak kontrolü · New York",
   noNotifications: "Bu kaynakta mevcut sonuçlarla eşleşen bildirim kaydı yok.", queueOverlap: "Kategoriler örtüşebilir; sayılarını birlikte toplamayın.", authorUnavailable: "Yazar bilgisi yok", noMatchingRecord: "Bağlı müşteri mevcut sonuçlarda bulunamadı.",
   queueCategories: "Takip kategorileri", openCatering: "Açık catering", overdueCatering: "Gecikmiş catering", missingOwner: "Sorumlusu yok", missingFollowup: "Takip zamanı yok", openTasks: "Açık görevler", overdueTasks: "Gecikmiş görevler", awaitingDecision: "Yücel yanıtı bekliyor", filterPageOnly: "Sorumlu filtresi yalnız bu sayfayı kapsar.", page: "Sayfa", records: "kayıt", total: "Toplam", noMatchingWork: "Bu sayfada eşleşen açık iş yok.", openCustomer: "Müşteriyi aç", openRequest: "Talebi aç", requestReference: "Talep referansı", notificationConfig: "Genel bildirim ayarı", errorReference: "Hata referansı", sourceOnly: "Kaynağın döndürdüğü teklif", realOnly: "Yalnız gerçek kayıtlar", roleUnavailable: "Rol bilgisi mevcut çağrıdan alınamıyor.",
   alertNotRequested: "İstenmedi", alertSuppressed: "Sıklık sınırı nedeniyle gönderilmedi", alertClaimed: "Gönderim denemesi alındı", alertAccepted: "Email servisi kabul etti; teslim kanıtı değil", alertFailed: "Gönderim doğrulanamadı", notificationScopeLimit: "Bildirim kaynağı son 30 günün en fazla 100 talebini kapsar.", offerDateScope: "Teklif tarihleri takvim günüdür; saat dilimiyle önceki güne kaydırılmaz.",
@@ -20,4 +21,24 @@ export const staffCopy = {
 } as const;
 export const staffStatuses: Record<string, string> = { new: "Yeni", contacted: "İletişime geçildi", quoted: "Teklif verildi", won: "Kazanıldı", lost: "Kaybedildi", closed: "Kapandı" };
 export const staffEmailLabels: Record<string, string> = { subscribed: "Abone", pending_review: "Onay bekliyor", not_subscribed: "Abone değil", unsubscribed: "Abonelikten ayrıldı", confirmed: "Klaviyo’da doğrulandı", pending: "Onay tamamlanmadı", suppressed: "Gönderim kapalı", not_on_list: "VIP listesinde değil", unavailable: "Doğrulanamadı" };
+export const campaignEligibilityReasons: Record<string, string> = {
+  below_minimum: "Tutar eşiğin altında", channel_mismatch: "Sipariş kanalı uygun değil",
+  customer_ineligible: "Abonelik/uygunluk koşulu sağlanmıyor", period_limit: "Kişi sınırı doldu", total_limit: "Toplam sınır doldu",
+  outside_window: "Kampanya tarihi veya saati dışında", order_not_paid: "Ödeme/iade sonrası uygunluk doğrulanmadı",
+  already_applied: "Bu siparişte zaten kullanılmış", invalid_test_pair: "Test kaydı eşleşmiyor",
+  order_not_synced: "Sipariş henüz CRM’ye alınmamış", no_active_campaign: "Aktif kampanya yok",
+  no_item_campaign: "Ürün ikramı kampanyası yok", ambiguous_campaign: "Birden fazla kampanya eşleşiyor",
+  amount_evidence_missing: "Sipariş tutarı kanıtı eksik", order_unmatched: "Müşteri eşleşmesi yok",
+};
 export { opsCopy } from "./opsCopy.ts";
+export const loyaltyCopy = {
+  title: "Müşteri ve kampanya ölçüleri", customers: "Yeni / tekrar müşteri", newCustomer: "İlk ödenmiş sipariş", repeatCustomer: "Tekrar sipariş veren",
+  campaigns: "Kampanya kullanımı", applied: "Kullanım", repeat30: "30 günde tekrar", sent: "Gönderilen mesaj", attributed: "Mesaj → sipariş",
+  source: "Gözlenen, içe aktarılmış kayıtlar", scope: "Bu ayın tam satış toplamı değildir. İlk ve tekrar siparişini aynı ay veren kişi iki grupta da yer alabilir.",
+  period: "Ay", checked: "Kontrol", testScope: "Test kayıtları dahil", realScope: "Test kayıtları hariç", loading: "Ölçüler okunuyor",
+  missing: "Bağlantı bekliyor; ölçü kaynağı henüz kullanılabilir değil.", error: "Ölçüler doğrulanamadı. Yenile ile tekrar kontrol edin.",
+  unknown: "Kaynak bu ölçüyü doğrulamıyor.", noOrders: "Bu dönemde doğrulanmış sipariş kaynağı yok.", noAttribution: "Siparişe açık mesaj / kampanya kaynağı bağı yok.",
+  immature: "30 günlük takip süresi henüz tamamlanmadı.", noCampaign: "Bu kaynakta döneme ait kampanya kullanımı yok.",
+  paymentTimeUnknown: "Ödeme tarihi eksik; 30 günlük tekrar oranı doğrulanamıyor.",
+  cohort: "Yalnız 30 günü tamamlayan kullanımlar", notSales: "Gönderim, teslim veya satış kanıtı değildir.", attributionCaution: "Yalnız açık kaynak eşleşmeleri; kesin nedensellik göstermez.",
+} as const;

@@ -24,3 +24,6 @@ verify_jwt = true
 [functions.clover-webhook]
 # Clover sends X-Clover-Auth, not a Supabase JWT.
 verify_jwt = false
+
+[functions.ops-write]
+verify_jwt = true

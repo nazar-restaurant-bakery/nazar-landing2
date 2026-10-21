@@ -11,6 +11,8 @@ const sha=/^[a-f0-9]{64}$/;
 const additivePolicy=new Map([
  ['k4_suppression_consent_offers',{path:'supabase/migrations/20261019000200_suppression_consent_offers.sql',tool:'tools/test-env/k4-migrate.py'}],
  ['k5_klaviyo_profile_sync',{path:'supabase/migrations/20261019000300_klaviyo_profile_sync.sql',tool:'tools/test-env/k5-migrate.py'}],
+ ['daily_scheduler',{path:'supabase/migrations/20261021000700_daily_scheduler.sql',tool:'tools/test-env/daily-operations/Operations-Runner.ps1'}],
+ ['ops_write_gate',{path:'supabase/migrations/20261021000500_ops_write_gate.sql',tool:'tools/test-env/daily-operations/Operations-Runner.ps1'}],
  ['k6_message_send_gate',{path:'supabase/migrations/20261020000800_message_send_gate.sql',tool:'tools/test-env/k6-migrate.py'}],
 ]);
 export const sha256Lf=text=>createHash('sha256').update(text.replace(/\r\n/g,'\n'),'utf8').digest('hex');
@@ -132,13 +134,55 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
    issue('K9_DELIVERY_CONTRACT','Held reviewed K9 must retain its exact identity, wait for K8 and stay outside historical replay.');
   try{const bytes=await fs.readFile(path.join(realRoot,k9Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k9Sha)issue('K9_DELIVERY_BYTES','K9 reviewed LF delivery bytes changed.');}catch{issue('K9_DELIVERY_MISSING','K9 file missing.');}
  }
+ const k11Delivery=manifest.k11_delivery;
+ const k11Path='supabase/migrations/20261021000300_loyalty_referrals_metrics.sql';
+ const k11Sha='b33ce7dfca27f354768d84c459bd29faaafb1af73c3afdcc7c3d99f5cbdda9ae';
+ if(k11Delivery){
+  if(typeof k11Delivery!=='object'||Object.keys(k11Delivery).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
+   ||k11Delivery.path!==k11Path||k11Delivery.sha256_bytes!==k11Sha||k11Delivery.application_order!==9
+   ||k11Delivery.requires_previous_order!==8||k11Delivery.execution_enabled!==false||k11Delivery.included_in_k3_reset!==false)
+   issue('K11_DELIVERY_CONTRACT','Held K11 must retain reviewed bytes/order after K9 and stay outside historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k11Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k11Sha)issue('K11_DELIVERY_BYTES','K11 reviewed LF bytes changed.');}catch{issue('K11_DELIVERY_MISSING','K11 file missing.');}
+ }
+ const k13EngineDelivery=manifest.k13_engine_delivery;
+ const k13EnginePath='supabase/migrations/20261021000350_nazar_commission_engine.sql';
+ const k13EngineSha='bb17cad3b4cbb21a8f99722c07b9d27d71ab65e34366ccd571949e844d0be509';
+ if(k13EngineDelivery){
+  if(typeof k13EngineDelivery!=='object'||Object.keys(k13EngineDelivery).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
+   ||k13EngineDelivery.path!==k13EnginePath||k13EngineDelivery.sha256_bytes!==k13EngineSha||k13EngineDelivery.application_order!=='9b'
+   ||k13EngineDelivery.requires_previous_order!==9||k13EngineDelivery.execution_enabled!==false||k13EngineDelivery.included_in_k3_reset!==false)
+   issue('K13_ENGINE_DELIVERY_CONTRACT','K13 commission engine must be order 9b after K11, outside historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k13EnginePath));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k13EngineSha)issue('K13_ENGINE_DELIVERY_BYTES','K13 engine reviewed LF bytes changed.');}catch{issue('K13_ENGINE_DELIVERY_MISSING','K13 engine file missing.');}
+ }
+ const k13Delivery=manifest.k13_delivery;
+ const k13Path='supabase/migrations/20261021000400_commission_from_orders.sql';
+ const k13Sha='c0717b848cd75864f9410fdcaae636bc07cdb7581ec70c34efdf57f6eb1703c1';
+ if(k13Delivery){
+  if(typeof k13Delivery!=='object'||Object.keys(k13Delivery).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
+   ||k13Delivery.path!==k13Path||k13Delivery.sha256_bytes!==k13Sha||k13Delivery.application_order!==10
+   ||k13Delivery.requires_previous_order!=='9b'||k13Delivery.execution_enabled!==false||k13Delivery.included_in_k3_reset!==false)
+   issue('K13_DELIVERY_CONTRACT','K13 must retain reviewed bytes/order after the Nazar commission engine and stay outside historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k13Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k13Sha)issue('K13_DELIVERY_BYTES','K13 reviewed LF bytes changed.');}catch{issue('K13_DELIVERY_MISSING','K13 file missing.');}
+ }
  // Newly merged main deliveries remain inventory-only. Verify their canonical
  // Git/LF identity without rewriting Windows CRLF checkouts of existing SQL.
  const currentMainDeliveries=[
-  {"key": "staff_manage_delivery", "order": "14b", "path": "supabase/migrations/20261021000850_staff_manage_authorization.sql", "sha": "e6de5aa8ec80abc2ce2444d60a26e95c84ebded2451b8e7be24e67fe18008afe"},
+  {"key":"staff_manage_delivery","order":"14b","path":"supabase/migrations/20261021000850_staff_manage_authorization.sql","sha":"e6de5aa8ec80abc2ce2444d60a26e95c84ebded2451b8e7be24e67fe18008afe"},
+  {"key":"k10_coupon_delivery_receipts","order":"14a","path":"supabase/migrations/20261021000825_coupon_delivery_reconciliation.sql","sha":"f6e45de3d48f09b154534a902f2ad531d3d99c46000e253cafc4fba1110e1789"},
   {key:'k7_payment_day_delivery',order:'6b',path:'supabase/migrations/20261020001000_clover_payment_day_totals.sql',sha:'2b5b31f9539d04b08a3ca7e85baf8bb7ded828d498ad051c43c83d2f664515cc'},
   {key:'k8_delivery',order:7,path:'supabase/migrations/20261021000100_clover_webhook.sql',sha:'1d305756deba4b614c6e60198ef7c954bca9008bc944be7e4bea52f4ff29a94e'},
  ];
+ const k13bDelivery=manifest.k13b_delivery;
+ const k13bPath='supabase/migrations/20261021000450_commission_channel_label.sql';
+ const k13bSha='1d859b4b56b02b75d9662ba976a1b4f149c53c067c6fd0497e4794cda3e33607';
+ if(k13bDelivery){
+  if(typeof k13bDelivery!=='object'||Object.keys(k13bDelivery).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
+   ||k13bDelivery.path!==k13bPath||k13bDelivery.sha256_bytes!==k13bSha||k13bDelivery.application_order!=='10b'
+   ||k13bDelivery.requires_previous_order!==10||k13bDelivery.execution_enabled!==false||k13bDelivery.included_in_k3_reset!==false)
+   issue('K13B_DELIVERY_CONTRACT','K13b must follow K13 and stay outside historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k13bPath));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k13bSha)issue('K13B_DELIVERY_BYTES',k13bPath);}
+  catch{issue('K13B_DELIVERY_MISSING',k13bPath);}
+ }
  for(const policy of currentMainDeliveries){
   const entry=manifest[policy.key];if(!entry)continue;
   if(typeof entry!=='object'||Object.keys(entry).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,sha256_bytes'
@@ -148,7 +192,46 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   try{const bytes=await fs.readFile(path.join(realRoot,policy.path));if(sha256Lf(bytes.toString('utf8'))!==policy.sha)issue('CURRENT_MAIN_DELIVERY_BYTES',policy.path);}
   catch{issue('CURRENT_MAIN_DELIVERY_MISSING',policy.path);}
  }
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
+ // K10 is an inventory-only forward delivery over these exact K9 bytes. This
+ // records a reviewed dependency, not a global application order or permission
+ // to execute it. Neither K11 nor K15 is a prerequisite of the read-only check.
+ const k10Eligibility=manifest.k10_eligibility_delivery;
+ const k10Path='supabase/migrations/20261021000600_campaign_eligibility_check.sql';
+ const k10Sha='33c9b6d59b024ce325a5461c52b09e374f169d45228980bd11c8f8a974c99285';
+ if(k10Eligibility){
+  if(typeof k10Eligibility!=='object'||Object.keys(k10Eligibility).sort().join(',')!=='execution_enabled,included_in_k3_reset,path,requires,sha256_bytes'
+   ||k10Eligibility.path!==k10Path||k10Eligibility.sha256_bytes!==k10Sha
+   ||k10Eligibility.execution_enabled!==false||k10Eligibility.included_in_k3_reset!==false)
+   issue('K10_ELIGIBILITY_DELIVERY_CONTRACT','K10 must retain its exact non-executable identity outside K3 reset/replay, without an application order.');
+  const dependency=Array.isArray(k10Eligibility.requires)&&k10Eligibility.requires.length===1?k10Eligibility.requires[0]:null;
+  if(!dependency||typeof dependency!=='object'||Object.keys(dependency).sort().join(',')!=='path,sha256_bytes'
+   ||dependency.path!==k9Path||dependency.sha256_bytes!==k9Sha
+   ||!k9Delivery||k9Delivery.path!==k9Path||k9Delivery.sha256_bytes!==k9Sha)
+   issue('K10_ELIGIBILITY_DEPENDENCY','K10 requires the exact reviewed K9 path and bytes; no substituted or additional dependency is accepted.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k10Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k10Sha)issue('K10_ELIGIBILITY_DELIVERY_BYTES','K10 reviewed LF delivery bytes changed.');}catch{issue('K10_ELIGIBILITY_DELIVERY_MISSING','K10 eligibility file missing.');}
+ }
+ // K10 signup-reward preparation is held at reviewed order 14. The exact
+ // reviewed K9 and read-only K10 sources are its dependencies; inventory does
+ // not install it, activate a campaign/flow, or add it to K3 reset/replay.
+ const k10Coupons=manifest.k10_coupon_delivery;
+ const k10CouponPath='supabase/migrations/20261021000800_signup_reward_coupons.sql';
+ const k10CouponSha='b0d27ed1a76763ff79ac28fec7d443b87daf425ecc7bb15b0273c49b46548626';
+ if(k10Coupons){
+  if(typeof k10Coupons!=='object'||Object.keys(k10Coupons).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires,sha256_bytes'
+   ||k10Coupons.path!==k10CouponPath||k10Coupons.sha256_bytes!==k10CouponSha
+   ||k10Coupons.application_order!==14||k10Coupons.execution_enabled!==false||k10Coupons.included_in_k3_reset!==false)
+   issue('K10_COUPON_DELIVERY_CONTRACT','Held signup-reward coupons must keep their reviewed identity/order without execution or K3 replay inclusion.');
+  const dependencies=Array.isArray(k10Coupons.requires)?k10Coupons.requires:[];
+  const expected=[{path:k9Path,sha256_bytes:k9Sha},{path:k10Path,sha256_bytes:k10Sha}];
+  if(dependencies.length!==expected.length||dependencies.some((d,index)=>!d||typeof d!=='object'
+   ||Object.keys(d).sort().join(',')!=='path,sha256_bytes'
+   ||d.path!==expected[index]?.path||d.sha256_bytes!==expected[index]?.sha256_bytes)
+   ||!k9Delivery||k9Delivery.path!==k9Path||k9Delivery.sha256_bytes!==k9Sha
+   ||!k10Eligibility||k10Eligibility.path!==k10Path||k10Eligibility.sha256_bytes!==k10Sha)
+   issue('K10_COUPON_DEPENDENCY','Signup-reward coupons require exactly the reviewed K9 and K10 eligibility sources.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k10CouponPath));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k10CouponSha)issue('K10_COUPON_DELIVERY_BYTES','Signup-reward coupon reviewed LF delivery bytes changed.');}catch{issue('K10_COUPON_DELIVERY_MISSING','Signup-reward coupon file missing.');}
+ }
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],k10Eligibility?[k10Path]:[],k10Coupons?[k10CouponPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');

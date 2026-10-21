@@ -141,13 +141,13 @@ const adsRouter = (url, init) => {
   assert.equal('developer-token' in init.headers, false);
   assert.equal(url.href, 'https://googleads.googleapis.com/v26/customers/6478477284/googleAds:searchStream'); const query = JSON.parse(init.body).query;
   if (query.includes('customer.time_zone')) return json([{ results: [{ customer: { id: '6478477284', timeZone: 'America/New_York', currencyCode: 'USD' } }] }]);
-  if (query.includes('metrics.cost_micros')) return json([{ results: [{ metrics: { costMicros: '1200000', clicks: '4', conversions: 2 } }] }]);
+  if (query.includes('metrics.cost_micros')) return json([{ results: [{ metrics: { costMicros: '1200000', impressions: '90', clicks: '4', conversions: 2 } }] }]);
   if (query.includes('campaign.status')) return json([{ results: [{ campaign: { id: 'A', status: 'ENABLED' } }, { campaign: { id: 'B', status: 'PAUSED' } }, { campaign: { id: 'A', status: 'ENABLED' } }] }]);
   throw new Error('Unexpected synthetic GAQL');
 };
 test('Google Ads read-only queries fixed account, verifies scope and does not double-count campaigns', async () => {
   const ctx = make(adsEnv, adsRouter); const result = await ads(ctx);
-  assert.equal(result.status, 'connected'); assert.equal(val(result, 'spend_7d'), 1.2); assert.equal(val(result, 'clicks_7d'), 4); assert.equal(val(result, 'conversions_7d'), 2);
+  assert.equal(result.status, 'connected'); assert.equal(val(result, 'spend_yesterday'), 1.2); assert.equal(val(result, 'clicks_yesterday'), 4); assert.equal(val(result, 'conversions_yesterday'), 2);
   assert.equal(val(result, 'active_campaigns'), 1); assert.equal(val(result, 'paused_campaigns'), 1); assert.equal(ctx.calls.length, 4);
   assert.equal(ctx.calls.some(call => /mutate/.test(call.url)), false);
 });
@@ -246,20 +246,20 @@ const metaEnv = { META_ACCESS_TOKEN: 'synthetic-token', META_AD_ACCOUNT_ID: '123
 function metaRouter(url) {
   assert.equal(url.hostname, 'graph.facebook.com');
   if (url.pathname.endsWith('/act_123456789')) return json({ account_id: '123456789', name: 'Nazar synthetic fixture account', currency: 'USD', timezone_name: 'America/New_York' });
-  if (url.pathname.endsWith('/insights')) return json({ data: [{ spend: '1.20', reach: '55', actions: [{ action_type: 'lead', value: '2' }] }] });
+  if (url.pathname.endsWith('/insights')) return json({ data: [{ spend: '1.20', reach: '55', impressions: '90', clicks: '4', date_start: '2026-10-18', date_stop: '2026-10-18', actions: [{ action_type: 'lead', value: '2' }] }] });
   if (url.pathname.endsWith('/campaigns')) return json({ data: [{ id: 'A', effective_status: 'ACTIVE' }, { id: 'B', effective_status: 'PAUSED' }, { id: 'A', effective_status: 'ACTIVE' }] });
   throw new Error('Unexpected synthetic Meta URL');
 }
 test('Meta configured read adapter verifies Nazar account and reports selected outcome, no write capability', async () => {
   const ctx = make(metaEnv, metaRouter); const result = await meta(ctx);
-  assert.equal(result.status, 'connected'); assert.equal(val(result, 'spend_7d'), 1.2); assert.equal(val(result, 'reach_7d'), 55); assert.equal(val(result, 'results_7d'), 2); assert.equal(val(result, 'campaigns'), 2);
+  assert.equal(result.status, 'connected'); assert.equal(val(result, 'spend_yesterday'), 1.2); assert.equal(val(result, 'reach_yesterday'), 55); assert.equal(val(result, 'results_yesterday'), 2); assert.equal(val(result, 'campaigns'), 2);
   assert.deepEqual(result.capabilities, []); assert.ok(ctx.calls.every(call => !call.init.method || call.init.method === 'GET'));
 });
 test('Meta without an agreed result action leaves results unknown rather than summing unrelated actions', async () => {
-  const { META_RESULT_ACTION_TYPE, ...env } = metaEnv; const result = await meta(make(env, metaRouter)); assert.equal(val(result, 'results_7d'), null);
+  const { META_RESULT_ACTION_TYPE, ...env } = metaEnv; const result = await meta(make(env, metaRouter)); assert.equal(val(result, 'results_yesterday'), null);
 });
 test('Meta rejects another business account or incomplete insights', async () => {
-  const wrong = make(metaEnv, () => json({ account_id: '123456789', name: 'Other business', currency: 'USD' }));
+  const wrong = make(metaEnv, () => json({ account_id: '999999999', name: 'Other business', currency: 'USD' }));
   assert.equal((await meta(wrong)).error, 'meta_account_mismatch'); assert.equal(wrong.calls.length, 1);
   const ctx = make(metaEnv, url => url.pathname.endsWith('/insights') ? json({ data: [], paging: { next: 'https://graph.facebook.com/more' } }) : metaRouter(url));
   assert.equal((await meta(ctx)).error, 'meta_incomplete_insights');
