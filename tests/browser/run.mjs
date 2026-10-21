@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { staffCopy as c } from '../../src/lib/staffCopy.ts';
 import { opsCopy as o } from '../../src/lib/opsCopy.ts';
 import { runOpsScenarios } from './opsScenarios.mjs';
+import { runStaffManagementScenarios } from './staffManagementScenarios.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../..');
@@ -364,7 +365,16 @@ try {
     await page.setViewportSize({ width: 375, height: 812 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     await screenshot(page, 'coupon-shell-375-synthetic');
-    assert.ok((await calls(page, 'staff_business_authorized_v1')).every(call => call.params.p_operation === 'campaign.staff_mark'));
+    const permissions = await calls(page, 'staff_business_authorized_v1');
+    assert.ok(permissions.some(call => call.params.p_operation === 'campaign.staff_mark'));
+    assert.ok(permissions.some(call => call.params.p_operation === 'staff.manage'));
+    assert.ok(permissions.every(call => ['campaign.staff_mark','staff.manage'].includes(call.params.p_operation)));
+    await page.getByRole('link', exact('Personel')).click();
+    await page.getByRole('heading', exact('İşletme üyeleri')).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/staff/team');
+    await page.getByRole('link', exact('Kupon')).click();
+    await page.getByLabel('Kupon kodu', { exact: true }).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/staff/coupons');
     assert.equal(await writeCount(page), 0);
     await page.getByLabel('Kupon kodu', { exact: true }).fill('2345-6789-ABCD-EFGH');
     await page.evaluate(() => window.__staffMock.signOut());
@@ -381,6 +391,7 @@ try {
     assert.equal((await calls(page, 'coupon_redeem_v1')).length, 0);
   }, '/staff/coupons');
   await runOpsScenarios({ run, visible, screenshot, exact, snapshot, calls, setMode, c });
+  await runStaffManagementScenarios({run,visible,exact,calls,screenshot});
 } finally {
   await browser.close(); await server.close();
   const report = { scope: 'Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.',

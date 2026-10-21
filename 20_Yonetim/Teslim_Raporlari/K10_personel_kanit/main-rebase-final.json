@@ -1,0 +1,16 @@
+{
+  "main": "76f057eb127df6b1ecdc64afeb716e4211b05f19",
+  "pr": 78,
+  "unit_and_actual_14b_15_sql_tests_passed": 59,
+  "actual_staff_manage_checks": 23,
+  "additional_synthetic_postgres_groups_passed": 10,
+  "staff_browser_passed": 75,
+  "migration_order": 15,
+  "prerequisite_order": "14b",
+  "migration_sha256": "1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68",
+  "sql_changed": false,
+  "actual_14b_integration": "tests/staffManageDb.test.mjs, actual 14b plus byte-identical order15 consumer verified against migration file",
+  "hosted_changes": false,
+  "draft": true,
+  "typecheck_eslint_production_parity": "passed"
+}

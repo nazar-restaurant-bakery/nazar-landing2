@@ -1,0 +1,11 @@
+{
+  "base": "0449e1ea493397ce182c4881d5213b968b0bf78d",
+  "unit_passed": 62,
+  "postgres_groups_passed": 10,
+  "staff_browser_passed": 75,
+  "sql_changed": false,
+  "migration_order": 15,
+  "prerequisite": "#80 order14b",
+  "hosted_changes": false,
+  "pr": 78
+}

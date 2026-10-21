@@ -83,6 +83,8 @@ check('#78 exact pinned test consumer integrates without widening grants',async(
  const meta=JSON.parse(await readFile(join(h.repo,'tests/fixtures/staffManagementConsumer.source.json')));
  const consumer=await readFile(join(h.repo,'tests/fixtures/staffManagementConsumer.sql'));
  assert.equal(sha(consumer),meta.sha256);assert.equal(meta.test_only,true);
+ assert.equal(sha(await readFile(join(h.repo,meta.path))),meta.sha256);
+ assert.deepEqual(consumer,await readFile(join(h.repo,meta.path)));
  // Only synthetic identity columns required by consumer; no account operations.
  h.sql(`ALTER TABLE auth.users ADD COLUMN email text,ADD COLUMN raw_user_meta_data jsonb DEFAULT '{}'::jsonb;
  UPDATE auth.users SET email=id::text||'@synthetic.invalid';`);

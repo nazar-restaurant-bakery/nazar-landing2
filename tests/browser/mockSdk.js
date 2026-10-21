@@ -1,6 +1,7 @@
 // Strict in-memory fake. Every address, Auth session and record below is synthetic.
 // The Vite alias ensures the real Supabase SDK cannot be imported by this fixture.
 import { createOpsMock } from "./opsMock.js";
+import { createStaffManagementMock } from './staffManagementMock.js';
 export const fixtureIds = {
   customer: '11111111-1111-4111-8111-111111111111',
   secondCustomer: '22222222-2222-4222-8222-222222222222',
@@ -53,6 +54,7 @@ const emit = (event, value) => { for (const fn of listeners) fn(event, value); }
 const result = (data, error = null) => ({ data: clone(data), error });
 const remember = (name, params) => { state.calls.push({ name, params: clone(params ?? {}), at: new Date().toISOString() }); };
 const opsMock = createOpsMock(() => state, remember);
+const staffManagementMock = createStaffManagementMock(() => state, remember);
 const nextId = () => 'bbbbbbbb-bbbb-4bbb-8bbb-' + String(sequence++).padStart(12, '0');
 function unknown(name, params) {
   state.unexpected.push({ name, params: clone(params ?? {}) });
@@ -115,6 +117,8 @@ async function rpc(name, params) {
   // A request already accepted before sign-out can still resolve successfully.
   if (!signedInAtStart) return result(null, { code: '42501' });
   if (state.mode === 'denied') return result(null, { code: '42501' });
+  const managementResult=staffManagementMock.rpc(name,params);
+  if(managementResult!==undefined)return managementResult;
   if (name === 'staff_business_authorized_v1') {
     if (params?.p_operation !== 'campaign.staff_mark' || params?.p_business_id !== 'a358eba4-b197-4309-805b-46f43a718454') return unknown(name + ' parameters', params);
     return result(state.mode !== 'coupon-platform-only');
@@ -190,7 +194,7 @@ async function rpc(name, params) {
 }
 export function createClient(url, key) {
   if (url !== 'https://khgczybubufouraqyrcj.supabase.co' || key !== 'sb_publishable_OFFLINE_SYNTHETIC_ONLY') return unknown('createClient real credentials rejected', { url });
-  return { rpc, functions: { invoke: (_name, options) => opsMock.invoke(options.body) },
+  return { rpc, functions: { invoke: (name, options) => name==='staff-manage-invite'?staffManagementMock.invoke(options.body):opsMock.invoke(options.body) },
     storage: { from: () => ({ createSignedUrl: async () => ({ data:null,error:{message:"Synthetic download is not connected"} }) }) },
     auth: {
     async getSession() { remember('auth.getSession'); return { data: { session: state.signedIn ? clone(session) : null }, error: null }; },
