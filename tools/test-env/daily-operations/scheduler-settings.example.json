@@ -1,0 +1,10 @@
+{
+  "Sandbox": {
+    "businessId": "<existing business UUID>",
+    "cloverUrl": "https://<approved site hostname>/api/internal/daily-clover-pull"
+  },
+  "Production": {
+    "businessId": "<existing business UUID>",
+    "cloverUrl": "https://<approved site hostname>/api/internal/daily-clover-pull"
+  }
+}

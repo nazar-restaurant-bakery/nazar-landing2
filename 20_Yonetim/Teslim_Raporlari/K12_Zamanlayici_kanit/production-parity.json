@@ -1,0 +1,30 @@
+{
+  "base_main": "55806dbe218ce2ef241eea3639d162abcabbe3af",
+  "base_files": 212,
+  "candidate_files": 212,
+  "byte_identical_files": 209,
+  "changed_same_path": [
+    "index.html"
+  ],
+  "removed_hashed_files": [
+    "assets/index-DLt29jhc.js",
+    "assets/StaffPage-BXRkJZHT.js"
+  ],
+  "added_hashed_files": [
+    "assets/StaffPage-D1CZ0Z6U.js",
+    "assets/index-D0rL4kYS.js"
+  ],
+  "normalized_index_html_identical": true,
+  "main_js_equal_after_hash_and_one_ops_instruction_normalization": true,
+  "public_form_handlers_unchanged": true,
+  "ga4_source_unchanged": true,
+  "environment": "same Production target and synthetic public placeholders; hosted secrets not read",
+  "intended_changes": [
+    "staff scheduler card",
+    "one Ops instruction in shared copy",
+    "manual K7 quota hook",
+    "Ops runner extraction",
+    "new private machine endpoints"
+  ],
+  "deployed": false
+}

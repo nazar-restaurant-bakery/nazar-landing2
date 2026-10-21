@@ -1,0 +1,35 @@
+{
+  "local_only": true,
+  "postgres": "psql (PostgreSQL) 18.6",
+  "sql_assertions_passed": true,
+  "two_tenant_isolation": true,
+  "concurrent_tick_calls": 2,
+  "http_jobs_for_two_tenants": 2,
+  "concurrent_run_starts": 2,
+  "successful_run_starts": 1,
+  "concurrent_budget_reservations": 2,
+  "successful_reservations_at_29": 1,
+  "dst_march_and_november": true,
+  "provider_calls": 0,
+  "hosted_changes": false,
+  "logs": "C:\\Users\\Talip\\AppData\\Local\\Temp\\daily-scheduler-local-6aytgvox",
+  "fixture": {
+    "businesses": {
+      "a": "6411235f-0c93-45db-8de3-77b1786a9c26",
+      "b": "d7749d08-055e-40dd-98c1-f79b52c922af"
+    },
+    "users": {
+      "platformOnly": "fbd9550f-bc45-488f-b03a-941563115635",
+      "platformMember": "564a5b69-26e9-49d9-93da-963438844965",
+      "ownerA": "062f316d-298b-4f5f-9932-ff632ec2586b",
+      "managerA": "87639852-fbe7-4f6c-9f50-4057c3bfd184",
+      "staffA": "716b3837-3854-475f-aa76-b39a030d3f93",
+      "inactiveA": "c388d4dc-d048-4409-9fcf-b87f0a36a952",
+      "staffB": "5906c1ad-c8f7-4282-8719-41d9f9a875e0",
+      "legacyOnly": "d5a0624e-8ef4-401c-9721-02ed8601018f",
+      "inactivePlatform": "110672b0-dba8-46e4-a5c4-7ee196b02fe5"
+    }
+  },
+  "shared_contract_fixture_sha256": "1e347f35467ad27e8ddcbe5732f41301004f9577f2435fb5831dfc5cf25cf4e1",
+  "integration_limit": "pg_net and Vault use local synthetic contract fixtures; no live dispatch, cron extension or HMAC key configured"
+}

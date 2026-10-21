@@ -9,7 +9,7 @@ const nyWall = (value: number) => {
   const fields = Object.fromEntries(parts.map(part => [part.type, part.value]));
   return `${fields.year}-${fields.month}-${fields.day}T${fields.hour}:${fields.minute}`;
 };
-function nyMidnight(day: string): number | null {
+export function nyMidnight(day: string): number | null {
   const wall = Date.parse(`${day}T00:00:00Z`);
   if (!Number.isFinite(wall)) return null;
   let candidate = wall;
@@ -121,7 +121,7 @@ export class CloverRequestGate {
       try {
         response = await fetcher(url, { redirect: "manual", signal: AbortSignal.timeout(10000),
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "User-Agent": "NazarCRM/1.0" } });
-      } catch { throw new PullError("clover_request_failed", step); }
+      } catch (error) { if (error instanceof PullError) throw error; throw new PullError("clover_request_failed", step); }
       if (response.status !== 429) return response;
       if (!this.deadline) this.deadline = Date.now() + RETRY_BUDGET_MS;
       const header = response.headers.get("Retry-After");
@@ -157,7 +157,7 @@ export async function collectOrders(config: ReturnType<typeof orderPullConfig>, 
   if (typeof windowOrDays === "number" && (!Number.isInteger(windowOrDays) || windowOrDays < 1 || windowOrDays > 30))
     throw new Error("invalid_pull");
   if (!config.ready || !Number.isSafeInteger(window.start) || !Number.isSafeInteger(window.end)
-    || window.end <= window.start || window.end - window.start > 25 * 3600_000) throw new Error("invalid_pull");
+    || window.end <= window.start || window.end - window.start > 31 * 25 * 3600_000) throw new Error("invalid_pull");
   const since = window.start;
   const end = window.end - 1;
   const listed = new Map<string, ObjectValue>();

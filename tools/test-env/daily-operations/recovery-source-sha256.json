@@ -1,0 +1,18 @@
+[
+  {
+    "file": "tools/test-env/run-clover-recovery.mjs",
+    "sha256": "db4fb404c906eba398e44b1ee61434b65985870841df6f297172aff80ec24f02"
+  },
+  {
+    "file": "tools/test-env/clover-recovery.ts",
+    "sha256": "1f5b80850b968716e33739b5887ba2ba3d28027a2a483a3e21aaebf83d7b9e99"
+  },
+  {
+    "file": "functions/_lib/cloverOrderPull.ts",
+    "sha256": "d44bbcde53fdd3b6ad50dc713f5f06dd1ccdbdc922c6014f1f055eb994a206c9"
+  },
+  {
+    "file": "src/lib/deploymentEnvironment.ts",
+    "sha256": "6d5dbc927e2d3f97e1b580f8df326fb7658f2a2d875766ee01771e3690a49c16"
+  }
+]

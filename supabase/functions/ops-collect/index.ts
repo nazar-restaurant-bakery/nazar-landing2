@@ -1,15 +1,9 @@
+import { collectSources } from "./run-collectors.ts";
 import { ACTIONS, allowedOrigin, projectUrl, NAZAR_BUSINESS, uuid, type ActionName, type ClaimedAction, type Environment, type SafeResult } from "./contracts.ts";
 import { OpsStore } from "./store.ts";
 import { CollectorError, metric, type CollectorContext, type CollectorResult, type MetricSnapshot } from "./collectors.ts";
 import { parseCloverCsv } from "./clover_csv.ts";
 import { createCommissionPdf } from "./commission_report.ts";
-import { collect as clover } from "./clover_api.ts";
-import { collect as klaviyo } from "./klaviyo.ts";
-import { collect as reviews } from "./places.ts";
-import { collect as site } from "./site_ping.ts";
-import { collect as ga4 } from "./ga4.ts";
-import { collect as googleAds } from "./google_ads.ts";
-import { collect as meta } from "./meta.ts";
 
 const messages = {
   collected: "Bağlı kaynaklar kontrol edildi. Eksik bağlantılar ve kaynak hataları ayrı kaydedildi.",
@@ -22,36 +16,6 @@ const messages = {
   disconnected: "Bağlantı veya doğrulanmış yetki bekleniyor; işlem uygulanmadı.",
   failed: "İşlem tamamlanamadı. Sonucu kontrol edin; otomatik tekrar yapılmadı.",
 };
-
-async function collectSources(store: OpsStore, ctx: CollectorContext) {
-  const snapshot = await store.snapshot();
-  ctx.previous = snapshot.previous;
-  const sources: CollectorResult[] = [];
-  for (const [source, run] of [["clover", clover], ["klaviyo", klaviyo], ["reviews", reviews], ["site", site], ["ga4", ga4], ["google_ads", googleAds], ["meta", meta]] as const) {
-    try { sources.push(await run(ctx)); }
-    catch { sources.push({ source, status: "error", metrics: [], error: "collector_failed", requestsUsed: 0 }); }
-  }
-  // A visible waiting tile is not a scheduler implementation. This release
-  // accepts authenticated staff requests only and never installs a timer/job.
-  sources.push({ source: "scheduler", status: "not_connected", metrics: [], requestsUsed: 0,
-    note: "Bu sürüm yalnız Şimdi topla ile çalışır. Günlük otomatik toplama ayrı karardır." });
-  const importProof = snapshot.metrics.find(item => item.metric === "last_clover_import_at" && item.value_text);
-  if (importProof) {
-    const cloverStatus = sources.find(item => item.source === "clover");
-    if (cloverStatus?.status === "not_connected") {
-      cloverStatus.status = "connected"; cloverStatus.capabilities = ["sync_clover_csv"];
-      cloverStatus.note = "Doğrulanmış CSV kaynağı mevcut; otomatik Clover API aktarımı bağlı değil.";
-    }
-  }
-  const cloverSource = sources.find(source => source.source === "clover");
-  if (cloverSource) cloverSource.capabilities = ["sync_clover_csv"];
-  sources.push({ source: "supabase", status: "connected", metrics: snapshot.metrics, capabilities: snapshot.capabilities,
-    requestsUsed: 0, note: "Yalnız gerçek başvuruların aggregate sayımı. Sütunu / kaynağı olmayan ölçü bilinmiyor." });
-  const schedulerMetrics = [metric(ctx, "scheduler", "scheduler_mode", null, "manual; daily scheduler not installed"),
-    metric(ctx, "scheduler", "manual_runs_24h", typeof snapshot.scheduler.runs_24h === "number" ? snapshot.scheduler.runs_24h : null),
-    metric(ctx, "scheduler", "manual_failed_24h", typeof snapshot.scheduler.failed_24h === "number" ? snapshot.scheduler.failed_24h : null)];
-  return { metrics: [...sources.flatMap(source => source.metrics), ...schedulerMetrics], sources };
-}
 
 async function execute(action: ClaimedAction, store: OpsStore, ctx: CollectorContext) {
   if (!ACTIONS.includes(action.action)) throw new Error("unsupported_action");

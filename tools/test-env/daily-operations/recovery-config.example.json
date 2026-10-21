@@ -1,0 +1,10 @@
+{
+  "hostname": "<site hostname>",
+  "expectedUrl": "https://<project-ref>.supabase.co",
+  "expectedBusinessId": "<existing business UUID>",
+  "environment": {
+    "VITE_SUPABASE_ANON_KEY": "<public publishable key>",
+    "CLOVER_MERCHANT_ID": "<configured merchant ID>",
+    "CLOVER_ONLINE_ORDER_TYPE_IDS": "<configured comma-separated type IDs>"
+  }
+}
