@@ -127,7 +127,7 @@ export async function handleRequest(request: Request, env: Environment, requestF
     if (!actionId) return reply(400, "invalid_action");
     action = await store.claim(actionId, userId);
     if (!action) return reply(409, "already_claimed_or_unavailable");
-    const ctx: CollectorContext = { env, now: new Date(), budget: { remaining: 30 }, fetch: async (url, init) => {
+    const ctx: CollectorContext = { env, businessId: NAZAR_BUSINESS, now: new Date(), budget: { remaining: 30 }, fetch: async (url, init) => {
       let reserved = false;
       try { reserved = await store.reserveExternal(); }
       catch { if (ctx.budget) ctx.budget.remaining++; throw new CollectorError("daily_budget_unavailable"); }

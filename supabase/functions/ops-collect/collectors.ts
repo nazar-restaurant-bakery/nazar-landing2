@@ -9,6 +9,7 @@ export type MetricSnapshot = {
 export type RequestBudget = { remaining: number };
 export type CollectorContext = {
   env: Record<string, string | undefined>; fetch?: typeof fetch; now?: Date;
+  businessId?: string; // Trusted server identity; never a browser-selected target.
   budget?: RequestBudget; previous?: MetricSnapshot[];
 };
 export type CollectorResult = {
