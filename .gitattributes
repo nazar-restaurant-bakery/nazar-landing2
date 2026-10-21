@@ -49,3 +49,10 @@
 /tools/test-env/migration-manifest.json text eol=lf
 /tools/test-env/audit-migrations.mjs text eol=lf
 /tests/testEnvMigrations.test.mjs text eol=lf
+
+# K10 signup-reward coupons: one reviewed LF delivery, never K3 replay.
+/supabase/migrations/20261021000800_signup_reward_coupons.sql text eol=lf
+/functions/_lib/coupon*.ts text eol=lf
+/functions/api/coupon-qr/* text eol=lf
+/tests/coupon*.mjs text eol=lf
+/tests/fixtures/coupon*.mjs text eol=lf

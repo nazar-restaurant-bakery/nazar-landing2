@@ -1,0 +1,46 @@
+{
+  "artifactKind": "reviewed-configuration-not-an-api-import-payload",
+  "activationReady": false,
+  "name": "Nazar VIP — Welcome",
+  "status": "draft",
+  "apiRevision": "2026-07-15",
+  "trigger": {
+    "type": "metric",
+    "name": "Nazar Coupon Welcome Authorized",
+    "reentry": "never",
+    "nativeListOrSegmentTriggerAllowed": false
+  },
+  "actions": [
+    {
+      "type": "email",
+      "status": "draft",
+      "delaySeconds": 0,
+      "subject": "Welcome to Nazar VIP — your simit coupon",
+      "htmlFile": "welcome-email.html",
+      "textFile": "welcome-email.txt",
+      "filters": [
+        "Current explicit email marketing consent is SUBSCRIBED",
+        "Current email suppression is absent",
+        "Current VIP-list suppression is absent"
+      ]
+    }
+  ],
+  "eventProperties": [
+    "coupon_code",
+    "coupon_qr_payload",
+    "coupon_qr_image_url",
+    "campaign_id",
+    "coupon_id",
+    "minimum_amount_cents",
+    "channels",
+    "expires_at",
+    "message_key"
+  ],
+  "activationBlockers": [
+    "No flow activation or provider event/profile/email write is authorized by this delivery.",
+    "Connect and verify the trusted confirmation processor with dated actual double-opt-in evidence.",
+    "Review exact source account, VIP list, product/channel mapping and current provider email action statuses.",
+    "Resolve delivery receipt reconciliation: HTTP 202 is event acceptance, not email sent. K6 unknown is terminal and blocks later marketing indefinitely, not merely 168 hours.",
+    "Prove one authorized live acceptance separately before distributing cards."
+  ]
+}
