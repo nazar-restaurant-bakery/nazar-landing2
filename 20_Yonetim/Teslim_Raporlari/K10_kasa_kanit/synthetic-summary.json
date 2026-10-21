@@ -1,0 +1,18 @@
+{
+  "scope": "K10_STAFF_COUPON_CHECKOUT",
+  "base": "066bdd031af27bc45fbfd51ca174074c320100e2",
+  "node_passed": 112,
+  "node_failed": 0,
+  "node_skipped": 0,
+  "new_contract_tests": 19,
+  "checkout_browser_passed": 16,
+  "staff_shell_regression_passed": 64,
+  "typescript_passed": true,
+  "targeted_eslint_passed": true,
+  "production_build_passed": true,
+  "migration_added": false,
+  "secret_added": false,
+  "provider_calls": 0,
+  "hosted_changes": false,
+  "coupon_core_concurrency_proof": "Owned by Coordination core PR; UI two-device acceptance uses atomic synthetic RPC."
+}

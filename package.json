@@ -11,7 +11,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
+<<<<<<< HEAD
     "qrcode-generator": "2.0.4",
+=======
+    "jsqr": "1.4.0",
+>>>>>>> cbca9f3 (Add scoped staff coupon checkout with local camera QR and safe readback)
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.11.0"
