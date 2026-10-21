@@ -28,3 +28,9 @@
 /docs/K9_STAFF_SCOPE_SETUP.sql text eol=lf
 /tests/businessStaffLegacyDb.test.mjs text eol=lf
 /tests/fixtures/businessStaffLegacy*.sql text eol=lf
+
+# Forward-only staff authorization and reproducible synthetic consumer.
+/supabase/migrations/20261021000850_staff_manage_authorization.sql text eol=lf
+/tests/staffManage*.mjs text eol=lf
+/tests/fixtures/staffManagementConsumer.sql text eol=lf
+/tools/test-env/staff-manage/** text eol=lf

@@ -1,0 +1,65 @@
+{
+  "14b": {
+    "file": "20261021000850_staff_manage_authorization.sql",
+    "sha256": "E6DE5AA8EC80ABC2CE2444D60A26E95C84EBDED2451B8E7BE24E67FE18008AFE",
+    "module": "StaffManage",
+    "sourceBranch": "feat/staff-manage-runtime",
+    "dependencies": [
+      {
+        "order": "14",
+        "file": "20261021000800_signup_reward_coupons.sql",
+        "sha256": "B0D27ED1A76763FF79AC28FEC7D443B87DAF425ECC7BB15B0273C49B46548626",
+        "checks": "migration_order_14",
+        "receipt": "Sirali_Kurulum_kanit/receipts/14-{target}-success.json",
+        "requireOrder": true,
+        "legacy": true
+      }
+    ],
+    "preconditions": [
+      "(SELECT md5(prosrc)='91693fbd873a60de9c9d5c59cad666dc' FROM pg_proc WHERE oid=to_regprocedure('core.staff_authorized_v1(uuid,text)'))",
+      "(SELECT prosecdef AND provolatile='s' AND proconfig @> ARRAY['search_path=\"\"'] FROM pg_proc WHERE oid=to_regprocedure('core.staff_authorized_v1(uuid,text)'))",
+      "to_regprocedure('public.staff_business_authorized_v1(uuid,text)') IS NOT NULL",
+      "has_function_privilege('authenticated','public.staff_business_authorized_v1(uuid,text)','EXECUTE')",
+      "NOT has_function_privilege('anon','public.staff_business_authorized_v1(uuid,text)','EXECUTE')",
+      "NOT has_function_privilege('service_role','public.staff_business_authorized_v1(uuid,text)','EXECUTE')",
+      "(SELECT count(*)=0 FROM pg_proc p,aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl WHERE p.oid=to_regprocedure('core.staff_authorized_v1(uuid,text)') AND acl.grantee=0)",
+      "NOT has_schema_privilege('anon','core','USAGE')",
+      "NOT has_function_privilege('anon','core.staff_authorized_v1(uuid,text)','EXECUTE')",
+      "NOT has_table_privilege('anon','core.business_staff','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('anon','core.platform_operators','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_schema_privilege('authenticated','core','USAGE')",
+      "NOT has_function_privilege('authenticated','core.staff_authorized_v1(uuid,text)','EXECUTE')",
+      "NOT has_table_privilege('authenticated','core.business_staff','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('authenticated','core.platform_operators','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_schema_privilege('service_role','core','USAGE')",
+      "NOT has_function_privilege('service_role','core.staff_authorized_v1(uuid,text)','EXECUTE')",
+      "NOT has_table_privilege('service_role','core.business_staff','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('service_role','core.platform_operators','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "(SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('core.business_staff'))",
+      "(SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('core.platform_operators'))"
+    ],
+    "postconditions": [
+      "(SELECT md5(prosrc)='9a0c5c63c5668d6c9522debd11e03622' FROM pg_proc WHERE oid=to_regprocedure('core.staff_authorized_v1(uuid,text)'))",
+      "(SELECT prosecdef AND provolatile='s' AND proconfig @> ARRAY['search_path=\"\"'] FROM pg_proc WHERE oid=to_regprocedure('core.staff_authorized_v1(uuid,text)'))",
+      "to_regprocedure('public.staff_business_authorized_v1(uuid,text)') IS NOT NULL",
+      "has_function_privilege('authenticated','public.staff_business_authorized_v1(uuid,text)','EXECUTE')",
+      "NOT has_function_privilege('anon','public.staff_business_authorized_v1(uuid,text)','EXECUTE')",
+      "NOT has_function_privilege('service_role','public.staff_business_authorized_v1(uuid,text)','EXECUTE')",
+      "(SELECT count(*)=0 FROM pg_proc p,aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl WHERE p.oid=to_regprocedure('core.staff_authorized_v1(uuid,text)') AND acl.grantee=0)",
+      "NOT has_schema_privilege('anon','core','USAGE')",
+      "NOT has_function_privilege('anon','core.staff_authorized_v1(uuid,text)','EXECUTE')",
+      "NOT has_table_privilege('anon','core.business_staff','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('anon','core.platform_operators','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_schema_privilege('authenticated','core','USAGE')",
+      "NOT has_function_privilege('authenticated','core.staff_authorized_v1(uuid,text)','EXECUTE')",
+      "NOT has_table_privilege('authenticated','core.business_staff','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('authenticated','core.platform_operators','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_schema_privilege('service_role','core','USAGE')",
+      "NOT has_function_privilege('service_role','core.staff_authorized_v1(uuid,text)','EXECUTE')",
+      "NOT has_table_privilege('service_role','core.business_staff','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "NOT has_table_privilege('service_role','core.platform_operators','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')",
+      "(SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('core.business_staff'))",
+      "(SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('core.platform_operators'))"
+    ]
+  }
+}

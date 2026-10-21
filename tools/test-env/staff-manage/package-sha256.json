@@ -1,0 +1,46 @@
+[
+  {
+    "file": ".gitignore",
+    "sha256": "a35185c19cfd23ffa994af47ce6e58568f354a75791c3c973bca23c377782f30"
+  },
+  {
+    "file": "K7-DbRunner.ps1",
+    "sha256": "f33d200727a327ee5f2732922010ee79e9b079172faeffa41dc4e74a98252f3a"
+  },
+  {
+    "file": "migration-plans.json",
+    "sha256": "0618b5a662824f8fb354577c45799322563dc8c6eef62281b94099dcd22a9d40"
+  },
+  {
+    "file": "Prepare-Targets.ps1",
+    "sha256": "77671488c4a648f2f7bf2cff94ca447216a9dd5b0b1629bfc021e8e573ce900f"
+  },
+  {
+    "file": "README.md",
+    "sha256": "87792bc64f1394c6666c56c10c794b7448fbf10aa87e1eb21e5c369e644090d9"
+  },
+  {
+    "file": "sql/20261021000850_staff_manage_authorization.sql",
+    "sha256": "e6de5aa8ec80abc2ce2444d60a26e95c84ebded2451b8e7be24e67fe18008afe"
+  },
+  {
+    "file": "StaffManage-Runner.ps1",
+    "sha256": "5175c908c06ad4ab4daf5cee7b7c59964192968322ae377e3b2224819d6864a4"
+  },
+  {
+    "file": "Start-StaffManage-Production.ps1",
+    "sha256": "72097ef09bdeef06c9924ce92aefdae44da8c64c9b6eec354793a7d4b3eb7c2b"
+  },
+  {
+    "file": "Start-StaffManage-Sandbox.ps1",
+    "sha256": "c0fbbf7a1b4543bb4234b322ef940373c31a4587ee32e312bafe81910e204da1"
+  },
+  {
+    "file": "targets.example.json",
+    "sha256": "7361987a7dad897cf3ce4a56fe73088a2508233404aa3c8750ead2af818fdcd8"
+  },
+  {
+    "file": "tests/Test-Offline.ps1",
+    "sha256": "f85ab1a676681d118d5558e7e6db6c06bdcc763a9d20cf5e545fc81ab6d51c09"
+  }
+]
