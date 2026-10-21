@@ -6,7 +6,7 @@ import { browserDeployment } from "../lib/supabase";
 
 type PullWarning = { code?: string; step?: string; httpStatus?: number };
 type PullResult = { code?: string; step?: string; providerStatus?: number; fetched?: number; upserted?: number; requestCount?: number; warnings?: PullWarning[] };
-type DayTotals = { orderCount?: number; netCents?: number; refundUnverifiedCount?: number;
+type DayTotals = { orderCount?: number; collectedCents?: number; tipCents?: number; refundUnverifiedCount?: number; undatedTransactionCount?: number;
   customerAccessDeniedCount?: number; reconciliationConfirmed?: boolean };
 const safeCode = /^[a-z][a-z0-9_]{1,48}$/;
 const safeSteps = new Set(["configuration", "authorization", "list", "order_core", "order_refunds", "order_customers", "ingest"]);
@@ -38,8 +38,8 @@ export default function CloverOrderPullPanel({ accessToken }: { accessToken: str
   const [day, setDay] = useState(yesterday);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [totals, setTotals] = useState<{ day: string; orderCount: number; netCents: number;
-    refundUnverifiedCount: number; customerAccessDeniedCount: number; reconciliationConfirmed: boolean } | null>(null);
+  const [totals, setTotals] = useState<{ day: string; orderCount: number; collectedCents: number; tipCents: number;
+    refundUnverifiedCount: number; undatedTransactionCount: number; customerAccessDeniedCount: number; reconciliationConfirmed: boolean } | null>(null);
 
   async function pull() {
     if (busy || !staffClient || !browserDeployment.configured) return;
@@ -60,38 +60,43 @@ export default function CloverOrderPullPanel({ accessToken }: { accessToken: str
         return;
       }
       const scopeWarnings = pullWarnings(pulled.warnings);
-      const { data, error } = await staffClient.rpc("clover_order_day_totals_v1", {
+      const { data, error } = await staffClient.rpc("clover_order_day_summary_v2", {
         p_business_id: browserDeployment.businessId, p_start: range.start, p_end: range.end,
       });
       const result = data as DayTotals | null;
       if (error || !result || !Number.isSafeInteger(result.orderCount)
-        || !Number.isSafeInteger(result.netCents) || result.orderCount! < 0
+        || !Number.isSafeInteger(result.collectedCents) || !Number.isSafeInteger(result.tipCents) || result.orderCount! < 0
         || !Number.isSafeInteger(result.refundUnverifiedCount) || result.refundUnverifiedCount! < 0
+        || !Number.isSafeInteger(result.undatedTransactionCount) || result.undatedTransactionCount! < 0
         || !Number.isSafeInteger(result.customerAccessDeniedCount) || result.customerAccessDeniedCount! < 0
         || typeof result.reconciliationConfirmed !== "boolean") {
         setMessage(`Siparişler çekildi.${scopeWarnings ? ` ${scopeWarnings}.` : ""} Adım: day_totals · Kod: day_totals_unconfirmed. Yeniden çekmeden önce kontrol edin.`);
         return;
       }
-      setTotals({ day, orderCount: result.orderCount!, netCents: result.netCents!,
+      setTotals({ day, orderCount: result.orderCount!, collectedCents: result.collectedCents!, tipCents: result.tipCents!,
         refundUnverifiedCount: result.refundUnverifiedCount!,
+        undatedTransactionCount: result.undatedTransactionCount!,
         customerAccessDeniedCount: result.customerAccessDeniedCount!,
         reconciliationConfirmed: result.reconciliationConfirmed! });
       setMessage(`${pulled.fetched} sipariş, ${pulled.requestCount ?? "?"} Clover isteği kontrol edildi.${scopeWarnings ? ` ${scopeWarnings}.` : ""}
-        ${result.reconciliationConfirmed ? "Seçilen günün toplamı aşağıda." : "Seçilen gün: iade doğrulanmadı; mutabakat onaylanamaz."}`);
+        ${result.reconciliationConfirmed ? "Seçilen günün toplamı aşağıda." : "İade veya işlem tarihi doğrulanmadı; mutabakat onaylanamaz."}`);
     } catch { setMessage("Çekme başarısız · Adım: request · Kod: network_or_response. Tekrar denemeden önce kontrol edin."); }
     finally { setBusy(false); }
   }
 
   return <section className="staff-panel mb-5 p-4 sm:p-5" aria-label="Clover gün mutabakatı">
     <h2 className="text-lg font-semibold">Clover gün mutabakatı</h2>
-    <p className="mt-1 text-sm text-stone-600">Kapanmış günü seçin. Sistem yalnız seçilen New York gününün siparişlerini Clover’dan okur ve sipariş sayısıyla tahsilat toplamını gösterir.</p>
+    <p className="mt-1 text-sm text-stone-600">Kapanmış New York gününü seçin. Sipariş sayısı açılış gününe, tahsilat ve bahşiş ödeme gününe göre gösterilir.</p>
     <div className="mt-4 flex flex-wrap items-end gap-3"><label className="text-sm font-medium">Gün (New York)
       <input type="date" value={day} max={yesterday()} onChange={event => { setDay(event.target.value); setTotals(null); }} className="staff-input mt-1 block" />
     </label><button type="button" disabled={busy} onClick={() => void pull()} className="staff-button">{busy ? "Kontrol ediliyor…" : "Clover’dan getir"}</button></div>
     {message && <p role="status" className="mt-3 text-sm">{message}</p>}
     {totals && <div className="mt-3 text-sm font-semibold">
-      <p>{totals.day}: {totals.orderCount} sipariş · {totals.reconciliationConfirmed ? "Net tahsilat" : "Ön net tutar (iade doğrulanmadı)"}: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totals.netCents / 100)}</p>
+      <p>Siparişler (açılış günü): {totals.orderCount}</p>
+      <p>Tahsilat (ödeme günü, bahşiş hariç): {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totals.collectedCents / 100)} · Bahşiş: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totals.tipCents / 100)}</p>
       <p>İadesi doğrulanmayan: {totals.refundUnverifiedCount} · Müşteri eşleşmesi token izni nedeniyle yapılamayan: {totals.customerAccessDeniedCount}</p>
+      {totals.undatedTransactionCount > 0 && <p>Tarihi eksik ödeme/iade kaydı: {totals.undatedTransactionCount}</p>}
+      <p className="mt-1 font-normal text-stone-600">Tahsilat, sisteme çekilmiş ödeme ve iadeleri kapsar; Clover gün raporuyla doğrulanmadan kesinleşmez.</p>
     </div>}
   </section>;
 }
