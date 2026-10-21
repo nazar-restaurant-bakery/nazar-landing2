@@ -1,0 +1,14 @@
+{
+  "base": "2bbbcdf4338987249ca137d6ee65593a8c4c0e09",
+  "ads_reader_identical_to_main": true,
+  "ads_reader_sha256_lf": "09f287bbc56ee128258ab58d6bbdbea81329f256b6120060c0f0723eff717a20",
+  "ads_tile_identical_to_main": true,
+  "node_passed": 68,
+  "node_failed": 0,
+  "hosted_changes": false,
+  "browser_passed": 61,
+  "browser_failed": 0,
+  "typescript": "passed",
+  "targeted_eslint": "passed",
+  "production_parity": "passed"
+}
