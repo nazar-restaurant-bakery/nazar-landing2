@@ -44,6 +44,42 @@ BEGIN
  IF (other->>'qualifiedNetCents')::bigint<>10000 THEN RAISE EXCEPTION 'k13_tenant_isolation_failed'; END IF;
  IF EXISTS(SELECT 1 FROM core.commissions) THEN RAISE EXCEPTION 'k13_preview_persisted'; END IF;
 END $test$;
+-- Clover payment.amount is already tip-free: Oct 15 net sales must match
+-- $262.54 collected before tip less $24.49 tax = $238.05.
+INSERT INTO core.orders(business_id,clover_order_id,clover_merchant_id,clover_order_type_id,
+ online_order,created_at,raw_response) VALUES
+ ('22222222-2222-4222-8222-222222222222','SIMPAYOCT15','MERCHANT123','TYPEK13A',true,
+  '2026-10-15 18:00Z','{"raw":{"orderType":{"name":"Pickup"}},"refundsVerified":true}'),
+ ('22222222-2222-4222-8222-222222222222','SIMREFDAY','MERCHANT123','TYPEK13A',true,
+  '2026-10-16 18:00Z','{"raw":{"orderType":{"name":"Pickup"}},"refundsVerified":true}');
+INSERT INTO core.payments(business_id,order_id,clover_payment_id,amount_cents,payment_status,
+ created_at,raw_response)
+ SELECT business_id,id,'PAY'||clover_order_id,
+   CASE clover_order_id WHEN 'SIMPAYOCT15' THEN 26254 ELSE 10000 END,
+   'SUCCESS',CASE clover_order_id WHEN 'SIMPAYOCT15' THEN '2026-10-15 18:10Z'::timestamptz
+     ELSE '2026-10-16 18:10Z'::timestamptz END,
+   CASE clover_order_id WHEN 'SIMPAYOCT15' THEN '{"taxAmount":2449,"tipAmount":1819}'::jsonb
+     ELSE '{"taxAmount":1000,"tipAmount":1500}'::jsonb END
+ FROM core.orders WHERE clover_order_id IN ('SIMPAYOCT15','SIMREFDAY');
+INSERT INTO core.refunds(business_id,order_id,clover_refund_id,amount_cents,created_at,raw_response)
+ SELECT business_id,id,'REFUNDK13REFDAY',3000,'2026-10-16 19:00Z',
+   '{"taxAmount":300,"tipAmount":450}'::jsonb
+ FROM core.orders WHERE clover_order_id='SIMREFDAY';
+DO $tip$ DECLARE d15 record; d16 record; month_data jsonb; BEGIN
+ SELECT * INTO d15 FROM core.commission_order_day_rows_v1(
+   '22222222-2222-4222-8222-222222222222','2026-10-01') WHERE day='2026-10-15';
+ SELECT * INTO d16 FROM core.commission_order_day_rows_v1(
+   '22222222-2222-4222-8222-222222222222','2026-10-01') WHERE day='2026-10-16';
+ IF d15.gross_cents<>23805 OR d15.refund_cents<>0 OR d15.missing_fields<>0
+ THEN RAISE EXCEPTION 'k13_oct15_tip_double_counted'; END IF;
+ IF d16.gross_cents<>9000 OR d16.refund_cents<>2700 OR d16.gross_cents-d16.refund_cents<>6300
+ THEN RAISE EXCEPTION 'k13_same_day_refund_failed'; END IF;
+ month_data:=core.commission_input_from_orders_v1(
+   '22222222-2222-4222-8222-222222222222','2026-10-01');
+ IF (month_data->>'qualifiedNetCents')::bigint<>30105 OR
+   (month_data->>'missingFieldCount')::bigint<>0
+ THEN RAISE EXCEPTION 'k13_tip_refund_month_failed'; END IF;
+END $tip$;
 -- Contract §4: generated local Auth identities, two tenants, no hosted users.
 CREATE TEMP TABLE k13_contract_users(name text PRIMARY KEY,id uuid NOT NULL DEFAULT gen_random_uuid());
 GRANT SELECT ON k13_contract_users TO authenticated;

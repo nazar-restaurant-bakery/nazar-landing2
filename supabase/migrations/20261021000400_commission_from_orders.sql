@@ -15,7 +15,8 @@ DO $guard$ BEGIN
 END $guard$;
 
 -- A payment/refund belongs to its transaction's New York day, not the order day.
--- NULL tax/tip/date, unknown channel, and inaccessible refunds never become zero.
+-- Payment/refund amount excludes tip; subtract tax once, never subtract tip again.
+-- NULL tax/date, unknown channel, and inaccessible refunds never become zero.
 CREATE FUNCTION core.commission_order_day_rows_v1(p_business_id uuid,p_month date)
 RETURNS TABLE(day date,order_count bigint,gross_cents bigint,refund_cents bigint,
  missing_fields bigint,unknown_channel bigint,refund_unverified bigint)
@@ -42,9 +43,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
      trim(regexp_replace(lower(coalesce(tx.source#>>'{raw,orderType,name}','')),
        '[ _-]+',' ','g')) AS channel,
      CASE WHEN tx.raw->>'taxAmount' ~ '^[0-9]{1,12}$'
-       THEN (tx.raw->>'taxAmount')::bigint END AS tax_cents,
-     CASE WHEN tx.raw->>'tipAmount' ~ '^[0-9]{1,12}$'
-       THEN (tx.raw->>'tipAmount')::bigint END AS tip_cents
+       THEN (tx.raw->>'taxAmount')::bigint END AS tax_cents
    FROM tx,bounds WHERE tx.happened>=bounds.lo AND tx.happened<bounds.hi
  ), included AS (
    SELECT *, channel !~ '\muber(\s+eats)?\M|\mgrub\s*hub\M' AS allowed,
@@ -53,14 +52,14 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
    FROM classified
  )
  SELECT ny_day,count(DISTINCT order_id) FILTER (WHERE NOT is_refund AND allowed),
-   coalesce(sum(amount-tax_cents-tip_cents) FILTER
+   coalesce(sum(amount-tax_cents) FILTER
      (WHERE NOT is_refund AND allowed AND known AND tax_cents IS NOT NULL
-       AND tip_cents IS NOT NULL AND amount>=tax_cents+tip_cents),0)::bigint,
-   coalesce(sum(amount-tax_cents-tip_cents) FILTER
+       AND amount>=tax_cents),0)::bigint,
+   coalesce(sum(amount-tax_cents) FILTER
      (WHERE is_refund AND allowed AND known AND tax_cents IS NOT NULL
-       AND tip_cents IS NOT NULL AND amount>=tax_cents+tip_cents),0)::bigint,
+       AND amount>=tax_cents),0)::bigint,
    count(*) FILTER (WHERE allowed AND
-     (tax_cents IS NULL OR tip_cents IS NULL OR amount<tax_cents+tip_cents)),
+     (tax_cents IS NULL OR amount<tax_cents)),
    count(*) FILTER (WHERE allowed AND NOT known),
    count(DISTINCT order_id) FILTER (WHERE allowed AND source->>'refundsVerified' IS DISTINCT FROM 'true')
  FROM included GROUP BY ny_day
