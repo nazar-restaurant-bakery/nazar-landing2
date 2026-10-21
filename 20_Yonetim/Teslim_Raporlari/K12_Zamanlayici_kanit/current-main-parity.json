@@ -1,0 +1,28 @@
+{
+  "base": "0449e1ea493397ce182c4881d5213b968b0bf78d",
+  "candidate": "6d0dd8a00dcf0fbc6f075a561204079944b1fd1c",
+  "APP_ENV_present": false,
+  "TEST_variables_present": false,
+  "hosted_secrets_read": false,
+  "network_or_DB": false,
+  "builds_passed": true,
+  "base_files": 212,
+  "candidate_files": 212,
+  "byte_equal": 209,
+  "normalized_public_main_equal": true,
+  "normalized_html_equal": true,
+  "critical_source_equal": [
+    "functions/api/signup.ts",
+    "src/lib/analytics.ts",
+    "src/pages/staff/StaffShell.tsx",
+    "src/lib/crmData.ts",
+    "functions/api/staff/profile-sync.ts",
+    "functions/_lib/profileSyncRuntime.ts"
+  ],
+  "intended_differences": [
+    "staff Ops UI",
+    "new private scheduler path and quota for existing manual K7"
+  ],
+  "gzip_total_delta": 1214,
+  "checked_at": "2026-10-21T17:25:18.195630+00:00"
+}
