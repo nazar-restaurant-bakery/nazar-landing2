@@ -5,7 +5,7 @@ import { staffClient } from "../lib/crmData";
 import { browserDeployment } from "../lib/supabase";
 
 type PullWarning = { code?: string; step?: string; httpStatus?: number };
-type PullResult = { code?: string; step?: string; providerStatus?: number; fetched?: number; upserted?: number; warnings?: PullWarning[] };
+type PullResult = { code?: string; step?: string; providerStatus?: number; fetched?: number; upserted?: number; requestCount?: number; warnings?: PullWarning[] };
 type DayTotals = { orderCount?: number; netCents?: number; refundUnverifiedCount?: number;
   customerAccessDeniedCount?: number; reconciliationConfirmed?: boolean };
 const safeCode = /^[a-z][a-z0-9_]{1,48}$/;
@@ -51,7 +51,7 @@ export default function CloverOrderPullPanel({ accessToken }: { accessToken: str
       const response = await fetch("/api/staff/clover-order-pull", {
         method: "POST", cache: "no-store",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ days: range.days }),
+        body: JSON.stringify({ day }),
       });
       const pulled = await response.json() as PullResult;
       if (!response.ok || pulled.code !== "ok" || !Number.isSafeInteger(pulled.fetched)
@@ -76,7 +76,7 @@ export default function CloverOrderPullPanel({ accessToken }: { accessToken: str
         refundUnverifiedCount: result.refundUnverifiedCount!,
         customerAccessDeniedCount: result.customerAccessDeniedCount!,
         reconciliationConfirmed: result.reconciliationConfirmed! });
-      setMessage(`${pulled.fetched} sipariş kontrol edildi.${scopeWarnings ? ` ${scopeWarnings}.` : ""}
+      setMessage(`${pulled.fetched} sipariş, ${pulled.requestCount ?? "?"} Clover isteği kontrol edildi.${scopeWarnings ? ` ${scopeWarnings}.` : ""}
         ${result.reconciliationConfirmed ? "Seçilen günün toplamı aşağıda." : "Seçilen gün: iade doğrulanmadı; mutabakat onaylanamaz."}`);
     } catch { setMessage("Çekme başarısız · Adım: request · Kod: network_or_response. Tekrar denemeden önce kontrol edin."); }
     finally { setBusy(false); }
@@ -84,7 +84,7 @@ export default function CloverOrderPullPanel({ accessToken }: { accessToken: str
 
   return <section className="staff-panel mb-5 p-4 sm:p-5" aria-label="Clover gün mutabakatı">
     <h2 className="text-lg font-semibold">Clover gün mutabakatı</h2>
-    <p className="mt-1 text-sm text-stone-600">Kapanmış günü seçin. Sistem o günü kapsayan son günleri Clover’dan okur ve seçilen günün sipariş sayısıyla tahsilat toplamını gösterir.</p>
+    <p className="mt-1 text-sm text-stone-600">Kapanmış günü seçin. Sistem yalnız seçilen New York gününün siparişlerini Clover’dan okur ve sipariş sayısıyla tahsilat toplamını gösterir.</p>
     <div className="mt-4 flex flex-wrap items-end gap-3"><label className="text-sm font-medium">Gün (New York)
       <input type="date" value={day} max={yesterday()} onChange={event => { setDay(event.target.value); setTotals(null); }} className="staff-input mt-1 block" />
     </label><button type="button" disabled={busy} onClick={() => void pull()} className="staff-button">{busy ? "Kontrol ediliyor…" : "Clover’dan getir"}</button></div>
