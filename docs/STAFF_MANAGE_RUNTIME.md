@@ -1,6 +1,6 @@
 # staff.manage — ileri migration teslimi
 
-21 Ekim 2026 · **Hazır / uygulanmadı.** Draft PR bağlantısı teslim sonunda eklenir. Birleşme ve hosted uygulama Talip'te; öncelik K13 ve kampanya PR'larından sonradır.
+21 Ekim 2026 · **Hazır / uygulanmadı.** [Draft PR #80](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/80). Birleşme ve hosted uygulama Talip'te; öncelik K13 ve kampanya PR'larından sonradır.
 
 - **Yapıldı:** #79 main birleşmesi doğrulandı; Kol 2'ye #78'i güncel main üzerine yeniden temellendirme bildirildi. Yeni `20261021000850_staff_manage_authorization.sql`, sözleşme §2.1'i mevcut private yardımcıda uygular. Aktif owner veya aktif hedef üyeliği olan aktif platform operatörü geçer; sıradan manager/staff, platform-only, pasif/NULL/yanlış işletme reddedilir. Aktör yalnız `auth.uid()`.
 - **Kapanış kanıtı:** native PostgreSQL 18.6 sentetik **23/23**; migration envanteri **19/19**; korumalı başlatıcı negatif/çevrimdışı testleri **21/21**. Yeni SQL sonrası 21 operatör koşulu DB'de doğrulandı. Önceki tüm fonksiyonlardan yalnız hedef helper tanımı değişti; ACL/SECURITY DEFINER/search_path aynı kaldı. Uygulanmış sıra 8 SHA değişmedi. Form, /staff ve GA4 kaynak kodu değişmedi.
