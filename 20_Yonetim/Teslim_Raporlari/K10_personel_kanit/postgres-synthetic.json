@@ -1,0 +1,51 @@
+{
+  "local_only": true,
+  "postgres": "18.6",
+  "shared_contract": "v1.1 proposed fixture; #65 helper not changed",
+  "passed": 10,
+  "checks": [
+    "v1.1: owner and active platform+member yes; manager/staff/platform-only/inactive/wrong tenant/NULL no; platform read unchanged",
+    "own-tenant unmasked member list; wrong-tenant/staff/manager/platform-only HTTP-boundary SQLSTATE 42501",
+    "private RLS tables have no application direct CRUD/TRUNCATE grants",
+    "own owner cannot deactivate even with a second owner; last owner cannot deactivate/demote",
+    "role change and tenant deactivation preserve Auth user; stale snapshot rejected",
+    "two concurrent owner demotions serialize: one updated, one last_owner; one owner remains",
+    "invites disabled by default; same-key idempotency; concurrent JWT gate only one lease; forged identity/service-only bypass denied",
+    "Auth-matching identity creates exactly one tenant member/audit; repeated finalizer is idempotent",
+    "unknown cannot resend; existing Auth user added only to target tenant; existing inactive membership cannot be overwritten by invite",
+    "revocation after JWT gate creates no membership; service finalizer retains safe unknown audit"
+  ],
+  "concurrent_owner_changes": [
+    {
+      "code": "updated",
+      "changed": true
+    },
+    {
+      "code": "last_owner",
+      "changed": false
+    }
+  ],
+  "concurrent_invite_gate_successes": 1,
+  "provider_calls": 0,
+  "hosted_changes": false,
+  "fixture_manifest": {
+    "businesses": {
+      "a": "c0ed1cd3-b4a7-4f01-a1e9-9decc5f54570",
+      "b": "b3db98b2-75c9-4a57-9b0f-f960f61bf17b"
+    },
+    "users": {
+      "ownerA": "94a831a4-d641-4c51-998d-d37d2210a1fb",
+      "ownerA2": "6a7fe5af-8bca-4388-b6bd-e865a04328f4",
+      "managerA": "5fa1f42c-ccfc-4621-949d-9ff1a44607c5",
+      "staffA": "c9916078-f07a-4ecc-af39-1ab526e8a015",
+      "inactiveA": "23e81db9-83ec-4fde-a0af-c95d0385cd5e",
+      "staffB": "96f5cbd2-43ab-403a-9dc2-c54fe57dd345",
+      "platformOnly": "802e23ae-adea-458f-b445-f7728d13ee45",
+      "platformMember": "a3065399-2b97-42a7-82a7-14563a8a530a",
+      "inactivePlatform": "24858226-8df4-4dea-addc-7f20ea03b59d",
+      "legacyOnly": "6741a8c9-caa7-4019-a583-35c471603778"
+    }
+  },
+  "logs": "C:\\Users\\Talip\\AppData\\Local\\Temp\\staff-management-local-_j1gqf94",
+  "migration_sha256": "1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68"
+}

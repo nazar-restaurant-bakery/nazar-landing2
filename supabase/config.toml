@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.ops-write]
 verify_jwt = true
+
+[functions.staff-manage-invite]
+verify_jwt = true

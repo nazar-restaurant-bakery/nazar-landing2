@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { staffCopy as c } from '../../src/lib/staffCopy.ts';
 import { opsCopy as o } from '../../src/lib/opsCopy.ts';
 import { runOpsScenarios } from './opsScenarios.mjs';
+import { runStaffManagementScenarios } from './staffManagementScenarios.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../..');
@@ -381,6 +382,7 @@ try {
     assert.equal((await calls(page, 'coupon_redeem_v1')).length, 0);
   }, '/staff/coupons');
   await runOpsScenarios({ run, visible, screenshot, exact, snapshot, calls, setMode, c });
+  await runStaffManagementScenarios({run,visible,exact,calls,screenshot});
 } finally {
   await browser.close(); await server.close();
   const report = { scope: 'Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.',

@@ -84,3 +84,5 @@
 /tests/staffManage*.mjs text eol=lf
 /tests/fixtures/staffManagementConsumer.sql text eol=lf
 /tools/test-env/staff-manage/** text eol=lf
+
+/supabase/migrations/20261021000900_staff_management.sql text eol=lf

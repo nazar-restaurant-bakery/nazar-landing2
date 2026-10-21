@@ -1,0 +1,69 @@
+{
+  "scope": "Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.",
+  "startedAt": "2026-10-21T03:16:36.542Z",
+  "finishedAt": "2026-10-21T03:16:52.110Z",
+  "browserExecutable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "passed": 14,
+  "failed": 0,
+  "checks": [
+    {
+      "case": "Members 01 owner sees own unmasked members and menu",
+      "passed": true
+    },
+    {
+      "case": "Members 02 members-staff hidden menu and direct 403",
+      "passed": true
+    },
+    {
+      "case": "Members 02 members-platform-only hidden menu and direct 403",
+      "passed": true
+    },
+    {
+      "case": "Members 02 members-wrong-business hidden menu and direct 403",
+      "passed": true
+    },
+    {
+      "case": "Members 03 platform operator plus member sees management",
+      "passed": true
+    },
+    {
+      "case": "Members 04 invite exact tenant role and one submission",
+      "passed": true
+    },
+    {
+      "case": "Members 05 role change and deactivate preserve card",
+      "passed": true
+    },
+    {
+      "case": "Members 06 own owner and last owner controls",
+      "passed": true
+    },
+    {
+      "case": "Members 07 invite disabled before operator configuration",
+      "passed": true
+    },
+    {
+      "case": "Members 08 uncertain invite only reads and never resends",
+      "passed": true
+    },
+    {
+      "case": "Members 09 mismatched tenant response rejected",
+      "passed": true
+    },
+    {
+      "case": "Members 10 375px full UI without overflow",
+      "passed": true
+    },
+    {
+      "case": "Members 11 signout clears full personal list",
+      "passed": true
+    },
+    {
+      "case": "Members 12 uncertain update no blind retry",
+      "passed": true
+    }
+  ],
+  "screenshots": [
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-staff-members\\20_Yonetim\\Teslim_Raporlari\\K10_personel_kanit\\browser-final\\staff-members-375.png"
+  ]
+}

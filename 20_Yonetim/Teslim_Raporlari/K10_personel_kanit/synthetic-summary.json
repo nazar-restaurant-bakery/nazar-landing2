@@ -1,0 +1,16 @@
+{
+  "node": {
+    "passed": 61,
+    "failed": 0,
+    "skipped": 0,
+    "edge_new_cases": 12
+  },
+  "native_postgres_groups": 10,
+  "browser_full": 75,
+  "browser_final_personnel": 14,
+  "typescript": "passed",
+  "targeted_eslint": "passed",
+  "production_build": "passed",
+  "live_emails": 0,
+  "hosted_changes": false
+}
