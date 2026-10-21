@@ -1,0 +1,107 @@
+{
+  "baseline": "76f057eb127df6b1ecdc64afeb716e4211b05f19 (main)",
+  "current_main_source_comparison": "76f057eb127df6b1ecdc64afeb716e4211b05f19",
+  "environment": "same Production target/mode, same synthetic publishable/site-key placeholders; hosted values not read",
+  "baseline_files": 212,
+  "candidate_files": 213,
+  "byte_identical_files": 209,
+  "changed_same_path": [
+    "index.html"
+  ],
+  "removed_hashed_files": [
+    "assets/StaffPage-CATHDwzF.js",
+    "assets/index-uIA0-2jO.js"
+  ],
+  "added_hashed_files": [
+    "assets/StaffPage-DwGgPF-q.js",
+    "assets/index-j8nEsT8M.js",
+    "assets/jsQR-98TMeY0M.js"
+  ],
+  "normalized_index_html_identical": true,
+  "existing_css_identical": true,
+  "protected_source_parity": [
+    {
+      "path": "src/pages/AboutPage.tsx",
+      "sha256_lf": "abaafd21825b0515b9ce06562dd9ec7fa2dc7e9ad1a8c57ea4a5192261c73922"
+    },
+    {
+      "path": "src/pages/CateringPage.tsx",
+      "sha256_lf": "061bfc6fae83e773840b09fcb964ff7bf3662b348e42fb7d90bb445b34e8fd5e"
+    },
+    {
+      "path": "src/pages/ContactPage.tsx",
+      "sha256_lf": "19df3149f718370aa60dff665a3e4b9299d85ccf64e25fd0cfce7d764d358304"
+    },
+    {
+      "path": "src/pages/CrmPreviewPage.tsx",
+      "sha256_lf": "50f7d04d496bcba546660b9b7ccd0969bfa55ee37d39dda6a45c0a1402cb9167"
+    },
+    {
+      "path": "src/pages/GalleryPage.tsx",
+      "sha256_lf": "2f68272c278f0e252dd425a39f168ad5c7e6d1a2f42d9b075e1d7b51c29d7f43"
+    },
+    {
+      "path": "src/pages/HomePage.tsx",
+      "sha256_lf": "bc56f83be04c6e5827695c85e4146c4335977edcfaa4af6bf0c18e0d810827da"
+    },
+    {
+      "path": "src/pages/MenuPage.tsx",
+      "sha256_lf": "05e36f1e425cc991ec5d2253a9b1212a5f4309d40c61662d1a514dc99a5f03a8"
+    },
+    {
+      "path": "src/pages/ReviewsPage.tsx",
+      "sha256_lf": "32690289f2bdac9ec18a565d75e519aa6a2bd1bbb714d9625cda1d8949140d0a"
+    },
+    {
+      "path": "src/pages/SpecialsPage.tsx",
+      "sha256_lf": "84f9d648fb41828919fe9159fbe965fba75020d8e9e8446171876c15dd2e7bb7"
+    },
+    {
+      "path": "src/pages/StaffOffersPage.tsx",
+      "sha256_lf": "147cffe25cfe5656196582280131cd6d268b09bfc9782e1be8e89cabc0528468"
+    },
+    {
+      "path": "src/pages/StaffProfileSyncPage.tsx",
+      "sha256_lf": "d33cfa249917f9ee50d0d7ae4674ebf742012b3f311edcc1d03082571175e135"
+    },
+    {
+      "path": "src/pages/VipPage.tsx",
+      "sha256_lf": "565cfdf7b52667be5feeeaa277997b0a104b442a747242ad7ecd571eb537742d"
+    },
+    {
+      "path": "src/lib/analytics.ts",
+      "sha256_lf": "ac62a3f2eb719b40065da7931fedd5f9c5e5467160f457be1916ac8c371b7227"
+    },
+    {
+      "path": "src/lib/signup.ts",
+      "sha256_lf": "c24f3411dbb570d86b3ee331d560f651d527d16d8cebbe65779e6894b80ea2bb"
+    },
+    {
+      "path": "src/lib/supabase.ts",
+      "sha256_lf": "462b47f141e86b07655ee6090d8a5d98c896ffd62005a46eea2ffe1f4e807711"
+    },
+    {
+      "path": "src/lib/staffSupabase.ts",
+      "sha256_lf": "d4f9b0cb5bb4eb651fcc7ac5061c44c189ea6c429c993b9b1d5b833f44200c8a"
+    },
+    {
+      "path": "src/pages/staff/StaffSignIn.tsx",
+      "sha256_lf": "526c8c34259a62bae4767b4e9a8089edcc2d42c65bb643cde4756d8a2873b88d"
+    },
+    {
+      "path": "functions/api/signup.ts",
+      "sha256_lf": "2ca4a8d15b0bcae1d9f068ff7a0c20276afa72eef782ea6e2067d11c3bf2f35a"
+    },
+    {
+      "path": "functions/_lib/klaviyoProfileSync.ts",
+      "sha256_lf": "aed3d090a4c8e057704f99443eb98b3c79d8743bc8d8f23b9071d13c0283ec30"
+    },
+    {
+      "path": "supabase/functions/ops-collect/ga4.ts",
+      "sha256_lf": "01b57075e3796e259dcd597ef0329a35b2dab84292e7783047b5da8e706b6772"
+    }
+  ],
+  "expected_changes": "StaffPage checkout, lazy jsQR chunk, generated CommonJS interop/minified binding names in shared main JS, content hash references. Main JS is not claimed byte-equal after normalization.",
+  "provider_calls": 0,
+  "production_deployment": false
+}

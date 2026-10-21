@@ -1,0 +1,1 @@
+export const staffClient={async rpc(name,args){const r=await fetch('/__fixture/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,args})});return {...await r.json(),status:r.status};}};

@@ -357,6 +357,29 @@ try {
     await page.evaluate(() => window.__staffMock.signOut());
     assert.equal(await link.count(), 0);
   }, '/staff/catering');
+  await run('44 Coupon menu opens scoped checkout and logout clears it', 'normal', async page => {
+    await page.getByRole('link', exact('Kupon')).click();
+    await page.getByLabel('Kupon kodu', { exact: true }).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/staff/coupons');
+    await page.setViewportSize({ width: 375, height: 812 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await screenshot(page, 'coupon-shell-375-synthetic');
+    assert.ok((await calls(page, 'staff_business_authorized_v1')).every(call => call.params.p_operation === 'campaign.staff_mark'));
+    assert.equal(await writeCount(page), 0);
+    await page.getByLabel('Kupon kodu', { exact: true }).fill('2345-6789-ABCD-EFGH');
+    await page.evaluate(() => window.__staffMock.signOut());
+    assert.equal(await page.getByLabel('Kupon kodu', { exact: true }).count(), 0);
+  });
+  await run('45 Denied direct coupon route never opens lookup', 'auth-denied', async page => {
+    await visible(page, c.accessDenied);
+    assert.equal(await page.getByLabel('Kupon kodu', { exact: true }).count(), 0);
+    assert.equal((await calls(page, 'coupon_lookup_v1')).length, 0);
+  }, '/staff/coupons');
+  await run('46 CRM reader without campaign.staff_mark cannot use coupon screen', 'coupon-platform-only', async page => {
+    await visible(page, '403 · Bu işletmede kupon kullanımı için yetkiniz yok.');
+    assert.equal(await page.getByLabel('Kupon kodu', { exact: true }).count(), 0);
+    assert.equal((await calls(page, 'coupon_redeem_v1')).length, 0);
+  }, '/staff/coupons');
   await runOpsScenarios({ run, visible, screenshot, exact, snapshot, calls, setMode, c });
 } finally {
   await browser.close(); await server.close();

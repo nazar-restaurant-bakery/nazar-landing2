@@ -115,6 +115,14 @@ async function rpc(name, params) {
   // A request already accepted before sign-out can still resolve successfully.
   if (!signedInAtStart) return result(null, { code: '42501' });
   if (state.mode === 'denied') return result(null, { code: '42501' });
+  if (name === 'staff_business_authorized_v1') {
+    if (params?.p_operation !== 'campaign.staff_mark' || params?.p_business_id !== 'a358eba4-b197-4309-805b-46f43a718454') return unknown(name + ' parameters', params);
+    return result(state.mode !== 'coupon-platform-only');
+  }
+  if (name === 'daily_scheduler_status') {
+    if (params?.p_business_id !== 'a358eba4-b197-4309-805b-46f43a718454') return unknown(name + ' business', params);
+    return result({enabled:false,last_run:null,requests_today:0});
+  }
   const opsResult = opsMock.rpc(name);
   if (opsResult !== undefined) return opsResult;
   if (name === 'loyalty_metrics_v1') return state.loyaltyResponse

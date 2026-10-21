@@ -1,0 +1,25 @@
+{
+  "passed": 16,
+  "failed": 0,
+  "checks": [
+    "375px: no horizontal overflow; masked name, receipt and Clover instruction visible.",
+    "Valid → mark succeeds; synchronous double click makes exactly one write; used time displayed.",
+    "Second lookup of used coupon cannot mark again.",
+    "Two devices share atomic synthetic RPC: one redeemed, one already_used; no second successful UI.",
+    "Lost write response triggers only lookup, keeps retry locked; persisted used result wins.",
+    "Camera permission denial preserves typed lookup.",
+    "Unknown write + valid readback still locks the write until explicit fresh lookup; no blind repeat.",
+    "Optional Clover ID and note use the exact four-argument RPC with full receipt evidence.",
+    "Actual jsQR decodes video/canvas synthetic QR locally; no automatic lookup/redeem; camera tracks stop.",
+    "Logout during pending camera permission stops the late stream.",
+    "Wrong business, not found, inactive and expired render distinct no-write decisions.",
+    "Lookup HTTP403/42501 clears private state, not a wrong-business disclosure.",
+    "Revoked membership 403 clears code/customer/receipt and blocks marking.",
+    "Platform-only / unauthorized permission false never opens lookup or write.",
+    "Late old-session write response cannot restore coupon, name or receipt after logout/new session.",
+    "No external requests, coupon console output, query string or local/session storage."
+  ],
+  "provider_calls": 0,
+  "hosted_changes": false,
+  "concurrency_limit": "Two real React devices against atomic synthetic RPC, not a claim of core PostgreSQL locking proof."
+}
