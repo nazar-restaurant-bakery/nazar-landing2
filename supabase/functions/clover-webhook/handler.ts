@@ -86,10 +86,33 @@ async function freshOrder(event: Event, binding: Claim, token: string, fetcher: 
   url.searchParams.set("expand", "lineItems,payments,orderType");
   const core = await cloverGet(url, token, fetcher, "order_core");
   if (core.id !== orderId) throw new Error("order_id_mismatch");
-  url.searchParams.set("expand", "refunds,customers");
-  const optional = await cloverGet(url, token, fetcher, "order_refunds");
-  if (optional.id !== orderId) throw new Error("order_id_mismatch");
-  try { return snapshot({ ...core, refunds: optional.refunds, customers: optional.customers },
+  let refunds: unknown;
+  let refundsVerified = true;
+  url.searchParams.set("expand", "refunds");
+  try {
+    const response = await cloverGet(url, token, fetcher, "order_refunds");
+    if (response.id !== orderId) throw new Error("order_id_mismatch");
+    refunds = response.refunds;
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== "order_refunds_access_denied") throw error;
+    refundsVerified = false;
+  }
+  let customers: unknown;
+  let customerAccess = "verified";
+  const online = object(core.orderType) && typeof core.orderType.id === "string"
+    && binding.onlineOrderTypeIds.includes(core.orderType.id);
+  if (online) {
+    url.searchParams.set("expand", "customers");
+    try {
+      const response = await cloverGet(url, token, fetcher, "order_customers");
+      if (response.id !== orderId) throw new Error("order_id_mismatch");
+      customers = response.customers;
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== "order_customers_access_denied") throw error;
+      customerAccess = "denied";
+    }
+  }
+  try { return snapshot({ ...core, refunds, customers, refundsVerified, customerAccess },
     event.merchant, binding.onlineOrderTypeIds); }
   catch (error) { throw error instanceof PullError ? new Error(error.code) : new Error("snapshot_invalid"); }
 }

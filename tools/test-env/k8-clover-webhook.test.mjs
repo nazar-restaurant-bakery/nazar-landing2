@@ -12,7 +12,7 @@ const event = (key, action = 'CREATE', ts = 1700000000000) => ({ appId: 'APP1234
 const request = (payload, auth = 'test-auth-code') => new Request('https://test.invalid/functions/v1/clover-webhook',
   { method: 'POST', headers: { 'X-Clover-Auth': auth, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
-function harness({ refunded = false, missingPayments = false } = {}) {
+function harness({ refunded = false, missingPayments = false, denied = '' } = {}) {
   const events = new Map(); const orders = new Map(); const calls = [];
   const fetcher = async (input, options) => {
     const url = String(input); calls.push(url);
@@ -39,9 +39,12 @@ function harness({ refunded = false, missingPayments = false } = {}) {
     if (url.includes('/orders/ORDER123456')) {
       const expand = new URL(url).searchParams.get('expand').split(',');
       assert.ok(expand.length <= 3);
+      if (expand.includes('customers')) return denied === 'customers'
+        ? new Response('', { status: 403 })
+        : Response.json({ id: 'ORDER123456', customers: { elements: [{ emailAddress: 'test@example.invalid' }] } });
+      if (expand.includes('refunds') && denied === 'refunds') return new Response('', { status: 403 });
       if (expand.includes('refunds')) return Response.json({ id: 'ORDER123456',
-        ...(refunded ? { refunds: { elements: [{ id: 'REFUND12345', amount: 500 }] } } : {}),
-        customers: { elements: [] } });
+        ...(refunded ? { refunds: { elements: [{ id: 'REFUND12345', amount: 500 }] } } : {}) });
       return Response.json({ id: 'ORDER123456', createdTime: 1700000000000,
         orderType: { id: 'ONLINE12345' }, total: 4500, lineItems: { elements: [] },
         ...(missingPayments ? {} : { payments: { elements: [{ id: 'PAY1234567', amount: 4500, result: 'SUCCESS' }] } }) });
@@ -92,6 +95,16 @@ test('refund update reads refund from Orders API', async () => {
   const h = harness({ refunded: true });
   assert.equal((await h.handler(request(event('O:ORDER123456', 'UPDATE')))).status, 200);
   assert.equal(h.orders.get('ORDER123456').refunds[0].amount, 500);
+});
+
+for (const denied of ['refunds', 'customers']) test(`${denied} 403 stays explicitly unverified`, async () => {
+  const h = harness({ denied });
+  assert.equal((await h.handler(request(event('O:ORDER123456')))).status, 200);
+  const order = h.orders.get('ORDER123456');
+  assert.equal(order.refundsVerified, denied !== 'refunds');
+  assert.equal(order.customerAccess, denied === 'customers' ? 'denied' : 'verified');
+  if (denied === 'customers') assert.equal(order.customerEmail, null);
+  assert.equal(h.calls.filter(x => x.includes('/orders/ORDER123456')).length, 3);
 });
 
 test('missing payments leaves a failed event and does not ingest', async () => {

@@ -2,7 +2,7 @@ type ObjectValue = Record<string, unknown>;
 const cloverId = /^[A-Za-z0-9]{8,32}$/;
 const object = (x: unknown): x is ObjectValue => x !== null && typeof x === "object" && !Array.isArray(x);
 const id = (x: unknown): x is string => typeof x === "string" && cloverId.test(x);
-export type PullStep = "configuration" | "authorization" | "list" | "order_core" | "order_refunds" | "ingest";
+export type PullStep = "configuration" | "authorization" | "list" | "order_core" | "order_refunds" | "order_customers" | "ingest";
 
 export class PullError extends Error {
   readonly code: string;
@@ -39,7 +39,7 @@ export function snapshot(detail: unknown, merchant: string, onlineTypes: string[
   const items = elements(detail.lineItems, "order_core");
   const payments = elements(detail.payments, "order_core");
   const refunds = detail.refunds === undefined ? [] : elements(detail.refunds, "order_refunds");
-  const customers = detail.customers === undefined ? [] : elements(detail.customers, "order_refunds");
+  const customers = detail.customers === undefined ? [] : elements(detail.customers, "order_customers");
   for (const row of [...items, ...payments, ...refunds]) if (!id(row.id)) throw new PullError("clover_child_invalid", "order_core");
   for (const row of payments) if (!Number.isSafeInteger(row.amount) || Number(row.amount) < 0) throw new PullError("clover_payment_invalid", "order_core");
   for (const row of refunds) if (!Number.isSafeInteger(row.amount) || Number(row.amount) < 0) throw new PullError("clover_refund_invalid", "order_refunds");
@@ -50,5 +50,6 @@ export function snapshot(detail: unknown, merchant: string, onlineTypes: string[
     state: detail.state ?? null, total: detail.total ?? null,
     customerEmail: contact(customer, "emailAddress", "emailAddresses"),
     customerPhone: contact(customer, "phoneNumber", "phoneNumbers"),
-    items, payments, refunds, raw: detail };
+    items, payments, refunds, refundsVerified: detail.refundsVerified !== false,
+    customerAccess: detail.customerAccess === "denied" ? "denied" : "verified", raw: detail };
 }

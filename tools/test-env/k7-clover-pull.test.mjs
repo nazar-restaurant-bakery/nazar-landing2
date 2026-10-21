@@ -284,11 +284,16 @@ test('429 honors Retry-After, retries within three attempts and counts each atte
 test('batch expansion avoids core detail calls and an ingest retry upserts by Clover ID', async () => {
   const rows = [order('ORDER123456'), order('ORDER654321')];
   const stored = new Map();
+  const attempts = [];
   let failOnce = true;
   let cloverCalls = 0;
   const fakeFetch = async (input, options) => {
     const url = String(input);
     if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+    if (url.endsWith('/rpc/clover_pull_attempt_record_v1')) {
+      attempts.push(JSON.parse(options.body));
+      return Response.json(true);
+    }
     if (url.endsWith('/rpc/clover_order_ingest_v1')) {
       const record = JSON.parse(options.body).p_snapshot;
       if (record.id === rows[1].id && failOnce) { failOnce = false; return new Response('', { status: 500 }); }
@@ -327,5 +332,7 @@ test('batch expansion avoids core detail calls and an ingest retry upserts by Cl
     assert.equal((await second.json()).requestCount, 3);
     assert.equal(stored.size, 2);
     assert.equal(cloverCalls, 6);
+    assert.deepEqual(attempts.map(attempt => [attempt.p_error_code, attempt.p_fetched_count, attempt.p_upserted_count]),
+      [['database_http_error', 2, 1], [null, 2, 2]]);
   } finally { console.warn = originalWarn; }
 });
