@@ -24,7 +24,7 @@ for p in source_paths:
   current=(root/p).read_bytes();old=run(['git','show','origin/main:'+p],root).replace('\r\n','\n').encode()
   sources[p]={'same_as_base':current.replace(b'\r\n',b'\n')==(base/p).read_bytes().replace(b'\r\n',b'\n'),'same_as_origin_main':current.replace(b'\r\n',b'\n')==old}
 # All public source files must remain byte-equivalent after Git newline normalization.
-changed=run(['git','diff','--name-only','f6cc0a8','--','public','src/pages/StaffPage.tsx','src/lib/analytics.ts','src/lib/supabase.ts','functions/api','index.html'],root).strip().splitlines()
+changed=run(['git','diff','--name-only','origin/main','--','public','src/pages/StaffPage.tsx','src/lib/analytics.ts','src/lib/supabase.ts','functions/api','index.html'],root).strip().splitlines()
 assert not changed,changed
 assert css.read_bytes()==cssb.read_bytes(),'Unexpected public CSS change'
 assert len(a)==len(b),'Unexpected published file count change'

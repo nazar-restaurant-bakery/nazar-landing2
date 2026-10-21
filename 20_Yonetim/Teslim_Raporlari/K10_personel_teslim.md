@@ -1,6 +1,6 @@
 # K10 — işletme personel yönetimi
 
-20 Ekim 2026 · [Draft PR #78](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/78). Dal `feat/staff-members-management`; taban **#65 / feat/campaign-engine, f6cc0a8**. Birleşme Talip'te. Kaynak: Talip'in 22:53 kararı ve `Personel_Kapsam_Sozlesme.md` v1; yeni `staff.manage` işlemi için **önerilen v1.1 varsayımı**.
+20 Ekim 2026 · [Draft PR #78](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/78). Dal `feat/staff-members-management`; taban **main, 5412eb9**. Birleşme Talip'te. Kaynak: Talip'in 22:53 kararı ve `Personel_Kapsam_Sozlesme.md` v1; yeni `staff.manage` işlemi için **önerilen v1.1 varsayımı**.
 
 ## Kapsam ve dosyalar
 
@@ -18,7 +18,7 @@ Kaynaklar: `StaffShell.tsx`, yeni `StaffManagement.tsx`, `StaffManagementLink.ts
 
 Koordinasyon'a `staff.manage` önerildi: **aktif owner evet; aktif platform+aktif işletme üyesi evet; platform-only, sıradan manager/staff, pasif ve yanlış işletme hayır**. Aktör yalnız `auth.uid()`; NULL ve bilinmeyen işletme false. Test fixture'ı aynı ortak fixture kimliklerini ve bu tek yeni allowlist dalını kullanır.
 
-**v1.1 henüz Koordinasyon/Talip tarafından #65'e kabul edilmedi.** Koordinasyon'un öneriyi insan onayı saymadığı kaydedildi. Bu PR ortak helper'ı veya kanonik sözleşmeyi değiştirmez. v1 ile ekran/işlemler kapalı kalır; kendi `ops_write_staff` benzeri personel tablosu veya legacy fallback yoktur. Private service finalizer aktörü sadece JWT ile hazırlanmış ve aynı kullanıcı tarafından claim edilmiş kayıttan alır; service key + sahte aktör UUID'siyle yeni intent açılamaz.
+**21 Ekim: staff.manage önerisi yönlendirici tarafından onaylandı; kanonik sözleşme/helper için Koordinasyon'un ayrı PR'ı bekleniyor.** Koordinasyon'un öneriyi insan onayı saymadığı kaydedildi. Bu PR ortak helper'ı veya kanonik sözleşmeyi değiştirmez. v1 ile ekran/işlemler kapalı kalır; kendi `ops_write_staff` benzeri personel tablosu veya legacy fallback yoktur. Private service finalizer aktörü sadece JWT ile hazırlanmış ve aynı kullanıcı tarafından claim edilmiş kayıttan alır; service key + sahte aktör UUID'siyle yeni intent açılamaz.
 
 ## Migration
 
@@ -28,12 +28,12 @@ SHA256: `1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68` · UT
 
 ## Test ve Production parity
 
-- İlgili Node testleri **61/61**: 12 yeni Edge sınırı/davet testi + mevcut personel, CRM, Ops, preview/production izolasyonu. Auth/sağlayıcı istekleri sentetiktir; gerçek e-posta yoktur.
+- İlgili Node testleri **62/62**: 12 yeni Edge sınırı/davet testi + mevcut personel, CRM, Ops, preview/production izolasyonu. Auth/sağlayıcı istekleri sentetiktir; gerçek e-posta yoktur.
 - Yerel PostgreSQL **18.6**, yeni boş owned loopback kümesinde gerçek migration/RPC: **10/10 kontrol grubu**. Ortak rol matrisi, 42501, yanlış tenant, doğrudan tablo erişimi, kendi/son owner, eşzamanlı iki owner düşürmede yalnız biri, stale snapshot, Auth kimliği korunarak pasifleştirme, tek davet gate'i, sahte kimlik/service bypass, idempotent finalize, unknown yeniden gönderme engeli ve claim sonrası yetki kaldırma. `tests/staffManagementPostgres.py`.
 - Gerçek StaffPage/BrowserRouter + katı sentetik SDK ile tüm CRM/Ops tarayıcı paketi **75/75** (61 mevcut + 14 Personel); son ortak stil sınıfı değişiminden sonra Personel **14/14** yeniden geçti. Davet, çift tıklama, rol/pasif, owner kontrolleri, 403, platform kapsamı, kayıp yazma/davet yanıtı, çıkışta kişisel veri temizliği, bozuk tenant yanıtı ve **375px taşmasız** görünüm. Gerçek Auth/JWT/PostgREST entegrasyonu veya e-posta teslimi kanıtı yerine geçmez; bunlar sandbox kabulündedir.
-- TypeScript, hedefli ESLint, build ve diff whitespace kontrolü geçti. Aynı sentetik Production public değişkenleriyle #65 tabanı ve aday **212/212** dosya, **209 byte-eşit**; ortak CSS byte-eşit. Beklenen fark personel JS, main chunk referansı/minifier ve index hash referansıdır. Form, Auth, public uygulama, Supabase ortam koruması ve GA4 kaynakları ayrıca güncel main **9d1aa93** ile LF-byte eşittir. Hosted secret/değişken okunmadı veya yayın yapılmadı.
+- TypeScript, hedefli ESLint, build ve diff whitespace kontrolü geçti. Aynı sentetik Production public değişkenleriyle #65 tabanı ve aday **212/212** dosya, **209 byte-eşit**; ortak CSS byte-eşit. Beklenen fark personel JS, main chunk referansı/minifier ve index hash referansıdır. Form, Auth, public uygulama, Supabase ortam koruması ve GA4 kaynakları ayrıca güncel main **5412eb9** ile LF-byte eşittir. Hosted secret/değişken okunmadı veya yayın yapılmadı.
 
-Kanıt: `K10_personel_kanit/postgres-synthetic.json`, `production-parity.json`, `synthetic-summary.json`, `browser/results.json` (75), `browser-final/results.json` (14), `browser-final/staff-members-375.png`. Yeniden üretim: `node --test tests/staffManagementEdge.test.mjs tests/staffUi.test.mjs tests/crmUi.test.mjs tests/opsUi.test.mjs tests/opsEnvironment.test.mjs tests/previewEnvironment.test.mjs tests/opsServer.test.mjs`; `python tests/staffManagementPostgres.py`; `node tests/browser/run.mjs --output 20_Yonetim/Teslim_Raporlari/K10_personel_kanit/browser`; `python tests/staffManagementParity.py` (aynı f6cc0a8 base worktree + mevcut dependencies).
+Kanıt: `K10_personel_kanit/postgres-synthetic.json`, `production-parity.json`, `synthetic-summary.json`, `browser/results.json` (75), `browser-final/results.json` (14), `browser-final/staff-members-375.png`. Yeniden üretim: `node --test tests/staffManagementEdge.test.mjs tests/staffUi.test.mjs tests/crmUi.test.mjs tests/opsUi.test.mjs tests/opsEnvironment.test.mjs tests/previewEnvironment.test.mjs tests/opsServer.test.mjs`; `python tests/staffManagementPostgres.py`; `node tests/browser/run.mjs --output 20_Yonetim/Teslim_Raporlari/K10_personel_kanit/browser`; `python tests/staffManagementParity.py` (aynı 5412eb9 base worktree + mevcut dependencies).
 
 ## Talip'in sonraki kurulum/kabul adımları
 
@@ -44,3 +44,5 @@ Kanıt: `K10_personel_kanit/postgres-synthetic.json`, `production-parity.json`, 
 5. Normal frontend yayınından önce sandbox gerçek davet/403/owner korumasını kabul et; sonra Talip birleştirir ve yayınlar. Owner çalışanı pasifleştirdiğinde sadece bu işletme erişimi kesilir; başka işletme/Auth kimliği korunur. Davet belirsizse yeniden gönder düğmesi yoktur; Talip kayıt ve Auth gönderimini uzlaştırır.
 
 Kapsamda kod ve sentetik test tamamlandı. Gerçek davet, veri/rol değişikliği veya deploy yapılmadı; başka kaleme geçilmedi.
+
+21 Ekim güncellemesi: #65 main''e 5412eb9 ile birleşti; #78 dalı bu main üzerine yeniden temellendirildi. Clover webhook JWT ayarı korundu. Node 62/62, tarayıcı 75/75, yerel PG 10/10 ve Production parity yeniden geçti. Sözleşme değişikliği bu PR''a eklenmedi; sıra önerisi 15 ve migration SHA aynı.

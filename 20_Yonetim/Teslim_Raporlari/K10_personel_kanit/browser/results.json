@@ -1,7 +1,7 @@
 {
   "scope": "Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.",
-  "startedAt": "2026-10-21T03:14:19.695Z",
-  "finishedAt": "2026-10-21T03:16:08.217Z",
+  "startedAt": "2026-10-21T04:57:41.005Z",
+  "finishedAt": "2026-10-21T05:00:26.664Z",
   "browserExecutable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "passed": 75,
   "failed": 0,

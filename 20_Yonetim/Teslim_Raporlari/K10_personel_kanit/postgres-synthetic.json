@@ -30,22 +30,22 @@
   "hosted_changes": false,
   "fixture_manifest": {
     "businesses": {
-      "a": "c0ed1cd3-b4a7-4f01-a1e9-9decc5f54570",
-      "b": "b3db98b2-75c9-4a57-9b0f-f960f61bf17b"
+      "a": "119fa36b-738f-455d-b5eb-9dec1e7e8edc",
+      "b": "11a6052f-17c8-4ae9-acef-a6ef12c9a93b"
     },
     "users": {
-      "ownerA": "94a831a4-d641-4c51-998d-d37d2210a1fb",
-      "ownerA2": "6a7fe5af-8bca-4388-b6bd-e865a04328f4",
-      "managerA": "5fa1f42c-ccfc-4621-949d-9ff1a44607c5",
-      "staffA": "c9916078-f07a-4ecc-af39-1ab526e8a015",
-      "inactiveA": "23e81db9-83ec-4fde-a0af-c95d0385cd5e",
-      "staffB": "96f5cbd2-43ab-403a-9dc2-c54fe57dd345",
-      "platformOnly": "802e23ae-adea-458f-b445-f7728d13ee45",
-      "platformMember": "a3065399-2b97-42a7-82a7-14563a8a530a",
-      "inactivePlatform": "24858226-8df4-4dea-addc-7f20ea03b59d",
-      "legacyOnly": "6741a8c9-caa7-4019-a583-35c471603778"
+      "ownerA": "e6ac84c9-aab8-4f5c-86e4-8c57c1df9c13",
+      "ownerA2": "27aed1e8-d9ce-45e6-9e5a-ab2a56b9ea9f",
+      "managerA": "98dab7e4-e6bd-4ac0-aa2a-c8907443c982",
+      "staffA": "b43e44a0-0d9e-4d22-ab34-968ec6ab394e",
+      "inactiveA": "2b6d251c-c1ab-4ef4-aad8-e04c302ef31d",
+      "staffB": "e76070bc-a70b-437e-9e3b-c9c5a168f050",
+      "platformOnly": "d2425fe0-e8fc-4083-b9a2-b5e2c2dfb0ff",
+      "platformMember": "6154a6a1-a88f-44f2-860b-789cfa91f8ae",
+      "inactivePlatform": "3d7af832-db4c-44c7-982c-01169b6dc622",
+      "legacyOnly": "1fae8326-e700-42f4-8cd3-2c9d9e7c3aa9"
     }
   },
-  "logs": "C:\\Users\\Talip\\AppData\\Local\\Temp\\staff-management-local-_j1gqf94",
+  "logs": "C:\\Users\\Talip\\AppData\\Local\\Temp\\staff-management-local-3x3xr40_",
   "migration_sha256": "1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68"
 }
