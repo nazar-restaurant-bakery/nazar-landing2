@@ -178,6 +178,7 @@ export async function parseCloverCsv(text: string, options: CloverCsvOptions): P
   add("net_sales_yesterday", day ? dollars(day.netCents) : null, yesterday, yesterday, day ? scope : "Bu CSV dünün dönemini kapsamıyor.");
   add("orders_yesterday", day?.orders ?? null, yesterday, yesterday);
   for (const row of parsed.daily) for (const [field, key] of [["grossCents", "gross_sales"], ["refundCents", "product_refunds"], ["netCents", "net_sales"], ["taxCents", "taxes"], ["tipCents", "tips"], ["collectedCents", "amount_collected"]] as const) add(key, dollars(row[field]), row.date, row.date);
+  for (const row of parsed.daily) add("orders", row.orders, row.date, row.date);
   for (const channel of ["dine_in", "pickup", "delivery", "catering"] as const) {
     add("channel_" + channel + "_net_sales_mtd", parsed.channels ? dollars(parsed.channels[channel].net) : null, options.periodStart, options.periodEnd);
     add("channel_" + channel + "_orders_mtd", parsed.channels ? parsed.channels[channel].orders : null, options.periodStart, options.periodEnd);

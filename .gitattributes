@@ -28,3 +28,13 @@
 /docs/K9_STAFF_SCOPE_SETUP.sql text eol=lf
 /tests/businessStaffLegacyDb.test.mjs text eol=lf
 /tests/fixtures/businessStaffLegacy*.sql text eol=lf
+
+/supabase/migrations/20261021000300_loyalty_referrals_metrics.sql text eol=lf
+/tools/test-env/k11-*.sql text eol=lf
+/tests/loyaltyReferralsDb.test.mjs text eol=lf
+/tests/fixtures/loyaltyNative.mjs text eol=lf
+
+# K13 reviewed migration and disposable shared-staff fixture keep LF bytes.
+/supabase/migrations/20261021000350_nazar_commission_engine.sql text eol=lf
+/supabase/migrations/20261021000400_commission_from_orders.sql text eol=lf
+/tools/test-env/k13-*.sql text eol=lf
