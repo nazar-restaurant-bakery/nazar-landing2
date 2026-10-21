@@ -1,6 +1,6 @@
 {
-  "base": "0449e1ea493397ce182c4881d5213b968b0bf78d",
-  "candidate": "6270bf74debd54a3d6c9efbe998866bd29941ebe",
+  "base": "2bbbcdf4338987249ca137d6ee65593a8c4c0e09",
+  "candidate": "50ada0c4f13f9a0419b7b31a666d8150ebf29d18",
   "APP_ENV_present": false,
   "TEST_variables_present": false,
   "hosted_secrets_read": false,
@@ -19,9 +19,10 @@
     "functions/api/staff/profile-sync.ts",
     "functions/_lib/profileSyncRuntime.ts"
   ],
+  "staff_presentation_isolation": null,
   "intended_differences": [
     "staff dry-run UI/private Ops gate"
   ],
-  "gzip_total_delta": 771,
-  "checked_at": "2026-10-21T17:23:08.877378+00:00"
+  "gzip_total_delta": 777,
+  "checked_at": "2026-10-21T17:56:02.520091+00:00"
 }
