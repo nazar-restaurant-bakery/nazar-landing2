@@ -1,6 +1,6 @@
 # K10 — işletme personel yönetimi
 
-20 Ekim 2026 · Draft PR bağlantısı teslimde eklenecek. Dal `feat/staff-members-management`; taban **#65 / feat/campaign-engine, f6cc0a8**. Birleşme Talip'te. Kaynak: Talip'in 22:53 kararı ve `Personel_Kapsam_Sozlesme.md` v1; yeni `staff.manage` işlemi için **önerilen v1.1 varsayımı**.
+20 Ekim 2026 · [Draft PR #78](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/78). Dal `feat/staff-members-management`; taban **#65 / feat/campaign-engine, f6cc0a8**. Birleşme Talip'te. Kaynak: Talip'in 22:53 kararı ve `Personel_Kapsam_Sozlesme.md` v1; yeni `staff.manage` işlemi için **önerilen v1.1 varsayımı**.
 
 ## Kapsam ve dosyalar
 

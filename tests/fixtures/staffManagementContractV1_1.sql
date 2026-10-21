@@ -42,4 +42,3 @@ $$;
 REVOKE ALL ON FUNCTION public.staff_business_authorized_v1(uuid,text)
   FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.staff_business_authorized_v1(uuid,text) TO authenticated;
-
