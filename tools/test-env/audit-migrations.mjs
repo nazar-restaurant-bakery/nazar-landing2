@@ -169,6 +169,17 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   {key:'k7_payment_day_delivery',order:'6b',path:'supabase/migrations/20261020001000_clover_payment_day_totals.sql',sha:'2b5b31f9539d04b08a3ca7e85baf8bb7ded828d498ad051c43c83d2f664515cc'},
   {key:'k8_delivery',order:7,path:'supabase/migrations/20261021000100_clover_webhook.sql',sha:'1d305756deba4b614c6e60198ef7c954bca9008bc944be7e4bea52f4ff29a94e'},
  ];
+ const k13bDelivery=manifest.k13b_delivery;
+ const k13bPath='supabase/migrations/20261021000450_commission_channel_label.sql';
+ const k13bSha='1d859b4b56b02b75d9662ba976a1b4f149c53c067c6fd0497e4794cda3e33607';
+ if(k13bDelivery){
+  if(typeof k13bDelivery!=='object'||Object.keys(k13bDelivery).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
+   ||k13bDelivery.path!==k13bPath||k13bDelivery.sha256_bytes!==k13bSha||k13bDelivery.application_order!=='10b'
+   ||k13bDelivery.requires_previous_order!==10||k13bDelivery.execution_enabled!==false||k13bDelivery.included_in_k3_reset!==false)
+   issue('K13B_DELIVERY_CONTRACT','K13b must follow K13 and stay outside historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k13bPath));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k13bSha)issue('K13B_DELIVERY_BYTES',k13bPath);}
+  catch{issue('K13B_DELIVERY_MISSING',k13bPath);}
+ }
  for(const policy of currentMainDeliveries){
   const entry=manifest[policy.key];if(!entry)continue;
   if(typeof entry!=='object'||Object.keys(entry).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,sha256_bytes'
@@ -178,7 +189,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   try{const bytes=await fs.readFile(path.join(realRoot,policy.path));if(sha256Lf(bytes.toString('utf8'))!==policy.sha)issue('CURRENT_MAIN_DELIVERY_BYTES',policy.path);}
   catch{issue('CURRENT_MAIN_DELIVERY_MISSING',policy.path);}
  }
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');
