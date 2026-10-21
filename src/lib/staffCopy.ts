@@ -21,3 +21,14 @@ export const staffCopy = {
 export const staffStatuses: Record<string, string> = { new: "Yeni", contacted: "İletişime geçildi", quoted: "Teklif verildi", won: "Kazanıldı", lost: "Kaybedildi", closed: "Kapandı" };
 export const staffEmailLabels: Record<string, string> = { subscribed: "Abone", pending_review: "Onay bekliyor", not_subscribed: "Abone değil", unsubscribed: "Abonelikten ayrıldı", confirmed: "Klaviyo’da doğrulandı", pending: "Onay tamamlanmadı", suppressed: "Gönderim kapalı", not_on_list: "VIP listesinde değil", unavailable: "Doğrulanamadı" };
 export { opsCopy } from "./opsCopy.ts";
+export const loyaltyCopy = {
+  title: "Müşteri ve kampanya ölçüleri", customers: "Yeni / tekrar müşteri", newCustomer: "İlk ödenmiş sipariş", repeatCustomer: "Tekrar sipariş veren",
+  campaigns: "Kampanya kullanımı", applied: "Kullanım", repeat30: "30 günde tekrar", sent: "Gönderilen mesaj", attributed: "Mesaj → sipariş",
+  source: "Gözlenen, içe aktarılmış kayıtlar", scope: "Bu ayın tam satış toplamı değildir. İlk ve tekrar siparişini aynı ay veren kişi iki grupta da yer alabilir.",
+  period: "Ay", checked: "Kontrol", testScope: "Test kayıtları dahil", realScope: "Test kayıtları hariç", loading: "Ölçüler okunuyor",
+  missing: "Bağlantı bekliyor; ölçü kaynağı henüz kullanılabilir değil.", error: "Ölçüler doğrulanamadı. Yenile ile tekrar kontrol edin.",
+  unknown: "Kaynak bu ölçüyü doğrulamıyor.", noOrders: "Bu dönemde doğrulanmış sipariş kaynağı yok.", noAttribution: "Siparişe açık mesaj / kampanya kaynağı bağı yok.",
+  immature: "30 günlük takip süresi henüz tamamlanmadı.", noCampaign: "Bu kaynakta döneme ait kampanya kullanımı yok.",
+  paymentTimeUnknown: "Ödeme tarihi eksik; 30 günlük tekrar oranı doğrulanamıyor.",
+  cohort: "Yalnız 30 günü tamamlayan kullanımlar", notSales: "Gönderim, teslim veya satış kanıtı değildir.", attributionCaution: "Yalnız açık kaynak eşleşmeleri; kesin nedensellik göstermez.",
+} as const;

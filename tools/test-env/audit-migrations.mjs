@@ -132,6 +132,16 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
    issue('K9_DELIVERY_CONTRACT','Held reviewed K9 must retain its exact identity, wait for K8 and stay outside historical replay.');
   try{const bytes=await fs.readFile(path.join(realRoot,k9Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k9Sha)issue('K9_DELIVERY_BYTES','K9 reviewed LF delivery bytes changed.');}catch{issue('K9_DELIVERY_MISSING','K9 file missing.');}
  }
+ const k11Delivery=manifest.k11_delivery;
+ const k11Path='supabase/migrations/20261021000300_loyalty_referrals_metrics.sql';
+ const k11Sha='b33ce7dfca27f354768d84c459bd29faaafb1af73c3afdcc7c3d99f5cbdda9ae';
+ if(k11Delivery){
+  if(typeof k11Delivery!=='object'||Object.keys(k11Delivery).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
+   ||k11Delivery.path!==k11Path||k11Delivery.sha256_bytes!==k11Sha||k11Delivery.application_order!==9
+   ||k11Delivery.requires_previous_order!==8||k11Delivery.execution_enabled!==false||k11Delivery.included_in_k3_reset!==false)
+   issue('K11_DELIVERY_CONTRACT','Held K11 must retain reviewed bytes/order after K9 and stay outside historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k11Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k11Sha)issue('K11_DELIVERY_BYTES','K11 reviewed LF bytes changed.');}catch{issue('K11_DELIVERY_MISSING','K11 file missing.');}
+ }
  // Newly merged main deliveries remain inventory-only. Verify their canonical
  // Git/LF identity without rewriting Windows CRLF checkouts of existing SQL.
  const currentMainDeliveries=[
@@ -147,7 +157,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   try{const bytes=await fs.readFile(path.join(realRoot,policy.path));if(sha256Lf(bytes.toString('utf8'))!==policy.sha)issue('CURRENT_MAIN_DELIVERY_BYTES',policy.path);}
   catch{issue('CURRENT_MAIN_DELIVERY_MISSING',policy.path);}
  }
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');
