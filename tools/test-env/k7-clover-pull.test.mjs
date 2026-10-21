@@ -61,7 +61,10 @@ test('manual pull checks staff before Clover and writes once', async () => {
   const calls = [];
   const fakeFetch = async (input, options) => {
     const url = String(input); calls.push(url);
-    if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+    if (url.endsWith('/rpc/staff_business_authorized_v1')) {
+      assert.deepEqual(JSON.parse(options.body), { p_business_id: env.TEST_BUSINESS_ID, p_operation: 'crm.write' });
+      return Response.json(true);
+    }
     if (url.endsWith('/rpc/clover_order_ingest_v1')) return Response.json({ orderId: 'test' });
     if (url.endsWith('/rpc/clover_pull_attempt_record_v1')) {
       assert.equal(JSON.parse(options.body).p_upserted_count, 1);
@@ -88,7 +91,7 @@ test('manual pull checks staff before Clover and writes once', async () => {
   assert.deepEqual(await response.json(), { code: 'ok', fetched: 1, upserted: 1, day: testDay, requestCount: 4, warnings: [] });
   assert.equal(calls.filter(x => x.endsWith('/rpc/clover_order_ingest_v1')).length, 1);
   assert.equal(calls.filter(x => x.includes('/orders/ORDER123456')).length, 1);
-  assert.ok(calls[0].endsWith('/rpc/crm_staff_authorized_v1'));
+  assert.ok(calls[0].endsWith('/rpc/staff_business_authorized_v1'));
   assert.ok(calls[1].includes('apisandbox.dev.clover.com'));
 });
 
@@ -96,7 +99,7 @@ test('Clover scope failure writes no snapshot', async () => {
   const calls = [];
   const fakeFetch = async (input) => {
     const url = String(input); calls.push(url);
-    if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+    if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
     return new Response('', { status: 403 });
   };
   const config = orderPullConfig(env, 'preview.pages.dev');
@@ -105,10 +108,28 @@ test('Clover scope failure writes no snapshot', async () => {
   assert.equal(calls.length, 1);
 });
 
+test('a denied business write scope stops before Clover and ingest', async () => {
+  const calls = [];
+  const fakeFetch = async (input, options) => {
+    calls.push(String(input));
+    assert.ok(String(input).endsWith('/rpc/staff_business_authorized_v1'));
+    assert.deepEqual(JSON.parse(options.body), { p_business_id: env.TEST_BUSINESS_ID, p_operation: 'crm.write' });
+    return Response.json(false);
+  };
+  const originalWarn = console.warn; console.warn = () => {};
+  try {
+    const response = await cloverOrderPullHandler(fakeFetch)({ request: new Request('https://preview.pages.dev/api/staff/clover-order-pull', {
+      method: 'POST', headers: { Origin: 'https://preview.pages.dev', Authorization: `Bearer ${'a'.repeat(24)}`,
+        'Content-Type': 'application/json' }, body: JSON.stringify({ day: testDay }) }), env });
+    assert.equal(response.status, 403);
+    assert.equal(calls.length, 1);
+  } finally { console.warn = originalWarn; }
+});
+
 test('fatal Clover denial keeps provider HTTP separate from site wrapper', async () => {
   const fakeFetch = async input => {
     const url = String(input);
-    if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+    if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
     if (url.includes('/orders/ORDER123456')) return new Response('', { status: 403 });
     if (url.includes('/orders?')) return listResponse(url);
     throw new Error('unexpected request');
@@ -129,7 +150,7 @@ test('refunded order is ingested after three limited expansions', async () => {
   let ingested;
   const fakeFetch = async (input, options) => {
     const url = String(input);
-    if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+    if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
     if (url.endsWith('/rpc/clover_order_ingest_v1')) {
       ingested = JSON.parse(options.body).p_snapshot;
       return Response.json({ orderId: 'test' });
@@ -165,7 +186,7 @@ test('missing payment expansion returns a safe stage and never ingests', async (
   const auditedEnv = { ...env, CLOVER_PULL_AUDIT: { writeDataPoint: point => auditPoints.push(point) } };
   const fakeFetch = async (input) => {
     const url = String(input); calls.push(url);
-    if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+    if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
     if (url.endsWith('/rpc/clover_pull_attempt_record_v1')) return Response.json(true);
     if (url.includes('/orders/ORDER123456')) {
       const value = order();
@@ -199,7 +220,7 @@ for (const denied of ['refunds', 'customers', 'none']) {
     const auditedEnv = { ...env, CLOVER_PULL_AUDIT: { writeDataPoint: point => auditPoints.push(point) } };
     const fakeFetch = async (input, options) => {
       const url = String(input);
-      if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+      if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
       if (url.endsWith('/rpc/clover_order_ingest_v1')) {
         snapshots.push(JSON.parse(options.body).p_snapshot);
         return Response.json({ orderId: 'test' });
@@ -289,7 +310,7 @@ test('batch expansion avoids core detail calls and an ingest retry upserts by Cl
   let cloverCalls = 0;
   const fakeFetch = async (input, options) => {
     const url = String(input);
-    if (url.endsWith('/rpc/crm_staff_authorized_v1')) return Response.json(true);
+    if (url.endsWith('/rpc/staff_business_authorized_v1')) return Response.json(true);
     if (url.endsWith('/rpc/clover_pull_attempt_record_v1')) {
       attempts.push(JSON.parse(options.body));
       return Response.json(true);

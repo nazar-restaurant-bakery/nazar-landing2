@@ -1,4 +1,4 @@
-import { projectUrl, OPS_BUCKET, uuid, type ActionName, type ClaimedAction, type Commission, type Environment, type SafeAction, type SafeResult } from "./contracts.ts";
+import { projectUrl, OPS_BUCKET, NAZAR_BUSINESS, uuid, type ActionName, type ClaimedAction, type Commission, type Environment, type SafeAction, type SafeResult } from "./contracts.ts";
 import type { CollectorResult, MetricSnapshot } from "./collectors.ts";
 
 export class OpsStore {
@@ -23,7 +23,9 @@ export class OpsStore {
     if (!response.ok) throw new Error("forbidden");
     const value: unknown = await response.json();
     const id = (value as { id?: unknown } | null)?.id;
-    if (!uuid(id) || await this.rpc("crm_staff_authorized_v1", {}, bearer) !== true) throw new Error("forbidden");
+    const businessId = this.env.OPS_BUSINESS_ID?.trim() || NAZAR_BUSINESS;
+    if (!uuid(id) || !uuid(businessId) || await this.rpc("staff_business_authorized_v1",
+      { p_business_id: businessId, p_operation: "ops.write" }, bearer) !== true) throw new Error("forbidden");
     return id;
   }
   claim(actionId: string, userId: string) { return this.rpc<ClaimedAction | null>("ops_claim_action", { p_action_id: actionId, p_user_id: userId }); }

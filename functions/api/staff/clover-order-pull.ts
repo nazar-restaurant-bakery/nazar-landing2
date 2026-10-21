@@ -65,7 +65,8 @@ export function cloverOrderPullHandler(fetcher: Fetcher = fetch) {
       catch { console.warn("k7_pull_attempt_record_unavailable"); }
     };
     try {
-      const allowed = await rpc(config.url, config.publicKey, "crm_staff_authorized_v1", {}, fetcher, bearer);
+      const allowed = await rpc(config.url, config.publicKey, "staff_business_authorized_v1",
+        { p_business_id: config.businessId, p_operation: "crm.write" }, fetcher, bearer);
       if (allowed !== true) return failure(env, 403, "forbidden", "authorization");
       authorized = true;
       const { orders, warnings, requestCount } = await collectOrders(config, window, fetcher, gate);

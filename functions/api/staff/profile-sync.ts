@@ -39,7 +39,9 @@ export function profileSyncHandler(fetcher: Fetcher = fetch) {
       profileSyncRpc(config, name, args, staff ? bearer : null, fetcher);
     try {
       let allowed: unknown;
-      try { allowed = await rpc("crm_staff_authorized_v1", {}, true); }
+      try { allowed = await rpc("staff_business_authorized_v1", {
+        p_business_id: config.businessId, p_operation: request.method === "GET" ? "crm.read" : "crm.write",
+      }, true); }
       catch (error) {
         if (error instanceof RpcUnavailable && [401,403].includes(error.status)) return reply(error.status,"forbidden");
         throw error;

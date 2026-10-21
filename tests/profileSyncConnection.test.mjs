@@ -31,7 +31,7 @@ function harness({allowed=true,provider=empty}={}) {
     const url=new URL(String(input)); calls.push({url,init});
     if(url.hostname==='a.klaviyo.com') return provider(input,init);
     const rpc=url.pathname.split('/').at(-1);
-    assert.equal(rpc,'crm_staff_authorized_v1','Check must never enqueue, claim, read the queue, or finish a lease');
+    assert.equal(rpc,'staff_business_authorized_v1','Check must never enqueue, claim, read the queue, or finish a lease');
     assert.equal(init.method,'POST'); assert.equal(new Headers(init.headers).get('Authorization'),`Bearer ${token}`);
     return json(allowed);
   };
@@ -163,7 +163,7 @@ test('helper independently refuses isolated/nonlive configurations; legacy run a
   }
   const calls=[]; const handler=profileSyncHandler(async(input)=>{
     const name=new URL(String(input)).pathname.split('/').at(-1); calls.push(name);
-    if(name==='crm_staff_authorized_v1')return json(true);
+    if(name==='staff_business_authorized_v1')return json(true);
     if(name==='klaviyo_profile_sync_enqueue_v1')return json({enqueued:0,unchanged:0});
     if(name==='klaviyo_profile_sync_claim_v1')return json(null);
     if(name==='crm_profile_sync_queue_v1')return json({items:[],counts:{total:0}});
@@ -171,9 +171,9 @@ test('helper independently refuses isolated/nonlive configurations; legacy run a
   });
   const result=await request({handler},{action:'run'});
   assert.equal(result.status,200); assert.equal(result.body.processed,0);
-  assert.deepEqual(calls,['crm_staff_authorized_v1','klaviyo_profile_sync_enqueue_v1','klaviyo_profile_sync_claim_v1']);
+  assert.deepEqual(calls,['staff_business_authorized_v1','klaviyo_profile_sync_enqueue_v1','klaviyo_profile_sync_claim_v1']);
   const invalid=await request({handler},{action:['check']}); assert.equal(invalid.status,400);
   const response=await handler({env:liveEnv(),request:new Request(origin+'/api/staff/profile-sync',{headers:{Authorization:`Bearer ${token}`}})});
   assert.equal(response.status,200); assert.equal((await response.json()).mode,'live');
-  assert.deepEqual(calls.slice(-2),['crm_staff_authorized_v1','crm_profile_sync_queue_v1']);
+  assert.deepEqual(calls.slice(-2),['staff_business_authorized_v1','crm_profile_sync_queue_v1']);
 });

@@ -59,7 +59,7 @@
     {"id":"follow_up_queue","path":"database/20261016_crm_follow_up_queue.sql","classification":"production_incremental","requires":["foundation","crm_staff","follow_up_tasks","decision_queue","test_exclusion"],"executable":false,"sha256_lf":"11e7ffca4a6caf78d74f779fceda6aa120eedc9bb0fa241461ea96a794bb26c4","sha256_bytes_at_capture":"961ece2a6232a78b2886983c8adb3fe0b89a8ef66d79504ccf3bbc5d13e1bdbb"},
     {"id":"note_authors","path":"database/20261016_crm_note_authors.sql","classification":"production_incremental","requires":["foundation","crm_staff","crm_overview","test_exclusion"],"executable":false,"sha256_lf":"38a2be871e61e075869d6e918e2eaa0b1d7faa9faeb453a5e621b58e43dd5a3d","sha256_bytes_at_capture":"d7dc68ba69b961d040ee3b33571a9c4a06d97b8ec6208ea4c5857ad855a126e9","definition_guard":{"function":"public.crm_overview_v2(text,text)","before_md5":"cc7195cbba782cf8543bb2beb03bcba2","already_applied_md5":"90ab6562cb720f99c1402b08e02c1397","line":10}}
   ],
-  "not_migrations": ["tests/fixtures/crmNoteAuthors.before.sql", "tests/formErrorMonitoring.rollback.sql", "tests/klaviyoOptout.rollback.sql"],
+  "not_migrations": ["tests/fixtures/crmNoteAuthors.before.sql", "tests/formErrorMonitoring.rollback.sql", "tests/klaviyoOptout.rollback.sql", "tests/fixtures/businessStaffLegacyPlatform.sql", "tests/fixtures/businessStaffLegacyAfterDump.sql", "tests/fixtures/businessStaffLegacyAcceptance.sql", "tests/fixtures/businessStaffLegacyPolicies.sql"],
   "blockers": [
     {"id":"NEUTRAL_BASELINE_MISSING","detail":"No reviewed environment-neutral full schema migration exists. Historical foundation has production-only human guard; do not run it as a canonical test migration.","evidence":["tools/test-env/legacy/01_KURULUM.sql:9","tools/test-env/legacy/01_KURULUM.sql:13","tools/test-env/legacy/01_KURULUM.sql:266"]},
     {"id":"LEGACY_FUNCTION_GUARDS_UNVERIFIED","detail":"Two patches require exact pg_get_functiondef hashes; dependency order is a proposal, not evidence that a clean replay reaches those definitions.","evidence":["database/20261016_catering_assignee_whitespace.sql:11","database/20261016_crm_note_authors.sql:10"]},
@@ -67,5 +67,9 @@
   ]
 ,
   "k7_delivery": {"path":"supabase/migrations/20261020000700_clover_order_core.sql","sha256_bytes":"5f68772059d9cd1e1d7a6a290aa31ee32d10ff5a367201577c4058861aada4a8","included_in_k3_reset":false,"execution_enabled":false},
-  "ops_delivery": {"path": "supabase/migrations/20261020000100_ops_panel.sql", "sha256_bytes": "3204eab72b8b0a9dc64eefc2f02d05ff0fde7a96489e010eb125896347007fa4", "included_in_k3_reset": false, "execution_enabled": false}
+  "ops_delivery": {"path": "supabase/migrations/20261020000100_ops_panel.sql", "sha256_bytes": "3204eab72b8b0a9dc64eefc2f02d05ff0fde7a96489e010eb125896347007fa4", "included_in_k3_reset": false, "execution_enabled": false},
+  "k7_optional_scope_delivery": {"path":"supabase/migrations/20261020000900_clover_optional_scope_status.sql","sha256_bytes":"a3778d0b933c4ce1a56dba04bcadc31b3f6d1c8f214d56af8203a88d6bcc826e","application_order":6,"included_in_k3_reset":false,"execution_enabled":false},
+  "k7_payment_day_delivery": {"path":"supabase/migrations/20261020001000_clover_payment_day_totals.sql","sha256_bytes":"2b5b31f9539d04b08a3ca7e85baf8bb7ded828d498ad051c43c83d2f664515cc","application_order":"6b","included_in_k3_reset":false,"execution_enabled":false},
+  "k8_delivery": {"path":"supabase/migrations/20261021000100_clover_webhook.sql","sha256_bytes":"1d305756deba4b614c6e60198ef7c954bca9008bc944be7e4bea52f4ff29a94e","application_order":7,"included_in_k3_reset":false,"execution_enabled":false},
+  "k9_delivery": {"path":"supabase/migrations/20261021000200_campaign_engine.sql","sha256_bytes":"a8b48363414e134f58379a03f848f4195141bd8c11047a75066d0feb66faba7d","application_order":8,"requires_previous_order":7,"included_in_k3_reset":false,"execution_enabled":false}
 }

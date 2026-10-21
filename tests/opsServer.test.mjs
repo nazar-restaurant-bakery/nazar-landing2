@@ -17,7 +17,11 @@ function harness(options={}) {
   if(parsed.origin===NAZAR_PROJECT){
    const name=parsed.pathname.split('/').at(-1);
    if(parsed.pathname==='/auth/v1/user')return send({id:staff});
-   if(name==='crm_staff_authorized_v1')return send(options.authorized!==false);
+   if(name==='staff_business_authorized_v1'){
+    assert.deepEqual(body,{p_business_id:options.scopeBusiness||NAZAR_BUSINESS,p_operation:'ops.write'});
+    assert.equal(init.headers.Authorization,jwt);
+    return send(options.authorized!==false);
+   }
    if(name==='ops_request_action'){
     const action={id,request_key:body.p_payload.clientRequestId,action:body.p_action,requested_by:staff,requested_at:new Date().toISOString(),status:'queued',result:{},finished_at:null};
     if(options.gray)Object.assign(action,{status:'not_connected',finished_at:new Date().toISOString(),result:{code:'capability_not_connected',message:'Synthetic unavailable capability.'}});
@@ -63,6 +67,20 @@ test('unauthorized staff, foreign origins, wrong project and claim replay never 
 });
 test('lost enqueue acknowledgement recovers exact request_key with no second enqueue',async()=>{
  const h=harness({lostAck:true});assert.equal((await h.invoke('collect')).status,202);assert.equal(h.actions.length,1);assert.equal(h.claims,1);assert.equal(h.finishes.length,1);assert.ok(h.calls.some(c=>c.path.endsWith('/ops_actions_v')));
+});
+test('configured business scope is checked without a fallback to default business before collection',async()=>{
+ const business='44444444-4444-4444-8444-444444444444';
+ const h=harness({authorized:false,scopeBusiness:business,env:{OPS_BUSINESS_ID:` ${business} `}});
+ assert.equal((await h.invoke('collect')).status,403);
+ assert.deepEqual(h.calls.map(call=>call.path),['/auth/v1/user','/rest/v1/rpc/staff_business_authorized_v1']);
+ assert.equal(h.actions.length,0);assert.equal(h.claims,0);assert.equal(h.finishes.length,0);
+ assert.equal(h.calls.some(call=>call.host!==new URL(NAZAR_PROJECT).hostname),false);
+});
+test('invalid configured business rejects after authentication without scope RPC or provider work',async()=>{
+ const h=harness({env:{OPS_BUSINESS_ID:'not-a-business-uuid'}});
+ assert.equal((await h.invoke('collect')).status,403);
+ assert.deepEqual(h.calls.map(call=>call.path),['/auth/v1/user']);
+ assert.equal(h.actions.length,0);assert.equal(h.claims,0);assert.equal(h.finishes.length,0);
 });
 test('one provider failure keeps other snapshots and records partial collection; daily cap prevents external call',async()=>{
  const h=harness({siteStatus:503});await h.invoke('collect');assert.equal(h.finishes[0].p_status,'failed');assert.ok(h.finishes[0].p_metrics.some(m=>m.metric==='manual_runs_24h'));assert.equal(h.finishes[0].p_connections.find(c=>c.source==='site').status,'error');

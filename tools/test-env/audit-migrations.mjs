@@ -108,7 +108,46 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
    issue('K7_DELIVERY_CONTRACT','Reviewed K7 delivery must retain its exact identity and stay outside historical replay.');
   try{const bytes=await fs.readFile(path.join(realRoot,k7Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k7Sha)issue('K7_DELIVERY_BYTES','K7 reviewed LF delivery bytes changed.');}catch{issue('K7_DELIVERY_MISSING','K7 file missing.');}
  }
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[]);
+ // PR66 adds the independently reviewed K7 report patch at order 6. Inventory
+ // registration cannot enable its execution or include it in K3 reset/replay.
+ const k7OptionalDelivery=manifest.k7_optional_scope_delivery;
+ const k7OptionalPath='supabase/migrations/20261020000900_clover_optional_scope_status.sql';
+ const k7OptionalSha='a3778d0b933c4ce1a56dba04bcadc31b3f6d1c8f214d56af8203a88d6bcc826e';
+ if(k7OptionalDelivery){
+  if(typeof k7OptionalDelivery!=='object'||Object.keys(k7OptionalDelivery).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,sha256_bytes'
+   ||k7OptionalDelivery.path!==k7OptionalPath||k7OptionalDelivery.sha256_bytes!==k7OptionalSha
+   ||k7OptionalDelivery.application_order!==6||k7OptionalDelivery.execution_enabled!==false||k7OptionalDelivery.included_in_k3_reset!==false)
+   issue('K7_OPTIONAL_SCOPE_DELIVERY_CONTRACT','Reviewed K7 report patch must retain its exact identity/order and stay outside historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k7OptionalPath));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k7OptionalSha)issue('K7_OPTIONAL_SCOPE_DELIVERY_BYTES','K7 report patch reviewed LF bytes changed.');}catch{issue('K7_OPTIONAL_SCOPE_DELIVERY_MISSING','K7 report patch file missing.');}
+ }
+ // Held K9 is inventory only: reserving order 8 after K8 cannot authorize
+ // execution or insert the new engine into historical K3 reset/replay.
+ const k9Delivery=manifest.k9_delivery;
+ const k9Path='supabase/migrations/20261021000200_campaign_engine.sql';
+ const k9Sha='a8b48363414e134f58379a03f848f4195141bd8c11047a75066d0feb66faba7d';
+ if(k9Delivery){
+  if(typeof k9Delivery!=='object'||Object.keys(k9Delivery).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
+   ||k9Delivery.path!==k9Path||k9Delivery.sha256_bytes!==k9Sha||k9Delivery.application_order!==8
+   ||k9Delivery.requires_previous_order!==7||k9Delivery.execution_enabled!==false||k9Delivery.included_in_k3_reset!==false)
+   issue('K9_DELIVERY_CONTRACT','Held reviewed K9 must retain its exact identity, wait for K8 and stay outside historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k9Path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k9Sha)issue('K9_DELIVERY_BYTES','K9 reviewed LF delivery bytes changed.');}catch{issue('K9_DELIVERY_MISSING','K9 file missing.');}
+ }
+ // Newly merged main deliveries remain inventory-only. Verify their canonical
+ // Git/LF identity without rewriting Windows CRLF checkouts of existing SQL.
+ const currentMainDeliveries=[
+  {key:'k7_payment_day_delivery',order:'6b',path:'supabase/migrations/20261020001000_clover_payment_day_totals.sql',sha:'2b5b31f9539d04b08a3ca7e85baf8bb7ded828d498ad051c43c83d2f664515cc'},
+  {key:'k8_delivery',order:7,path:'supabase/migrations/20261021000100_clover_webhook.sql',sha:'1d305756deba4b614c6e60198ef7c954bca9008bc944be7e4bea52f4ff29a94e'},
+ ];
+ for(const policy of currentMainDeliveries){
+  const entry=manifest[policy.key];if(!entry)continue;
+  if(typeof entry!=='object'||Object.keys(entry).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,sha256_bytes'
+   ||entry.path!==policy.path||entry.sha256_bytes!==policy.sha||entry.application_order!==policy.order
+   ||entry.execution_enabled!==false||entry.included_in_k3_reset!==false)
+   issue('CURRENT_MAIN_DELIVERY_CONTRACT',policy.key);
+  try{const bytes=await fs.readFile(path.join(realRoot,policy.path));if(sha256Lf(bytes.toString('utf8'))!==policy.sha)issue('CURRENT_MAIN_DELIVERY_BYTES',policy.path);}
+  catch{issue('CURRENT_MAIN_DELIVERY_MISSING',policy.path);}
+ }
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');
