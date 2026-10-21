@@ -1,6 +1,6 @@
 # K10 — personel kupon kasa ekranı
 
-21 Ekim 2026 · Dal: `feat/staff-coupon-checkout`; **Draft**, taban #72/#65 (`066bdd0`). Yalnız personel ekranı; kupon çekirdeği / ihraç / e-posta Koordinasyon'dadır. Kaynak: `K10_Kupon_Sozlesme.md` v1, `K10_Kampanya_Kararlari.md`.
+20 Ekim 2026 · [Draft PR #76](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/76) · Dal: `feat/staff-coupon-checkout`; **Draft**, taban #72/#65 (`066bdd0`). Yalnız personel ekranı; kupon çekirdeği / ihraç / e-posta Koordinasyon'dadır. Kaynak: `K10_Kupon_Sozlesme.md` v1, `K10_Kampanya_Kararlari.md`.
 
 ## Kapsam ve dosyalar
 

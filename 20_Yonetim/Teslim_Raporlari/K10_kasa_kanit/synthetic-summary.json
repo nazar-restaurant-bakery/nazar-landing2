@@ -14,5 +14,9 @@
   "secret_added": false,
   "provider_calls": 0,
   "hosted_changes": false,
-  "coupon_core_concurrency_proof": "Owned by Coordination core PR; UI two-device acceptance uses atomic synthetic RPC."
+  "coupon_core_concurrency_proof": "Owned by Coordination core PR; UI two-device acceptance uses atomic synthetic RPC.",
+  "draft_pr": 76,
+  "pr_base": "feat/campaign-eligibility-check",
+  "merged": false,
+  "deployed": false
 }
