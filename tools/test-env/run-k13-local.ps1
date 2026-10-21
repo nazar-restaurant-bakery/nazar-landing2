@@ -18,8 +18,9 @@ try {
     'tools/test-env/k7-local-bootstrap.sql',
     'supabase/migrations/20261020000700_clover_order_core.sql',
     'tools/test-env/k13-local-bootstrap.sql',
+    'supabase/migrations/20261021000350_nazar_commission_engine.sql',
+    'tools/test-env/k13-local-settings.sql',
     'tools/test-env/k13-shared-staff.fixture.sql',
-    'tests/opsDbCommission.fixture.sql',
     'supabase/migrations/20261021000400_commission_from_orders.sql',
     'tools/test-env/k13-commission-test.sql'
   )
