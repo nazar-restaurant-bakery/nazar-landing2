@@ -19,16 +19,16 @@ export async function collect(ctx: CollectorContext): Promise<CollectorResult> {
     const identity = await query("SELECT customer.id, customer.time_zone, customer.currency_code FROM customer");
     if (identity.length !== 1 || !object(identity[0]) || !object(identity[0].customer) || String(identity[0].customer.id) !== customer
       || identity[0].customer.timeZone !== "America/New_York" || identity[0].customer.currencyCode !== "USD") throw new CollectorError("ads_account_or_timezone_mismatch");
-    const stats = await query("SELECT metrics.cost_micros, metrics.clicks, metrics.conversions FROM customer WHERE segments.date BETWEEN '" + period.sevenStart + "' AND '" + period.sevenEnd + "'");
+    const stats = await query("SELECT metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM customer WHERE segments.date BETWEEN '" + period.yesterday + "' AND '" + period.yesterday + "'");
     const campaigns = await query("SELECT campaign.id, campaign.status FROM campaign WHERE campaign.status != 'REMOVED'");
     if (!campaigns.every(row => object(row) && object(row.campaign) && typeof row.campaign.id === "string" && ["ENABLED", "PAUSED"].includes(String(row.campaign.status)))) throw new CollectorError("ads_invalid_campaigns");
-    let spend: number | null = null, clicks: number | null = null, conversions: number | null = null;
+    let spend: number | null = null, impressions: number | null = null, clicks: number | null = null, conversions: number | null = null;
     if (stats.length === 1 && object(stats[0]) && object(stats[0].metrics)) {
       const values = stats[0].metrics; const micros = count(values.costMicros); spend = micros === null ? null : micros / 1_000_000;
-      clicks = count(values.clicks); conversions = typeof values.conversions === "number" && Number.isFinite(values.conversions) && values.conversions >= 0 ? values.conversions : null;
+      impressions = count(values.impressions); clicks = count(values.clicks); conversions = typeof values.conversions === "number" && Number.isFinite(values.conversions) && values.conversions >= 0 ? values.conversions : null;
     }
-    if (stats.length > 1 || (stats.length === 1 && [spend, clicks, conversions].some(value => value === null))) throw new CollectorError("ads_incomplete_statistics");
+    if (stats.length > 1 || (stats.length === 1 && [spend, impressions, clicks, conversions].some(value => value === null))) throw new CollectorError("ads_incomplete_statistics");
     const unique = new Map(campaigns.map(row => [row.campaign.id, row.campaign.status]));
-    return { source: "google_ads", status: "connected", metrics: [metric(ctx, "google_ads", "spend_7d", spend, null, period.sevenStart, period.sevenEnd), metric(ctx, "google_ads", "clicks_7d", clicks, null, period.sevenStart, period.sevenEnd), metric(ctx, "google_ads", "conversions_7d", conversions, "Ads conversion; doğrulanmış sipariş değildir.", period.sevenStart, period.sevenEnd), metric(ctx, "google_ads", "active_campaigns", [...unique.values()].filter(status => status === "ENABLED").length), metric(ctx, "google_ads", "paused_campaigns", [...unique.values()].filter(status => status === "PAUSED").length)], requestsUsed: start - budget(ctx).remaining };
+    return { source: "google_ads", status: "connected", metrics: [metric(ctx, "google_ads", "spend_yesterday", spend, null, period.yesterday, period.yesterday), metric(ctx, "google_ads", "impressions_yesterday", impressions, null, period.yesterday, period.yesterday), metric(ctx, "google_ads", "clicks_yesterday", clicks, null, period.yesterday, period.yesterday), metric(ctx, "google_ads", "conversions_yesterday", conversions, "Ads conversion; doğrulanmış sipariş değildir.", period.yesterday, period.yesterday), metric(ctx, "google_ads", "active_campaigns", [...unique.values()].filter(status => status === "ENABLED").length), metric(ctx, "google_ads", "paused_campaigns", [...unique.values()].filter(status => status === "PAUSED").length)], requestsUsed: start - budget(ctx).remaining };
   } catch (error) { return failure(ctx, "google_ads", start, error); }
 }
