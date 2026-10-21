@@ -205,3 +205,26 @@ test('CLI reports blocked readiness by default; integrity-only success remains e
  const unsupported=spawnSync(process.execPath,[script,'--apply'],{cwd:root,encoding:'utf8',timeout:15000});
  assert.equal(unsupported.status,64);assert.match(unsupported.stderr,/Usage/);
 });
+
+test('held K11 is exact-pinned at order 9 after K9 and cannot authorize replay',async()=>{
+ const entry=source.k11_delivery;assert.ok(entry);
+ assert.equal(entry.path,'supabase/migrations/20261021000300_loyalty_referrals_metrics.sql');
+ const bytes=await fs.readFile(new URL('../'+entry.path,import.meta.url));
+ assert.equal(bytes.includes(13),false);assert.equal(sha256Lf(bytes.toString('utf8')),entry.sha256_bytes);
+ assert.equal(entry.application_order,9);assert.equal(entry.requires_previous_order,8);
+ assert.equal(entry.execution_enabled,false);assert.equal(entry.included_in_k3_reset,false);
+ const missing=clone();delete missing.k11_delivery;
+ assert.ok(codes(await auditMigrations({root,manifest:missing})).includes('UNINVENTORIED_CANONICAL_SQL'));
+ for(const mutate of [
+  m=>{m.k11_delivery.sha256_bytes='f'.repeat(64);},
+  m=>{m.k11_delivery.execution_enabled=true;},
+  m=>{m.k11_delivery.included_in_k3_reset=true;},
+  m=>{m.k11_delivery.path='../unreviewed.sql';},
+  m=>{m.k11_delivery.application_order=8;},
+  m=>{m.k11_delivery.requires_previous_order=7;},
+  m=>{m.k11_delivery.application_tool='arbitrary-executable.py';},
+ ]){const manifest=clone();mutate(manifest);assert.ok(codes(await auditMigrations({root,manifest})).includes('K11_DELIVERY_CONTRACT'));}
+ const result=await auditMigrations({root});
+ assert.equal(result.readiness.ready,false);assert.equal(result.readiness.execution_performed,false);
+ assert.ok(result.proposed_order.every(row=>row.path!==entry.path));
+});

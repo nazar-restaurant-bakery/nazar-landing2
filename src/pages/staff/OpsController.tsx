@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { staffClient } from "../../lib/crmData";
-import { NAZAR_BUSINESS_ID } from "../../lib/supabase";
+import { browserDeployment, NAZAR_BUSINESS_ID } from "../../lib/supabase";
 import { opsCopy as c } from "../../lib/staffCopy";
 import { opsData, opsDenied, opsPending, opsReportPath, validOpsAction, validOpsActions, validOpsConnections, validOpsDashboard } from "../../lib/opsData";
 import type { OpsAction, OpsActionName, OpsConnection, OpsDashboard } from "../../lib/opsData";
 import OpsView from "./OpsView";
+import { loyaltyMonth, loyaltyRequestParams, loyaltyScopeMatches, validLoyaltyMetrics } from "../../lib/loyaltyMetrics";
+import type { LoyaltyMetrics, LoyaltyReadState, LoyaltyScope } from "../../lib/loyaltyMetrics";
+import { safeCrmRequest } from "../../lib/crmUi";
 
 type Props = {
   identity: string; includeTests: boolean; onDenied: () => void;
@@ -24,6 +27,7 @@ export default function OpsController({ identity, includeTests, onDenied, onRefr
   const [busy, setBusy] = useState(false);
   const [writeBlocked, setWriteBlocked] = useState(false);
   const [message, setMessage] = useState("");
+  const [loyalty, setLoyalty] = useState<{ scope: LoyaltyScope; timezone: string; data: LoyaltyMetrics | null; state: LoyaltyReadState } | null>(null);
   const alive = useRef(false);
   const epoch = useRef(0);
   const reading = useRef(false);
@@ -31,6 +35,7 @@ export default function OpsController({ identity, includeTests, onDenied, onRefr
   const actionReading = useRef(false);
   const actionSequence = useRef(0);
   const snapshotSequence = useRef(0);
+  const loyaltySequence = useRef(0);
   const health = useRef<{ dashboard: ReadState; connections: ReadState; actions: ReadState }>({ dashboard: "error", connections: "error", actions: "error" });
   const actionRows = useRef<OpsAction[] | null>(null);
   const pending = useRef<Pending | null>(null);
@@ -44,11 +49,44 @@ export default function OpsController({ identity, includeTests, onDenied, onRefr
   }, []);
   const deny = useCallback(() => {
     // Invalidate all in-flight reads/writes before the parent removes this view.
-    epoch.current++; actionSequence.current++; snapshotSequence.current++;
+    epoch.current++; actionSequence.current++; snapshotSequence.current++; loyaltySequence.current++;
     reading.current = false; actionReading.current = false; writing.current = false; pending.current = null; actionRows.current = null;
-    setDashboard(null); setConnections(null); setActions(null); setBusy(false); setWriteBlocked(true);
+    setDashboard(null); setConnections(null); setActions(null); setLoyalty(null); setBusy(false); setWriteBlocked(true);
     callbacks.current.onDenied();
   }, []);
+  const readLoyalty = useCallback(async () => {
+    if (!alive.current) return;
+    const current = epoch.current, sequence = ++loyaltySequence.current;
+    let scope: LoyaltyScope = { businessId: browserDeployment.businessId, identity, includeTests, month: loyaltyMonth() };
+    let timezone = "America/New_York";
+    setLoyalty({ scope, timezone, data: null, state: "loading" });
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 18_000);
+    const load = (context: LoyaltyScope) => safeCrmRequest(async () => {
+      if (!staffClient || !context.businessId) return { data: null, error: { code: "MISSING_CONFIG" } };
+      const query = staffClient.rpc("loyalty_metrics_v1", loyaltyRequestParams(context));
+      return await (query.abortSignal?.(controller.signal) ?? query);
+    });
+    try {
+      let result = await load(scope);
+      if (!alive.current || current !== epoch.current || sequence !== loyaltySequence.current) return;
+      if (opsDenied(result.error)) { deny(); return; }
+      // The first read discovers the tenant timezone. At a month boundary,
+      // re-read its actual current month before accepting any aggregate.
+      if (!result.error && validLoyaltyMetrics(result.data, scope)) {
+        timezone = result.data.timezone;
+        const tenantMonth = loyaltyMonth(new Date(), timezone);
+        if (scope.month !== tenantMonth) {
+          scope = { ...scope, month: tenantMonth };
+          result = await load(scope);
+          if (!alive.current || current !== epoch.current || sequence !== loyaltySequence.current) return;
+          if (opsDenied(result.error)) { deny(); return; }
+        }
+      }
+      const valid = !result.error && validLoyaltyMetrics(result.data, scope);
+      setLoyalty({ scope, timezone, data: valid ? result.data as LoyaltyMetrics : null, state: valid ? "ready" : opsPending(result.error) ? "missing" : "error" });
+    } finally { window.clearTimeout(timer); }
+  }, [identity, includeTests, deny]);
   const acceptActions = useCallback((next: OpsAction[], manual = false) => {
     actionRows.current = next; setActions(next);
     const tracked = pending.current;
@@ -87,7 +125,8 @@ export default function OpsController({ identity, includeTests, onDenied, onRefr
     if (readyDashboard) setDashboard(d.data as OpsDashboard);
     if (readyConnections) setConnections((cResult.data as { items: OpsConnection[] }).items);
     updateHealth();
-  }, [deny, updateHealth]);
+    void readLoyalty();
+  }, [deny, updateHealth, readLoyalty]);
 
   const readActions = useCallback(async () => {
     if (!alive.current || reading.current || actionReading.current) return;
@@ -137,6 +176,11 @@ export default function OpsController({ identity, includeTests, onDenied, onRefr
       writing.current = false; pending.current = null; actionRows.current = null;
     };
   }, [read]);
+
+  useEffect(() => {
+    void readLoyalty();
+    return () => { loyaltySequence.current++; }; // eslint-disable-line react-hooks/exhaustive-deps -- request generation, not a DOM ref
+  }, [readLoyalty]);
 
   useEffect(() => {
     if (!busy) return;
@@ -223,10 +267,13 @@ export default function OpsController({ identity, includeTests, onDenied, onRefr
     ...dashboard, metrics: dashboard.metrics.filter(item => includeTests || !item.is_test),
     offers: dashboard.offers.filter(item => includeTests || !item.is_test),
   };
+  const currentLoyaltyScope: LoyaltyScope = { businessId: browserDeployment.businessId, identity, includeTests,
+    month: loyaltyMonth(new Date(), loyalty?.timezone || "America/New_York") };
+  const visibleLoyalty = loyalty && loyaltyScopeMatches(loyalty.scope, currentLoyaltyScope) ? loyalty : null;
   return <OpsView dashboard={visibleDashboard} connections={connections} actions={actions}
     loading={loading} unavailable={unavailable} backendPending={backendPending}
     busy={busy} writeBlocked={writeBlocked} message={message}
-    onRefresh={() => { callbacks.current.onRefreshLegacy(); void read(true); }}
+    onRefresh={() => { callbacks.current.onRefreshLegacy(); void read(true); void readLoyalty(); }}
     onRequest={request} onDownload={download} onResume={resume} identity={identity}
-    errorsSection={errorsSection} detailsSection={detailsSection} />;
+    errorsSection={errorsSection} detailsSection={detailsSection} loyalty={visibleLoyalty?.data ?? null} loyaltyState={visibleLoyalty?.state ?? "loading"} />;
 }

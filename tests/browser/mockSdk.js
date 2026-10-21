@@ -117,6 +117,8 @@ async function rpc(name, params) {
   if (state.mode === 'denied') return result(null, { code: '42501' });
   const opsResult = opsMock.rpc(name);
   if (opsResult !== undefined) return opsResult;
+  if (name === 'loyalty_metrics_v1') return state.loyaltyResponse
+    ? clone(state.loyaltyResponse) : result(null, { code: 'PGRST202' });
   if (state.mode === 'throws' && !writes.has(name)) throw new Error('Synthetic read connection failure');
   if (name === 'crm_overview_v2') {
     if (params?.p_search !== '' || !['all', 'test'].includes(params?.p_segment)) return unknown(name + ' parameters', params);
@@ -218,6 +220,7 @@ window.__staffMock = {
   ids: fixtureIds,
   snapshot() { return clone({ ...state, held: state.held.map(h => h.name), holdNames: [...state.holdNames] }); },
   setMode(mode) { state.mode = mode; },
+  setLoyaltyResponse(data, error = null) { state.loyaltyResponse = result(data, error); },
   hold(name) { state.holdNames.push(name); },
   release() { const held = state.held.splice(0); for (const h of held) h.resolve(); },
   signOut() { state.signedIn = false; emit('SIGNED_OUT', null); },

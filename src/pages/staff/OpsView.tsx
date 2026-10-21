@@ -10,6 +10,8 @@ import ActionColumn from "../../components/staff/ops/ActionColumn";
 import ActionLog from "../../components/staff/ops/ActionLog";
 import { opsAge, opsCurrency, opsMetricNumber, opsPercent } from "../../components/staff/ops/opsFormat";
 import { observedSiteFailure } from "../../components/staff/ops/opsMetricVisibility";
+import LoyaltyMetricTiles from "../../components/staff/ops/LoyaltyMetricTiles";
+import type { LoyaltyMetrics, LoyaltyReadState } from "../../lib/loyaltyMetrics";
 
 export interface OpsViewProps {
   identity: string;
@@ -29,10 +31,12 @@ export interface OpsViewProps {
   errorsSection?: ReactNode;
   detailsSection?: ReactNode;
   children?: ReactNode;
+  loyalty?: LoyaltyMetrics | null;
+  loyaltyState?: LoyaltyReadState;
 }
 type Format = "number" | "money" | "percent" | "text" | "date" | "up";
 
-export default function OpsView({ identity, dashboard, connections, actions, loading, unavailable, backendPending, busy, writeBlocked, message, onRefresh, onRequest, onDownload, onResume, errorsSection, detailsSection, children }: OpsViewProps) {
+export default function OpsView({ identity, dashboard, connections, actions, loading, unavailable, backendPending, busy, writeBlocked, message, onRefresh, onRequest, onDownload, onResume, errorsSection, detailsSection, children, loyalty = null, loyaltyState = "missing" }: OpsViewProps) {
   const [selectedAction, setSelectedAction] = useState<OpsActionName | null>(null);
   const connection = (source: OpsSource) => backendPending ? undefined : connections?.find(item => item.source === source);
   const failedSitePing = observedSiteFailure(dashboard?.metrics || [], connection("site"), actions);
@@ -60,6 +64,7 @@ export default function OpsView({ identity, dashboard, connections, actions, loa
     {message && <p className="staff-panel p-4 text-sm" role="status">{message}</p>}
     <StatusStrip connections={backendPending ? null : connections} loading={loading} disabled={busy} onRefresh={onRefresh} onCollect={() => setSelectedAction("collect")} collectConfirmation={selectedAction === "collect" ? <ActionColumn confirmationOnly dashboard={dashboard} connections={connections} actions={actions} selectedAction="collect" onSelectAction={setSelectedAction} onRequest={onRequest} busy={busy} blocked={writeBlocked} backendPending={backendPending} /> : null} />
     <p className="text-xs text-stone-500">{c.snapshotScope} {c.realTotals}</p>
+    <LoyaltyMetricTiles data={loyalty} state={loyaltyState} />
     <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="grid min-w-0 items-stretch gap-4 md:grid-cols-2" data-testid="ops-metric-grid">
         <MetricTile {...tileProps(1, "clover", c.cloverSales, "net_sales_yesterday")} footer={<p>{c.netSalesDefinition}</p>}><div className="space-y-4">{row(`${c.yesterday} · ${c.netSales}`, "clover", "net_sales_yesterday", "money", true)}{row(`${c.monthToDate} · ${c.netSales}`, "clover", "net_sales_mtd", "money")}<div className="grid grid-cols-2 gap-3">{row(`${c.yesterday} · ${c.orders}`, "clover", "orders_yesterday")}{row(`${c.monthToDate} · ${c.orders}`, "clover", "orders_mtd")}</div></div></MetricTile>
