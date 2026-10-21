@@ -126,8 +126,19 @@ test('GA4 service account token URL is fixed and both OAuth/report calls consume
   assert.doesNotMatch(JSON.stringify(result), /PRIVATE KEY|synthetic-exchanged|gserviceaccount/);
 });
 
-const adsEnv = { GOOGLE_ADS_ACCESS_TOKEN: 'synthetic-access', GOOGLE_ADS_DEVELOPER_TOKEN: 'synthetic-dev' };
+const adsEnv = { GOOGLE_ADS_CLIENT_ID: 'synthetic-client', GOOGLE_ADS_CLIENT_SECRET: 'synthetic-secret', GOOGLE_ADS_REFRESH_TOKEN: 'synthetic-refresh', GOOGLE_ADS_CUSTOMER_ID: '647-847-7284' };
 const adsRouter = (url, init) => {
+  if (url.hostname === 'oauth2.googleapis.com') {
+    assert.equal(url.href, 'https://oauth2.googleapis.com/token');
+    const body = new URLSearchParams(init.body);
+    assert.equal(body.get('grant_type'), 'refresh_token');
+    assert.equal(body.get('client_id'), adsEnv.GOOGLE_ADS_CLIENT_ID);
+    assert.equal(body.get('client_secret'), adsEnv.GOOGLE_ADS_CLIENT_SECRET);
+    assert.equal(body.get('refresh_token'), adsEnv.GOOGLE_ADS_REFRESH_TOKEN);
+    return json({ access_token: 'synthetic-access' });
+  }
+  assert.equal(init.headers.Authorization, 'Bearer synthetic-access');
+  assert.equal('developer-token' in init.headers, false);
   assert.equal(url.href, 'https://googleads.googleapis.com/v26/customers/6478477284/googleAds:searchStream'); const query = JSON.parse(init.body).query;
   if (query.includes('customer.time_zone')) return json([{ results: [{ customer: { id: '6478477284', timeZone: 'America/New_York', currencyCode: 'USD' } }] }]);
   if (query.includes('metrics.cost_micros')) return json([{ results: [{ metrics: { costMicros: '1200000', clicks: '4', conversions: 2 } }] }]);
@@ -137,20 +148,39 @@ const adsRouter = (url, init) => {
 test('Google Ads read-only queries fixed account, verifies scope and does not double-count campaigns', async () => {
   const ctx = make(adsEnv, adsRouter); const result = await ads(ctx);
   assert.equal(result.status, 'connected'); assert.equal(val(result, 'spend_7d'), 1.2); assert.equal(val(result, 'clicks_7d'), 4); assert.equal(val(result, 'conversions_7d'), 2);
-  assert.equal(val(result, 'active_campaigns'), 1); assert.equal(val(result, 'paused_campaigns'), 1); assert.equal(ctx.calls.length, 3);
+  assert.equal(val(result, 'active_campaigns'), 1); assert.equal(val(result, 'paused_campaigns'), 1); assert.equal(ctx.calls.length, 4);
   assert.equal(ctx.calls.some(call => /mutate/.test(call.url)), false);
 });
 test('Ads credentials for another account are rejected before any fetch', async () => {
   const ctx = make({ ...adsEnv, GOOGLE_ADS_CUSTOMER_ID: '999-999-9999' }); assert.equal((await ads(ctx)).status, 'not_connected'); assert.equal(ctx.calls.length, 0);
 });
 test('Ads OAuth refresh call is budgeted along with all read calls', async () => {
-  const ctx = make({ GOOGLE_ADS_DEVELOPER_TOKEN: 'synthetic-dev', GOOGLE_ADS_CLIENT_ID: 'synthetic-client', GOOGLE_ADS_CLIENT_SECRET: 'synthetic-secret', GOOGLE_ADS_REFRESH_TOKEN: 'synthetic-refresh' }, (url, init) => url.hostname === 'oauth2.googleapis.com' ? json({ access_token: 'synthetic-access' }) : adsRouter(url, init));
+  const ctx = make(adsEnv, (url, init) => url.hostname === 'oauth2.googleapis.com' ? json({ access_token: 'synthetic-access' }) : adsRouter(url, init));
   const result = await ads(ctx); assert.equal(result.status, 'connected'); assert.equal(result.requestsUsed, 4); assert.equal(ctx.budget.remaining, 26);
   assert.doesNotMatch(JSON.stringify(result), /synthetic-secret|synthetic-refresh/);
 });
+test('Ads missing or blank OAuth settings stay disconnected without provider calls', async () => {
+  for (const key of Object.keys(adsEnv)) for (const value of [undefined, '', '   ']) {
+    const ctx = make({ ...adsEnv, [key]: value });
+    const result = await ads(ctx);
+    assert.equal(result.status, 'not_connected'); assert.deepEqual(result.metrics, []);
+    assert.equal(ctx.calls.length, 0); assert.equal(ctx.budget.remaining, 30);
+  }
+  const legacy = make({ GOOGLE_ADS_ACCESS_TOKEN: 'legacy-access', GOOGLE_ADS_DEVELOPER_TOKEN: 'legacy-dev', GOOGLE_ADS_CUSTOMER_ID: '6478477284' });
+  assert.equal((await ads(legacy)).status, 'not_connected'); assert.equal(legacy.calls.length, 0);
+});
+test('Ads ignores legacy tokens and still refreshes OAuth; provider denial is sanitized', async () => {
+  const ctx = make({ ...adsEnv, GOOGLE_ADS_ACCESS_TOKEN: 'legacy-access', GOOGLE_ADS_DEVELOPER_TOKEN: 'legacy-dev' }, adsRouter);
+  assert.equal((await ads(ctx)).status, 'connected'); assert.equal(ctx.calls.length, 4);
+  const denied = make(adsEnv, (url, init) => url.hostname === 'oauth2.googleapis.com' ? adsRouter(url, init) : new Response('private-provider-body synthetic-secret', { status: 403 }));
+  const result = await ads(denied);
+  assert.equal(result.error, 'provider_http_403'); assert.deepEqual(result.metrics, []);
+  assert.doesNotMatch(JSON.stringify(result), /private-provider-body|synthetic-secret/);
+});
+
 test('Ads wrong timezone rejects report instead of relabelling its dates NY', async () => {
-  const ctx = make(adsEnv, () => json([{ results: [{ customer: { id: '6478477284', timeZone: 'UTC', currencyCode: 'USD' } }] }]));
-  const result = await ads(ctx); assert.equal(result.status, 'error'); assert.equal(ctx.calls.length, 1); assert.deepEqual(result.metrics, []);
+  const ctx = make(adsEnv, (url, init) => url.hostname === 'oauth2.googleapis.com' ? adsRouter(url, init) : json([{ results: [{ customer: { id: '6478477284', timeZone: 'UTC', currencyCode: 'USD' } }] }]));
+  const result = await ads(ctx); assert.equal(result.status, 'error'); assert.equal(ctx.calls.length, 2); assert.deepEqual(result.metrics, []);
 });
 
 const profile = (id, attributes = {}, marketing = {}) => ({ id, attributes: { email: id + '@customer.example', first_name: 'Fixture', last_name: 'Guest', properties: {},

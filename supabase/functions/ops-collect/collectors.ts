@@ -95,7 +95,7 @@ export function previousAt(ctx: CollectorContext, source: OpsSource, key: string
   return found && target.getTime() - Date.parse(found.collected_at) <= 86_400_000 ? found : null;
 }
 export async function googleAccessToken(ctx: CollectorContext, prefix: "GA4" | "GOOGLE_ADS"): Promise<string | null> {
-  if (ctx.env[prefix + "_ACCESS_TOKEN"]?.trim()) return ctx.env[prefix + "_ACCESS_TOKEN"]!.trim();
+  if (prefix === "GA4" && ctx.env[prefix + "_ACCESS_TOKEN"]?.trim()) return ctx.env[prefix + "_ACCESS_TOKEN"]!.trim();
   if (prefix === "GOOGLE_ADS") {
     const client = ctx.env.GOOGLE_ADS_CLIENT_ID, secret = ctx.env.GOOGLE_ADS_CLIENT_SECRET, refresh = ctx.env.GOOGLE_ADS_REFRESH_TOKEN;
     if (!client || !secret || !refresh) return null;
