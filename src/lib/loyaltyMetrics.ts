@@ -3,7 +3,7 @@ type KnownCount = { known: boolean; reason: string | null };
 export type LoyaltyMetrics = {
   version: 1; business_id: string; month: string; timezone: string; include_tests: boolean; generated_at: string;
   customer_counts: KnownCount & { new: number | null; repeat: number | null };
-  campaigns: KnownCount & { items: { campaign_id: string; name: string; applied: number;
+  campaigns: KnownCount & { items: { campaign_id: string; name: string; applied: number; order_linked?: number; staff_attested?: number;
     repeat_30d: KnownCount & { numerator: number | null; denominator: number | null; rate: number | null } }[] };
   messages: KnownCount & { sent: number | null };
   attribution: KnownCount & { orders: number | null };
@@ -42,10 +42,14 @@ export function validLoyaltyMetrics(value: unknown, scope: LoyaltyScope): value 
   const ids = new Set();
   return campaigns.items.every(item => {
     if (!object(item) || !uuid(item.campaign_id) || ids.has(item.campaign_id) || typeof item.name !== "string" || !item.name.trim() || !count(item.applied)) return false;
+    // Older backend can still supply the total; absent breakdown stays unknown in the UI.
+    const hasSplit = item.order_linked !== undefined || item.staff_attested !== undefined;
+    if (hasSplit && (!count(item.order_linked) || !count(item.staff_attested)
+      || item.applied !== item.order_linked + item.staff_attested)) return false;
     ids.add(item.campaign_id);
     const repeat = item.repeat_30d;
     return known(repeat) && (repeat.known ? count(repeat.numerator) && count(repeat.denominator) && repeat.denominator > 0
-      && repeat.numerator <= repeat.denominator && typeof repeat.rate === "number" && Number.isFinite(repeat.rate)
+      && repeat.numerator <= repeat.denominator && (!hasSplit || repeat.denominator <= Number(item.order_linked)) && typeof repeat.rate === "number" && Number.isFinite(repeat.rate)
       && repeat.rate >= 0 && repeat.rate <= 1 && Math.abs(repeat.rate - repeat.numerator / repeat.denominator) <= 0.000001
       : repeat.numerator === null && repeat.denominator === null && repeat.rate === null);
   });

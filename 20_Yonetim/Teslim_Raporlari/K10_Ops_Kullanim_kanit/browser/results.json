@@ -1,0 +1,18 @@
+{
+  "passed": 11,
+  "failed": 0,
+  "syntheticOnly": true,
+  "checks": [
+    "Missing RPC leaves four unknown boxes with reasons and all existing Ops values intact.",
+    "Total 3 = linked 2 + attested 1; order-only repeat note visible.",
+    "Sourced new/repeat overlap, campaign cohort, sent zero and unproved attribution are distinct.",
+    "Old backend keeps known total and explicitly unknown split, never fabricated zero.",
+    "375px mobile retains all four boxes without horizontal overflow.",
+    "A foreign business response clears stale metrics and cannot appear.",
+    "Global Internal tests changes server filter; previous test aggregate is never reused.",
+    "A loyalty permission denial removes all private Ops data.",
+    "Logout plus a late metric response cannot restore private data.",
+    "Tenant month discovery followed by a failed re-read shows error, never an endless loading state.",
+    "Every request stayed on loopback; no account/provider/analytics writes or runtime errors."
+  ]
+}

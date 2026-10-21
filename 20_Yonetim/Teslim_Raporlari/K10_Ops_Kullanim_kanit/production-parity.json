@@ -1,0 +1,46 @@
+{
+  "production_mode": true,
+  "synthetic_public_environment_only": true,
+  "baseline": "4123b238aa374f1b1c43ca5583e8bcf57fc7d976",
+  "origin_main": "4123b238aa374f1b1c43ca5583e8bcf57fc7d976",
+  "base_files": 213,
+  "candidate_files": 213,
+  "byte_identical_files": 209,
+  "removed_or_changed": [
+    "index.html",
+    "assets/index-B0CTixkj.js",
+    "assets/jsQR-DvhJK__B.js",
+    "assets/StaffPage-D_CFD8am.js"
+  ],
+  "new_or_changed": [
+    "index.html",
+    "assets/index-CxDt_7vJ.js",
+    "assets/jsQR-Bwp5Ofh0.js",
+    "assets/StaffPage-CKXzVgci.js"
+  ],
+  "css_identical": true,
+  "sources": {
+    "src/App.tsx": {
+      "same_as_base": true,
+      "same_as_origin_main": true
+    },
+    "src/lib/supabase.ts": {
+      "same_as_base": true,
+      "same_as_origin_main": true
+    },
+    "src/lib/analytics.ts": {
+      "same_as_base": true,
+      "same_as_origin_main": true
+    },
+    "src/pages/staff/StaffSignIn.tsx": {
+      "same_as_base": true,
+      "same_as_origin_main": true
+    },
+    "functions/api/signup.ts": {
+      "same_as_base": true,
+      "same_as_origin_main": true
+    }
+  },
+  "protected_source_diff": [],
+  "hosted_deployment": false
+}

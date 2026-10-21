@@ -35,7 +35,7 @@ const refresh=page=>page.getByRole('button',{name:o.refresh,exact:true}).click()
 async function payload(page,includeTests=false){
   const params=await page.evaluate(()=>window.__staffMock.snapshot().calls.filter(c=>c.name==='loyalty_metrics_v1').at(-1).params);
   return {version:1,business_id:params.p_business_id,month:params.p_month,timezone:'America/New_York',include_tests:includeTests,generated_at:new Date().toISOString(),coverage:'observed_ingested_orders',
-    customer_counts:{known:true,new:1,repeat:1,reason:null},campaigns:{known:true,items:[{campaign_id:'22222222-2222-4222-8222-222222222222',name:'SYNTHETIC K11 CAMPAIGN',applied:2,repeat_30d:{known:true,numerator:1,denominator:2,rate:.5,reason:null}}],reason:null},
+    customer_counts:{known:true,new:1,repeat:1,reason:null},campaigns:{known:true,items:[{campaign_id:'22222222-2222-4222-8222-222222222222',name:'SYNTHETIC K11 CAMPAIGN',applied:3,order_linked:2,staff_attested:1,repeat_30d:{known:true,numerator:1,denominator:2,rate:.5,reason:null}}],reason:null},
     messages:{known:true,sent:0,reason:null},attribution:{known:false,orders:null,reason:'explicit_attribution_missing'}};
 }
 const set=(page,data,error=null)=>page.evaluate(({data,error})=>window.__staffMock.setLoyaltyResponse(data,error),{data,error});
@@ -49,10 +49,21 @@ try{
   checks.push('Missing RPC leaves four unknown boxes with reasons and all existing Ops values intact.');
   const data=await payload(page);await set(page,data);await refresh(page);
   await box('campaigns').getByText('SYNTHETIC K11 CAMPAIGN',{exact:true}).waitFor();
+  await box('campaigns').getByText(c.applied+': 3',{exact:true}).waitFor();
+  await box('campaigns').getByText(c.orderLinked+': 2',{exact:true}).waitFor();
+  await box('campaigns').getByText(c.staffAttested+': 1',{exact:true}).waitFor();
+  await box('campaigns').getByText(c.cohort,{exact:true}).waitFor();
+  checks.push('Total 3 = linked 2 + attested 1; order-only repeat note visible.');
   await box('messages').getByText('0',{exact:true}).waitFor();await box('attribution').getByText(c.noAttribution,{exact:true}).waitFor();
   assert.equal(await box('attribution').getByText('0',{exact:true}).count(),0);
   await page.screenshot({path:path.join(output,'k11-metrics-desktop-synthetic.png'),fullPage:true});
   checks.push('Sourced new/repeat overlap, campaign cohort, sent zero and unproved attribution are distinct.');
+  const legacy=structuredClone(data);delete legacy.campaigns.items[0].order_linked;delete legacy.campaigns.items[0].staff_attested;
+  await set(page,legacy);await refresh(page);await box('campaigns').getByText(c.splitMissing,{exact:true}).waitFor();
+  await box('campaigns').getByText(c.orderLinked+': —',{exact:true}).waitFor();
+  await box('campaigns').getByText(c.staffAttested+': —',{exact:true}).waitFor();
+  checks.push('Old backend keeps known total and explicitly unknown split, never fabricated zero.');
+  await set(page,data);await refresh(page);await box('campaigns').getByText(c.orderLinked+': 2',{exact:true}).waitFor();
   await page.setViewportSize({width:375,height:812});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
   assert.equal(await page.locator('[data-testid^="loyalty-box-"]').count(),4);
