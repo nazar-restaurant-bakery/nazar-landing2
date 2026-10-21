@@ -38,6 +38,9 @@
 /supabase/migrations/20261021000350_nazar_commission_engine.sql text eol=lf
 /supabase/migrations/20261021000400_commission_from_orders.sql text eol=lf
 /tools/test-env/k13-*.sql text eol=lf
+/supabase/migrations/20261021000450_commission_channel_label.sql text eol=lf
+/tools/test-env/k13b-*.sql text eol=lf
+
 # K10: reviewed read-only eligibility delivery and synthetic evidence sources.
 /.gitattributes text eol=lf
 /supabase/migrations/20261021000600_campaign_eligibility_check.sql text eol=lf
@@ -49,16 +52,13 @@
 /tools/test-env/migration-manifest.json text eol=lf
 /tools/test-env/audit-migrations.mjs text eol=lf
 /tests/testEnvMigrations.test.mjs text eol=lf
-
 # K10 signup-reward coupons: one reviewed LF delivery, never K3 replay.
 /supabase/migrations/20261021000800_signup_reward_coupons.sql text eol=lf
 /functions/_lib/coupon*.ts text eol=lf
 /functions/api/coupon-qr/* text eol=lf
 /tests/coupon*.mjs text eol=lf
 /tests/fixtures/coupon*.mjs text eol=lf
-
 /supabase/migrations/20261021000825_coupon_delivery_reconciliation.sql text eol=lf
 /functions/_lib/couponDelivery.ts text eol=lf
 /tests/couponDelivery*.mjs text eol=lf
-
 /tools/test-env/coupon-delivery/** text eol=lf

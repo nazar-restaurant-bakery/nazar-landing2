@@ -1,0 +1,262 @@
+{
+  "scope": "Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.",
+  "startedAt": "2026-10-21T18:20:37.157Z",
+  "finishedAt": "2026-10-21T18:22:19.795Z",
+  "browserExecutable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "passed": 61,
+  "failed": 0,
+  "checks": [
+    {
+      "case": "01 Whitespace note blocked without write",
+      "passed": true
+    },
+    {
+      "case": "02 Whitespace task blocked without write",
+      "passed": true
+    },
+    {
+      "case": "03 Task saves with exact params and reloads",
+      "passed": true
+    },
+    {
+      "case": "04 Note saves and survives refresh",
+      "passed": true
+    },
+    {
+      "case": "05 Empty response is a real empty state",
+      "passed": true
+    },
+    {
+      "case": "06 Malformed response is unavailable rather than zero records",
+      "passed": true
+    },
+    {
+      "case": "07 Denied response reveals no private records",
+      "passed": true
+    },
+    {
+      "case": "08 Network rejection stays recoverable",
+      "passed": true
+    },
+    {
+      "case": "09 Unavailable tasks are not shown as zero",
+      "passed": true
+    },
+    {
+      "case": "10 Malformed stored date does not crash rendering",
+      "passed": true
+    },
+    {
+      "case": "11 Missing or whitespace request owner is blocked",
+      "passed": true
+    },
+    {
+      "case": "12 Open request missing follow-up blocked before write",
+      "passed": true
+    },
+    {
+      "case": "13 Closed request accepts no follow-up per existing rule",
+      "passed": true
+    },
+    {
+      "case": "14 Failed save preserves draft and releases busy state",
+      "passed": true
+    },
+    {
+      "case": "15 Pending save prevents duplicate submission",
+      "passed": true
+    },
+    {
+      "case": "16 Released pending save produces exactly one note",
+      "passed": true
+    },
+    {
+      "case": "17 Sign-out clears private view",
+      "passed": true
+    },
+    {
+      "case": "18 Sign-in network error is recoverable",
+      "passed": true
+    },
+    {
+      "case": "19 Refresh retries tasks after connection recovery",
+      "passed": true
+    },
+    {
+      "case": "20 Retry after refresh saves only one note",
+      "passed": true
+    },
+    {
+      "case": "21 Lost write response refreshes committed note without automatic retry",
+      "passed": true
+    },
+    {
+      "case": "22 Logout clears drafts before next session",
+      "passed": true
+    },
+    {
+      "case": "23 Default staff route opens Tasks",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/customers",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/crm",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/catering",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/tasks",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/offers",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/system",
+      "passed": true
+    },
+    {
+      "case": "24 Denied direct route /staff/ops",
+      "passed": true
+    },
+    {
+      "case": "25 Internal tests hidden across all five tabs; can be deliberately included",
+      "passed": true
+    },
+    {
+      "case": "26 Kanban drag writes exact existing RPC params",
+      "passed": true
+    },
+    {
+      "case": "27 Invalid kanban move does not write and asks for missing fields",
+      "passed": true
+    },
+    {
+      "case": "28 Late read after sign-out cannot restore private data",
+      "passed": true
+    },
+    {
+      "case": "29 Late write after sign-out cannot restore draft/private data",
+      "passed": true
+    },
+    {
+      "case": "30 New York display and saved due time are independent of device timezone",
+      "passed": true
+    },
+    {
+      "case": "31 Decision question is validated and only one pending question is offered",
+      "passed": true
+    },
+    {
+      "case": "32 System resolves mocked form error without any email action",
+      "passed": true
+    },
+    {
+      "case": "33 Desktop synthetic three-column screenshot",
+      "passed": true
+    },
+    {
+      "case": "34 Mobile 375px is usable without whole-page overflow",
+      "passed": true
+    },
+    {
+      "case": "35 Unsaved note, task and catering drafts survive tab changes",
+      "passed": true
+    },
+    {
+      "case": "36 Unknown task write stays blocked until the task source itself reads successfully",
+      "passed": true
+    },
+    {
+      "case": "42 Clover panel loads last seven days with staff bearer",
+      "passed": true
+    },
+    {
+      "case": "43 Catering decision prepares exact draft without sending email",
+      "passed": true
+    },
+    {
+      "case": "37 Ops menu route has ten tiles and seven actions; System stays separate",
+      "passed": true
+    },
+    {
+      "case": "38 Missing ops migration preserves complete waiting layout without queue writes",
+      "passed": true
+    },
+    {
+      "case": "39 Ops permission denial clears records and hides every metric",
+      "passed": true
+    },
+    {
+      "case": "40 Ops refresh reads snapshots only; source failure keeps verified values",
+      "passed": true
+    },
+    {
+      "case": "41 Disconnected action requires confirmation and logs not_connected without provider work",
+      "passed": true
+    },
+    {
+      "case": "42 Collect confirmation can cancel and a double click cannot enqueue twice",
+      "passed": true
+    },
+    {
+      "case": "43 Lost running acknowledgement needs manual reconciliation without another enqueue",
+      "passed": true
+    },
+    {
+      "case": "44 Lost queue acknowledgement resumes existing ID only after explicit confirmation",
+      "passed": true
+    },
+    {
+      "case": "45 Other staff queued work cannot expose a resume control",
+      "passed": true
+    },
+    {
+      "case": "46 CSV upload preserves private rows outside the visible panel and queues exact range",
+      "passed": true
+    },
+    {
+      "case": "47 CSV oversized file never reaches an action request",
+      "passed": true
+    },
+    {
+      "case": "48 Test offer action uses only a server catalog ID and explicit target state",
+      "passed": true
+    },
+    {
+      "case": "49 Late ops read after logout cannot restore metrics or job state",
+      "passed": true
+    },
+    {
+      "case": "50 Ops panel displays totals and diagnostic aggregates without customer contact text",
+      "passed": true
+    },
+    {
+      "case": "51 Ops mobile 375px has a single metric column and no horizontal overflow",
+      "passed": true
+    },
+    {
+      "case": "52 Running action polls only the action log and stops at two minutes without retry",
+      "passed": true
+    },
+    {
+      "case": "53 Lost CSV acknowledgement retains file and date drafts until explicit reconciliation",
+      "passed": true
+    }
+  ],
+  "screenshots": [
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-ops-meta-daily\\20_Yonetim\\Teslim_Raporlari\\K12_Meta_Gunluk_kanit\\browser\\staff-customers-desktop.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-ops-meta-daily\\20_Yonetim\\Teslim_Raporlari\\K12_Meta_Gunluk_kanit\\browser\\staff-customers-mobile-list.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-ops-meta-daily\\20_Yonetim\\Teslim_Raporlari\\K12_Meta_Gunluk_kanit\\browser\\staff-customers-mobile-record.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-ops-meta-daily\\20_Yonetim\\Teslim_Raporlari\\K12_Meta_Gunluk_kanit\\browser\\staff-ops-desktop.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-ops-meta-daily\\20_Yonetim\\Teslim_Raporlari\\K12_Meta_Gunluk_kanit\\browser\\staff-ops-collect-confirmation-desktop.png",
+    "C:\\Users\\Talip\\Nazar Restaurant & Bakery growth plan\\tmp\\nazar-ops-meta-daily\\20_Yonetim\\Teslim_Raporlari\\K12_Meta_Gunluk_kanit\\browser\\staff-ops-mobile.png"
+  ]
+}
