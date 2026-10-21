@@ -99,6 +99,23 @@ test('held K9 delivery keeps exact reviewed bytes and waits for K8 without enter
  assert.equal((await auditMigrations({root})).readiness.ready,false);
 });
 
+for(const key of ['k7_payment_day_delivery','k8_delivery'])test(`merged main ${key} stays canonical, non-executable and outside historical replay`,async()=>{
+ const entry=source[key];assert.ok(entry);
+ const bytes=await fs.readFile(new URL('../'+entry.path,import.meta.url));
+ assert.equal(sha256Lf(bytes.toString('utf8')),entry.sha256_bytes);
+ assert.equal(entry.execution_enabled,false);assert.equal(entry.included_in_k3_reset,false);
+ const missing=clone();delete missing[key];
+ assert.ok(codes(await auditMigrations({root,manifest:missing})).includes('UNINVENTORIED_CANONICAL_SQL'));
+ for(const mutate of [
+  e=>{e.path='../unreviewed.sql';},e=>{e.sha256_bytes='0'.repeat(64);},
+  e=>{e.application_order=99;},e=>{e.execution_enabled=true;},
+  e=>{e.included_in_k3_reset=true;},e=>{e.application_tool='arbitrary-executable.py';},
+ ]){const manifest=clone();mutate(manifest[key]);assert.ok(codes(await auditMigrations({root,manifest})).includes('CURRENT_MAIN_DELIVERY_CONTRACT'));}
+ const result=await auditMigrations({root});
+ assert.equal(result.readiness.ready,false);assert.equal(result.readiness.execution_performed,false);
+ assert.ok(result.proposed_order.every(item=>item.path!==entry.path));
+});
+
 test('altered expected checksum fails closed',async()=>{
  const manifest=clone();manifest.sources[0].sha256_lf='0'.repeat(64);
  const result=await auditMigrations({root,manifest});assert.equal(result.integrity.ok,false);assert.ok(codes(result).includes('CHECKSUM_MISMATCH'));

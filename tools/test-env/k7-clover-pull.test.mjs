@@ -120,7 +120,7 @@ test('a denied business write scope stops before Clover and ingest', async () =>
   try {
     const response = await cloverOrderPullHandler(fakeFetch)({ request: new Request('https://preview.pages.dev/api/staff/clover-order-pull', {
       method: 'POST', headers: { Origin: 'https://preview.pages.dev', Authorization: `Bearer ${'a'.repeat(24)}`,
-        'Content-Type': 'application/json' }, body: '{"days":1}' }), env });
+        'Content-Type': 'application/json' }, body: JSON.stringify({ day: testDay }) }), env });
     assert.equal(response.status, 403);
     assert.equal(calls.length, 1);
   } finally { console.warn = originalWarn; }
