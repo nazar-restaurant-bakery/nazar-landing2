@@ -6,7 +6,7 @@
 
 Paket `20_Yonetim/Teslim_Raporlari/DailyOperations_kanit/` konumuna kopyalanır. `Prepare-Targets.ps1 -WorkspaceRoot <çalışma klasörü>` yalnız önceki onaylı operatör hedeflerini yerel ayara aktarır; yeni proje kimliği kaynak koduna eklenmez. `-OfflineCheck` bağlantı/parola/yazma yapmaz: PASSED=0, WAITING=2, FAILED=1. Eksik başarı kaydı doldurulmaz.
 
-1. `Start-K15-Sandbox.ps1`, Sandbox gerçek JWT/403/dry-run kabulü; sonra `Start-K15-Production.ps1`. Varsayılan kill switch kapalı kalır.
+1. Önce aynı hedefte **10b / K13b** başarı kaydı gerekir (`K13b_kanit/{sandbox|production}-success.json`, SHA ve `commission_channel_label` eşleşir); eski sıra 10 kaydı yeterli değildir. `Start-K15-Sandbox.ps1`, Sandbox gerçek JWT/403/dry-run kabulü; sonra `Start-K15-Production.ps1`. Varsayılan kill switch kapalı kalır.
 2. Mevcut sıra 12 Sandbox → Production (ayrı K10 başlatıcıları).
 3. `Start-DailyScheduler-Sandbox.ps1`; aşağıdaki Sandbox kabulü; sonra `Start-DailyScheduler-Production.ps1`. Her Production başlatıcısı kendi Sandbox SQL başarı kaydını ister. Tüm tenant ayarları kapalı başlar. Bu SQL hiçbir cron/extension/secret kurmaz.
 

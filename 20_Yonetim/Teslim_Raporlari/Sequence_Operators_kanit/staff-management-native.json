@@ -1,0 +1,18 @@
+{
+  "scope": "OWNED_LOOPBACK_POSTGRES_18_6_ONLY",
+  "migrationSha256": "1FAC9F6ED72ED1D5992425D1EEF87B8E00BAA54523F099E49771D62BF3EA0A68",
+  "planPrechecks": 27,
+  "operatorConnectionGuards": 3,
+  "postchecks": 89,
+  "groups": 5,
+  "checks": [
+    "all real preconditions true before M15",
+    "all real postconditions true after M15",
+    "helper, Auth identities, memberships and operators unchanged",
+    "RLS drift detected",
+    "wrong privileged RPC grant detected"
+  ],
+  "hostedConnections": 0,
+  "emails": 0,
+  "clusterShutdown": true
+}

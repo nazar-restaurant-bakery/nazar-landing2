@@ -13,7 +13,7 @@ $psql = Join-Path $env:USERPROFILE 'scoop/apps/postgresql/18.6-4/bin/psql.exe'
 $ca = Join-Path $workspace '20_Yonetim\Teslim_Raporlari\K3_kanit\tls\prod-ca-2021.crt'
 $helper = Join-Path $PSScriptRoot 'K7-DbRunner.ps1'
 $plansPath = Join-Path $PSScriptRoot 'migration-plans.json'
-$plansSha = 'F706491FEF8C19C33D13884A21C17BD1BAC4A5EB2FC4DF16282EAE5E8905A2E2'
+$plansSha = '4ECEF232C147499949368AC6751FD3722365976776B7ED86B250DEE671D62471'
 $targetsPath=Join-Path $PSScriptRoot 'targets.json'
 if (-not (Test-Path -LiteralPath $targetsPath) -or (Get-FileHash -LiteralPath $targetsPath).Hash -cne 'D3B0FD6973EC68CD81092E013D0035A5155B87C46465FCB25181C82571DA284E') { Write-Output 'DAILY OPERATIONS: FAILED (hedef ayarı/pin)'; exit 1 }
 $refs = Get-Content -LiteralPath $targetsPath -Raw | ConvertFrom-Json -AsHashtable

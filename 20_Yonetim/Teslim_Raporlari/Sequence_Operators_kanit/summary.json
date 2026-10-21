@@ -1,0 +1,39 @@
+{
+  "daily-operations": {
+    "planSha256": "4ecef232c147499949368ac6751fd3722365976776b7ed86b250dee671d62471",
+    "runnerSha256": "900489af0dbee1ce5cd5e0c331527fe26d48f5eb7071ebe363257d268bc7e83f",
+    "wrapperPinsChecked": 4,
+    "offlinePassed": 37,
+    "offlineTotal": 37,
+    "sourceInstalledBytesEqual": true
+  },
+  "staff-management": {
+    "planSha256": "b3eafa6a4822c8ebad3b53585e4eedc2158557060520aae5468ce6ccfeae8ec9",
+    "runnerSha256": "4c1f71a3879fe182e5fbb226c0a22b51644cf2831979cb52e831be7d75bb1485",
+    "wrapperPinsChecked": 2,
+    "offlinePassed": 24,
+    "offlineTotal": 24,
+    "sourceInstalledBytesEqual": true
+  },
+  "native": {
+    "scope": "OWNED_LOOPBACK_POSTGRES_18_6_ONLY",
+    "migrationSha256": "1FAC9F6ED72ED1D5992425D1EEF87B8E00BAA54523F099E49771D62BF3EA0A68",
+    "planPrechecks": 27,
+    "operatorConnectionGuards": 3,
+    "postchecks": 89,
+    "groups": 5,
+    "checks": [
+      "all real preconditions true before M15",
+      "all real postconditions true after M15",
+      "helper, Auth identities, memberships and operators unchanged",
+      "RLS drift detected",
+      "wrong privileged RPC grant detected"
+    ],
+    "hostedConnections": 0,
+    "emails": 0,
+    "clusterShutdown": true
+  },
+  "migrationsChanged": false,
+  "hostedConnections": 0,
+  "productionChanges": 0
+}

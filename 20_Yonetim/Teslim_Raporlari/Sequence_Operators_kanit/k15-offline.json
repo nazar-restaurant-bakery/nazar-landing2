@@ -1,0 +1,294 @@
+{
+  "scope": "OFFLINE_SYNTHETIC_ONLY",
+  "databaseConnections": 0,
+  "passwordPrompts": 0,
+  "hostedReceiptsWritten": 0,
+  "passed": 37,
+  "total": 37,
+  "results": [
+    {
+      "name": "valid-11-Sandbox",
+      "passed": true,
+      "expectedExit": 0,
+      "actualExit": 0,
+      "output": "MIGRATION 11 SANDBOX OFFLINE: PASSED (baglanti/parola/yazma yok)",
+      "errors": ""
+    },
+    {
+      "name": "valid-11-Production",
+      "passed": true,
+      "expectedExit": 0,
+      "actualExit": 0,
+      "output": "MIGRATION 11 PRODUCTION OFFLINE: PASSED (baglanti/parola/yazma yok)",
+      "errors": ""
+    },
+    {
+      "name": "missing-prior-11",
+      "passed": true,
+      "expectedExit": 2,
+      "actualExit": 2,
+      "output": "Beklenen basari kaydi: 10b sandbox-success.json\r\nMIGRATION 11 SANDBOX OFFLINE: WAITING",
+      "errors": ""
+    },
+    {
+      "name": "missing-own-sandbox-11",
+      "passed": true,
+      "expectedExit": 2,
+      "actualExit": 2,
+      "output": "Beklenen basari kaydi: 11 11-sandbox-success.json\r\nMIGRATION 11 PRODUCTION OFFLINE: WAITING",
+      "errors": ""
+    },
+    {
+      "name": "wrong-target-11",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 11 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-sha-11",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 11 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-psql-11",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 11 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-checks-11",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 11 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "future-time-11",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 11 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "non-utc-time-11",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 11 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "sql-tamper-11",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Dosya b�t�nl�g�; Sinif: Dosya/SHA256\r\nMIGRATION 11 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "sql-crlf-11",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Dosya b�t�nl�g�; Sinif: Dosya/SHA256\r\nMIGRATION 11 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "sequence-sha-11",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 11 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "valid-13-Sandbox",
+      "passed": true,
+      "expectedExit": 0,
+      "actualExit": 0,
+      "output": "MIGRATION 13 SANDBOX OFFLINE: PASSED (baglanti/parola/yazma yok)",
+      "errors": ""
+    },
+    {
+      "name": "valid-13-Production",
+      "passed": true,
+      "expectedExit": 0,
+      "actualExit": 0,
+      "output": "MIGRATION 13 PRODUCTION OFFLINE: PASSED (baglanti/parola/yazma yok)",
+      "errors": ""
+    },
+    {
+      "name": "missing-prior-13",
+      "passed": true,
+      "expectedExit": 2,
+      "actualExit": 2,
+      "output": "Beklenen basari kaydi: 12 12-sandbox-success.json\r\nMIGRATION 13 SANDBOX OFFLINE: WAITING",
+      "errors": ""
+    },
+    {
+      "name": "missing-own-sandbox-13",
+      "passed": true,
+      "expectedExit": 2,
+      "actualExit": 2,
+      "output": "Beklenen basari kaydi: 13 13-sandbox-success.json\r\nMIGRATION 13 PRODUCTION OFFLINE: WAITING",
+      "errors": ""
+    },
+    {
+      "name": "wrong-target-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-sha-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-psql-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-checks-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-schema-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-count-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "password-receipt-rejected-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "future-time-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "non-utc-time-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "sql-tamper-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Dosya b�t�nl�g�; Sinif: Dosya/SHA256\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "sql-crlf-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Dosya b�t�nl�g�; Sinif: Dosya/SHA256\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "sequence-sha-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "old-10-only-11-Sandbox",
+      "passed": true,
+      "expectedExit": 2,
+      "actualExit": 2,
+      "output": "Beklenen basari kaydi: 10b sandbox-success.json\r\nMIGRATION 11 SANDBOX OFFLINE: WAITING",
+      "errors": ""
+    },
+    {
+      "name": "old-10-only-11-Production",
+      "passed": true,
+      "expectedExit": 2,
+      "actualExit": 2,
+      "output": "Beklenen basari kaydi: 10b production-success.json\r\nMIGRATION 11 PRODUCTION OFFLINE: WAITING",
+      "errors": ""
+    },
+    {
+      "name": "10b-production-cannot-use-sandbox",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 11 PRODUCTION: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-order-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-status-13",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 13 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "hosted-receipts-unchanged",
+      "passed": true
+    },
+    {
+      "name": "offline-boundary-before-helper-password-db",
+      "passed": true
+    },
+    {
+      "name": "powershell-parser-clean",
+      "passed": true
+    }
+  ]
+}

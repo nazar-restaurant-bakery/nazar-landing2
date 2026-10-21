@@ -1,7 +1,7 @@
 [
   {
     "file": ".gitignore",
-    "sha256": "5f2952e4244d8cc75db075acdf7e2406dd122a0104aa3449f826a897db5d5964"
+    "sha256": "ebc59f76b5f250eb707bff106da50f317ae19b767ae9bda7f21b7cc30a85adcc"
   },
   {
     "file": "Configure-DailyScheduler.ps1",
@@ -13,11 +13,11 @@
   },
   {
     "file": "migration-plans.json",
-    "sha256": "f706491fef8c19c33d13884a21c17bd1bac4a5eb2fc4df16282eae5e8905a2e2"
+    "sha256": "4ecef232c147499949368ac6751fd3722365976776b7ed86b250dee671d62471"
   },
   {
     "file": "Operations-Runner.ps1",
-    "sha256": "d212405135d9e0c2efd480bd41ab369f468f1a13d626f3fb0a4e6760e6f1bd69"
+    "sha256": "900489af0dbee1ce5cd5e0c331527fe26d48f5eb7071ebe363257d268bc7e83f"
   },
   {
     "file": "Prepare-Targets.ps1",
@@ -25,7 +25,7 @@
   },
   {
     "file": "README.md",
-    "sha256": "9b8ff9f6db72f3633b410640f30634a7938fd4bb5f7bb5bcff9dd04c1f4bbd99"
+    "sha256": "8fe32f46f6f6f438f29d7f4563037dc7fc269e914cdef67a4912d59cf731cd85"
   },
   {
     "file": "recovery-config.example.json",
@@ -57,19 +57,19 @@
   },
   {
     "file": "Start-DailyScheduler-Production.ps1",
-    "sha256": "673df6d4bee3aafa5de77b9a029b64f2b9a0fac1380852ea0490407566e4240f"
+    "sha256": "a165fbeb0530d6d82131ff8f89ede3a13cbe7d77290d59c78a1edcb1b317583b"
   },
   {
     "file": "Start-DailyScheduler-Sandbox.ps1",
-    "sha256": "b3ec5a31e8a61787f89195d0d42b1f3cd093709528b74080d3945c58e7c91ebd"
+    "sha256": "7f2fa2ddae8fe04bb7e04da7b732cce7daff085a7d32b808d8e3d6aad8e3350a"
   },
   {
     "file": "Start-K15-Production.ps1",
-    "sha256": "33be88e94746150c7cd94cdf6895d3f24a316f0d2866c23f868b94f0c7d4e83a"
+    "sha256": "e2ca52a05f8233c80518d99b3472781e55e44b769bfbe5b1d1730ca755a1a674"
   },
   {
     "file": "Start-K15-Sandbox.ps1",
-    "sha256": "61af60341e8c0dc532b6bf386290cd2ac5e3e7f32ac0b3842b510ff0c5ada645"
+    "sha256": "d8819cb636180bf048e27ec0ef42e5933d271b778acfb2c6579d16beb8dd3895"
   },
   {
     "file": "targets.example.json",
@@ -77,6 +77,6 @@
   },
   {
     "file": "tests/Test-Offline.ps1",
-    "sha256": "e012874f974c32407be63a358f0640b79784a0b2d18e3747084702d1f8ead304"
+    "sha256": "8a1741290ba37be0b55b6def6eb7c3dde6a0af80f9f50c18ca97baa8fe496eee"
   }
 ]

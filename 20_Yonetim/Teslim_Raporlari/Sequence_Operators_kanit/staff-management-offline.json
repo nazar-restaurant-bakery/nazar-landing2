@@ -1,0 +1,190 @@
+{
+  "scope": "OFFLINE_SYNTHETIC_ONLY",
+  "databaseConnections": 0,
+  "passwordPrompts": 0,
+  "hostedReceiptsWritten": 0,
+  "passed": 24,
+  "total": 24,
+  "results": [
+    {
+      "name": "valid-15-Sandbox",
+      "passed": true,
+      "expectedExit": 0,
+      "actualExit": 0,
+      "output": "MIGRATION 15 SANDBOX OFFLINE: PASSED (baglanti/parola/yazma yok)",
+      "errors": ""
+    },
+    {
+      "name": "valid-15-Production",
+      "passed": true,
+      "expectedExit": 0,
+      "actualExit": 0,
+      "output": "MIGRATION 15 PRODUCTION OFFLINE: PASSED (baglanti/parola/yazma yok)",
+      "errors": ""
+    },
+    {
+      "name": "missing-prior-15",
+      "passed": true,
+      "expectedExit": 2,
+      "actualExit": 2,
+      "output": "Beklenen basari kaydi: 14b 14b-sandbox-success.json\r\nMIGRATION 15 SANDBOX OFFLINE: WAITING",
+      "errors": ""
+    },
+    {
+      "name": "missing-own-sandbox-15",
+      "passed": true,
+      "expectedExit": 2,
+      "actualExit": 2,
+      "output": "Beklenen basari kaydi: 15 15-sandbox-success.json\r\nMIGRATION 15 PRODUCTION OFFLINE: WAITING",
+      "errors": ""
+    },
+    {
+      "name": "wrong-target-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-sha-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-psql-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-checks-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-schema-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-count-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "password-receipt-rejected-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "future-time-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "non-utc-time-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "sql-tamper-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Dosya b�t�nl�g�; Sinif: Dosya/SHA256\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "sql-crlf-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Dosya b�t�nl�g�; Sinif: Dosya/SHA256\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "sequence-sha-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-order-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "wrong-status-15",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 SANDBOX: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "old-14-only-15-Sandbox",
+      "passed": true,
+      "expectedExit": 2,
+      "actualExit": 2,
+      "output": "Beklenen basari kaydi: 14b 14b-sandbox-success.json\r\nMIGRATION 15 SANDBOX OFFLINE: WAITING",
+      "errors": ""
+    },
+    {
+      "name": "old-14-only-15-Production",
+      "passed": true,
+      "expectedExit": 2,
+      "actualExit": 2,
+      "output": "Beklenen basari kaydi: 14b 14b-production-success.json\r\nMIGRATION 15 PRODUCTION OFFLINE: WAITING",
+      "errors": ""
+    },
+    {
+      "name": "14b-production-cannot-use-sandbox",
+      "passed": true,
+      "expectedExit": 1,
+      "actualExit": 1,
+      "output": "Adim: Sira/�nkosul kaydi; Sinif: Eksik/ge�ersiz kanit\r\nMIGRATION 15 PRODUCTION: FAILED",
+      "errors": ""
+    },
+    {
+      "name": "hosted-receipts-unchanged",
+      "passed": true
+    },
+    {
+      "name": "offline-boundary-before-helper-password-db",
+      "passed": true
+    },
+    {
+      "name": "powershell-parser-clean",
+      "passed": true
+    }
+  ]
+}

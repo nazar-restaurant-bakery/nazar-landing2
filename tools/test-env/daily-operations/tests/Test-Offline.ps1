@@ -80,6 +80,17 @@ foreach($order in @('11','13')){
  $name="sequence-sha-$order";$c=New-Case $name $order Sandbox;$seq=Join-Path $c 'Migration_Sirasi.md';$t=[IO.File]::ReadAllText($seq).Replace($plans[$order].sha256.ToLowerInvariant(),('0'*64));[IO.File]::WriteAllText($seq,$t,$utf8)
  Invoke-Case $name $order Sandbox $c 1 'FAILED'
 }
+# A former K13/10 success must never substitute for the new same-target 10b prerequisite.
+foreach($target in @('Sandbox','Production')){
+ $name="old-10-only-11-$target";$c=New-Case $name '11' $target
+ $d=$plans['11'].dependencies[0];$rp=Join-Path $c ($d.receipt -replace '\{target\}',$target.ToLowerInvariant());Remove-Item -LiteralPath $rp
+ $oldRef=if($target -eq 'Sandbox'){$sandbox}else{$production}
+ Write-Json (Join-Path $c ('K13_kanit/'+$target.ToLowerInvariant()+'-success.json')) ([ordered]@{target=$oldRef;migrationSha256='C0717B848CD75864F9410FDCAAE636BC07CDB7581EC70C34EFDF57F6EB1703C1';psql='18.6';verifiedAtUtc='2026-10-20T01:00:00.0000000Z';checks='commission_functions'})
+ Invoke-Case $name '11' $target $c 2 'OFFLINE: WAITING'
+}
+$name='10b-production-cannot-use-sandbox';$c=New-Case $name '11' Production
+$d=$plans['11'].dependencies[0];$rp=Join-Path $c ($d.receipt -replace '\{target\}','production');Mutate-Receipt $rp 'target' $sandbox
+Invoke-Case $name '11' Production $c 1 'FAILED'
 foreach($order in @('13')){
  foreach($m in @(@('order','99'),@('status','FAILED'))){
   $name="wrong-$($m[0])-$order";$c=New-Case $name $order Sandbox;$d=$plans[$order].dependencies[-1];$rp=Join-Path $c ($d.receipt -replace '\{target\}','sandbox');Mutate-Receipt $rp $m[0] $m[1]
@@ -96,7 +107,7 @@ $helperCall=$src.IndexOf('    . $helper')
 $prompt=$src.IndexOf('Read-Host ')
 $results.Add([pscustomobject]@{name='offline-boundary-before-helper-password-db';passed=($boundary -ge 0 -and $helperCall -gt $boundary -and $prompt -gt $boundary -and $src.IndexOf('Assert-DbChecks (Get-BooleanSql $pre)') -gt $prompt)})
 $parsed=$true
-foreach($f in @(Get-ChildItem -LiteralPath $bundle -Filter '*.ps1' -File|Where-Object{$_.Name -eq 'Operations-Runner.ps1' -or $_.Name -match '^Start-StaffManage-'})){
+foreach($f in @(Get-ChildItem -LiteralPath $bundle -Filter '*.ps1' -File|Where-Object{$_.Name -eq 'Operations-Runner.ps1' -or $_.Name -match '^Start-'})){
  $tokens=$null;$parseErrors=$null;[void][Management.Automation.Language.Parser]::ParseFile($f.FullName,[ref]$tokens,[ref]$parseErrors)
  if($parseErrors.Count -gt 0){$parsed=$false}
 }

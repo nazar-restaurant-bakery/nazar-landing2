@@ -5,11 +5,11 @@
     "module": "K15",
     "dependencies": [
       {
-        "order": "10",
-        "file": "20261021000400_commission_from_orders.sql",
-        "sha256": "C0717B848CD75864F9410FDCAAE636BC07CDB7581EC70C34EFDF57F6EB1703C1",
-        "checks": "commission_functions",
-        "receipt": "K13_kanit/{target}-success.json",
+        "order": "10b",
+        "file": "20261021000450_commission_channel_label.sql",
+        "sha256": "1D859B4B56B02B75D9662BA976A1B4F149C53C067C6FD0497E4794CDA3E33607",
+        "checks": "commission_channel_label",
+        "receipt": "K13b_kanit/{target}-success.json",
         "requireOrder": false,
         "legacy": true
       }

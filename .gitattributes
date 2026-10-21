@@ -55,3 +55,7 @@
 /tests/ops-write-gate.sql text eol=lf
 
 /tests/fixtures/staff-contract-v1.sql text eol=lf
+
+/tools/test-env/staff-management/** text eol=lf
+
+/tests/fixtures/staffManageAuthorizationOperator.sql text eol=lf
