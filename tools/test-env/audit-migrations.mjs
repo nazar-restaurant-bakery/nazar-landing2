@@ -178,7 +178,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
  const k13bDelivery=manifest.k13b_delivery;
  const k16Foundation=manifest.k16_foundation_delivery;
  const k16Path='supabase/migrations/20261022000100_site_order_foundation.sql';
- const k16Sha='a872960415bcb3f6177461c3e604daf1575fd5df2bf6f84aaf2debf91df68577';
+ const k16Sha='c8d92ad4a69b0c46ea3578054f92bd2aa675bd92ea5e4e2e161f040445aa0953';
  if(k16Foundation){
   if(typeof k16Foundation!=='object'||Object.keys(k16Foundation).sort().join(',')!==
    'application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'

@@ -136,7 +136,8 @@ BEGIN
     NOT EXISTS(SELECT 1 FROM core.payments p
       WHERE p.id=p_clover_payment_record_id AND p.business_id=p_business_id
         AND p.order_id=p_clover_order_record_id
-        AND p.clover_payment_id=v_payment.clover_payment_id) THEN
+        AND p.clover_payment_id=v_payment.clover_payment_id
+        AND p.amount_cents=v_payment.verified_cents) THEN
     RAISE EXCEPTION 'Clover ledger mismatch' USING ERRCODE='22023';
   END IF;
   IF v_payment.clover_order_id IS NOT NULL AND
