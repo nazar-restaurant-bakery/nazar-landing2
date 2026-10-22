@@ -1,0 +1,15 @@
+{
+  "observed_at": "2026-10-21T20:00:00-04:00",
+  "observation_time_approximate": true,
+  "gotprint_order": "30805504",
+  "printed_stock": "P, 2500; T not printed",
+  "requested_url": "https://www.nazarrestaurantandbakery.com/vip?utm_source=qr&utm_medium=offline&utm_campaign=qr_paket",
+  "observed_final_url": "https://www.nazarrestaurantandbakery.com/vip?utm_source=qr&utm_medium=offline&utm_campaign=qr_paket",
+  "visible_page": "Nazar VIP Club and signup form",
+  "query_retained": true,
+  "redirect_chain_recorded": false,
+  "form_submitted": false,
+  "live_database_queried": false,
+  "google_front_review_target": "ChIJKTmeJADZ54kRvLZoaDaB9J4",
+  "google_review_target_evidence": "previous physically scanned acceptance, 2026-10-13; not re-opened this run"
+}

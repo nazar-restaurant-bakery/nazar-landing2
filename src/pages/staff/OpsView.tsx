@@ -1,3 +1,4 @@
+import QrVipFunnel from "../../components/staff/ops/QrVipFunnel";
 import DailySchedulerStatus from "../../components/staff/ops/DailySchedulerStatus";
 import WriteGateDemo from "../../components/staff/ops/WriteGateDemo";
 import { useState, type ReactNode } from "react";
@@ -18,6 +19,8 @@ import type { LoyaltyMetrics, LoyaltyReadState } from "../../lib/loyaltyMetrics"
 
 export interface OpsViewProps {
   identity: string;
+  includeTests?: boolean;
+  funnelRevision?: number;
   dashboard: OpsDashboard | null;
   connections: OpsConnection[] | null;
   actions: OpsAction[] | null;
@@ -39,7 +42,7 @@ export interface OpsViewProps {
 }
 type Format = "number" | "money" | "percent" | "text" | "date" | "up";
 
-export default function OpsView({ identity, dashboard, connections, actions, loading, unavailable, backendPending, busy, writeBlocked, message, onRefresh, onRequest, onDownload, onResume, errorsSection, detailsSection, children, loyalty = null, loyaltyState = "missing" }: OpsViewProps) {
+export default function OpsView({ identity, includeTests=false, funnelRevision=0, dashboard, connections, actions, loading, unavailable, backendPending, busy, writeBlocked, message, onRefresh, onRequest, onDownload, onResume, errorsSection, detailsSection, children, loyalty = null, loyaltyState = "missing" }: OpsViewProps) {
   const [selectedAction, setSelectedAction] = useState<OpsActionName | null>(null);
   const connection = (source: OpsSource) => backendPending ? undefined : connections?.find(item => item.source === source);
   const failedSitePing = observedSiteFailure(dashboard?.metrics || [], connection("site"), actions);
@@ -67,6 +70,7 @@ export default function OpsView({ identity, dashboard, connections, actions, loa
     {message && <p className="staff-panel p-4 text-sm" role="status">{message}</p>}
     <StatusStrip connections={backendPending ? null : connections?.filter(item => item.source !== "scheduler") || null} loading={loading} disabled={busy} onRefresh={onRefresh} onCollect={() => setSelectedAction("collect")} collectConfirmation={selectedAction === "collect" ? <ActionColumn confirmationOnly dashboard={dashboard} connections={connections} actions={actions} selectedAction="collect" onSelectAction={setSelectedAction} onRequest={onRequest} busy={busy} blocked={writeBlocked} backendPending={backendPending} /> : null} />
     <p className="text-xs text-stone-500">{c.snapshotScope} {c.realTotals}</p>
+    {dashboard && <QrVipFunnel key={identity} identity={identity} businessId={dashboard.business_id} includeTests={includeTests} revision={funnelRevision} />}
     <LoyaltyMetricTiles data={loyalty} state={loyaltyState} />
     <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="grid min-w-0 items-stretch gap-4 md:grid-cols-2" data-testid="ops-metric-grid">

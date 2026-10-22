@@ -18,6 +18,7 @@ type Pending = { id: string | null; requestKey: string; action: OpsActionName; s
 type ReadState = "ready" | "missing" | "error";
 
 export default function OpsController({ identity, includeTests, onDenied, onRefreshLegacy, errorsSection, detailsSection }: Props) {
+  const [funnelRevision,setFunnelRevision]=useState(0);
   const [dashboard, setDashboard] = useState<OpsDashboard | null>(null);
   const [connections, setConnections] = useState<OpsConnection[] | null>(null);
   const [actions, setActions] = useState<OpsAction[] | null>(null);
@@ -270,10 +271,10 @@ export default function OpsController({ identity, includeTests, onDenied, onRefr
   const currentLoyaltyScope: LoyaltyScope = { businessId: browserDeployment.businessId, identity, includeTests,
     month: loyaltyMonth(new Date(), loyalty?.timezone || "America/New_York") };
   const visibleLoyalty = loyalty && loyaltyScopeMatches(loyalty.scope, currentLoyaltyScope) ? loyalty : null;
-  return <OpsView dashboard={visibleDashboard} connections={connections} actions={actions}
+  return <OpsView includeTests={includeTests} funnelRevision={funnelRevision} dashboard={visibleDashboard} connections={connections} actions={actions}
     loading={loading} unavailable={unavailable} backendPending={backendPending}
     busy={busy} writeBlocked={writeBlocked} message={message}
-    onRefresh={() => { callbacks.current.onRefreshLegacy(); void read(true); void readLoyalty(); }}
+    onRefresh={() => { setFunnelRevision(v=>v+1); callbacks.current.onRefreshLegacy(); void read(true); void readLoyalty(); }}
     onRequest={request} onDownload={download} onResume={resume} identity={identity}
     errorsSection={errorsSection} detailsSection={detailsSection} loyalty={visibleLoyalty?.data ?? null} loyaltyState={visibleLoyalty?.state ?? "loading"} />;
 }

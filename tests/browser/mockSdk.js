@@ -127,6 +127,7 @@ async function rpc(name, params) {
     if (params?.p_business_id !== 'a358eba4-b197-4309-805b-46f43a718454') return unknown(name + ' business', params);
     return result({enabled:false,last_run:null,requests_today:0});
   }
+  if(name === 'qr_vip_funnel_v1') return state.qrFunnelResponse ? clone(state.qrFunnelResponse) : result(null,{code:'PGRST202'});
   const opsResult = opsMock.rpc(name);
   if (opsResult !== undefined) return opsResult;
   if (name === 'loyalty_metrics_v1') return state.loyaltyResponse
@@ -238,6 +239,7 @@ window.__staffMock = {
   ids: fixtureIds,
   snapshot() { return clone({ ...state, held: state.held.map(h => h.name), holdNames: [...state.holdNames] }); },
   setMode(mode) { state.mode = mode; },
+  setQrFunnelResponse(data,error=null) { state.qrFunnelResponse=result(data,error); },
   setLoyaltyResponse(data, error = null) { state.loyaltyResponse = result(data, error); },
   hold(name) { state.holdNames.push(name); },
   release() { const held = state.held.splice(0); for (const h of held) h.resolve(); },

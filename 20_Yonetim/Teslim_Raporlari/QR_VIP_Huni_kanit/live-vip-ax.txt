@@ -1,0 +1,56 @@
+Browser tab: 415913940, Title: "VIP List — Nazar Restaurant & Bakery", URL: "https://www.nazarrestaurantandbakery.com/vip?utm_source=qr&utm_medium=offline&utm_campaign=qr_paket".
+0 AXWebArea VIP List — Nazar Restaurant & Bakery, URL: nazarrestaurantandbakery.com/vip?utm_source=qr&utm_medium=offline&utm_campaign=qr_paket
+	1 container root
+		2 container
+			3 link Description: N Nazar Restaurant & Bakery, Value: nazarrestaurantandbakery.com/
+			4 link Description: Home, Value: nazarrestaurantandbakery.com/
+			5 link Description: Menu, Value: nazarrestaurantandbakery.com/menu
+			6 link Description: Specials, Value: nazarrestaurantandbakery.com/specials
+			7 link Description: Catering, Value: nazarrestaurantandbakery.com/catering
+			8 link Description: Gallery, Value: nazarrestaurantandbakery.com/gallery
+			9 link Description: Reviews, Value: nazarrestaurantandbakery.com/reviews
+			10 link Description: About, Value: nazarrestaurantandbakery.com/about
+			11 link Description: Contact, Value: nazarrestaurantandbakery.com/contact
+			12 link Description: VIP Club, Value: nazarrestaurantandbakery.com/vip
+		13 link Description: Order Online — Pickup or Delivery, Value: nazar-bakery-west-haven.cloveronline.com/
+		14 text Also on:
+		15 link Description: DoorDash, Value: doordash.com/store/nazar-restaurant-&-bakery-west-haven-34962973/92198546/?cursor=eyJzdG9yZV9wcmltYXJ5X3ZlcnRpY2FsX2lkcyI6WzEsMTEwMDQ1LDQsMTAwMzMzXSwiY2Fyb3VzZWxfaWQiOiJyZWNlbnRseV92aWV3ZWQiLCJjYXJvdXNlbF90aXRsZSI6IlJlY2VudGx5IHZpZXdlZCJ9&pickup=false
+		16 link Description: Uber Eats, Value: ubereats.com/store/nazar-restaurant-%26-bakery-west-haven/miDkOS7wSnGYWrbqFRJAEg
+		17 link Description: Grubhub, Value: grubhub.com/restaurant/nazar-bakery--fast-food-39-elm-st-west-haven/12070448
+		18 text Browse here, then order online — pickup or delivery, straight from us.
+		19 text Our prices shown. Marketplace prices and fees may vary.
+		20 container
+			21 text NAZAR VIP
+			22 heading Nazar VIP Club, Value: 1
+				23 text Nazar VIP Club
+			24 text Exclusive offers, new items and weekly specials — straight from us, no middleman.
+			25 content list
+				26 text First look at weekly specials and seasonal bakery items
+				27 text Members-only offers you won’t find on delivery apps
+				28 text A heads-up when catering slots and holiday orders open
+			29 container
+				30 text NAME (optional)
+			31 text field (settable) NAME (optional), ID: vip-name
+			32 text EMAIL
+			33 text field (settable) EMAIL
+			34 container
+				35 text PHONE (optional)
+			36 text field (settable) PHONE (optional)
+			37 container
+				38 checkbox (settable, integer) Description: Email me offers and updates., Value: 0
+				39 text Email me offers and updates.
+			40 container Human verification
+			41 button Join the VIP Club
+			42 text An unfinished form is saved on this device, can be restored for 24 hours, and is deleted after successful submission. Nazar stores submitted details; Klaviyo manages VIP emails. Unsubscribe any time.
+		43 container
+			44 text Nazar Restaurant & Bakery West Haven, CT • Turkish cuisine • Fresh bakery
+			45 link Description: Join the VIP Club →, Value: nazarrestaurantandbakery.com/vip
+			46 text ©  2026  Nazar. All rights reserved.
+		47 container
+			48 link Description: Order Online — Pickup or Delivery, Value: nazar-bakery-west-haven.cloveronline.com/
+			49 text Also on:
+			50 link Description: DoorDash, Value: doordash.com/store/nazar-restaurant-&-bakery-west-haven-34962973/92198546/?cursor=eyJzdG9yZV9wcmltYXJ5X3ZlcnRpY2FsX2lkcyI6WzEsMTEwMDQ1LDQsMTAwMzMzXSwiY2Fyb3VzZWxfaWQiOiJyZWNlbnRseV92aWV3ZWQiLCJjYXJvdXNlbF90aXRsZSI6IlJlY2VudGx5IHZpZXdlZCJ9&pickup=false
+			51 link Description: Uber Eats, Value: ubereats.com/store/nazar-restaurant-%26-bakery-west-haven/miDkOS7wSnGYWrbqFRJAEg
+			52 link Description: Grubhub, Value: grubhub.com/restaurant/nazar-bakery--fast-food-39-elm-st-west-haven/12070448
+
+The focused UI element is 0 AXWebArea VIP List — Nazar Restaurant & Bakery, URL: nazarrestaurantandbakery.com/vip?utm_source=qr&utm_medium=offline&utm_campaign=qr_paket

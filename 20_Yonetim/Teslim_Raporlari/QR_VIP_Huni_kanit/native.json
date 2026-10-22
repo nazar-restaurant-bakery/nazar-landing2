@@ -1,0 +1,14 @@
+{
+  "passed": 7,
+  "checks": [
+    "3 QR customers -> 2 dated confirmations -> 2 SIMIT coupons; non-QR and unconfirmed excluded downstream",
+    "only exact QR signup evidence-linked coupons count; 2 uses=1 linked+1 attested; immature repeat unknown",
+    "second coupon use never increments funnel",
+    "test filter, empty second tenant and wrong-tenant 403 boundary",
+    "period-matched fresh GA4=7 for real view; test cohort never borrows it",
+    "stale GA4 unknown, not zero",
+    "anonymous/service_role cannot use staff-only reader"
+  ],
+  "hosted": false,
+  "provider_calls": 0
+}
