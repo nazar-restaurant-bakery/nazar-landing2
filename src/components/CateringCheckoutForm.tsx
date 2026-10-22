@@ -48,13 +48,14 @@ export default function CateringCheckoutForm({ selections }: { selections: Selec
   const [token, setToken] = React.useState("");
   const [resetSignal, setResetSignal] = React.useState(0);
   const [busy, setBusy] = React.useState(false);
+  const [needsHelp, setNeedsHelp] = React.useState(false);
   const [message, setMessage] = React.useState("");
   const inFlight = React.useRef(false);
   const onToken = React.useCallback((value: string) => setToken(value), []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current || !selections.length) return;
+    if (inFlight.current || needsHelp || !selections.length) return;
     if (!token || !turnstileSiteKey) { setMessage(copy.verify); return; }
     const pickupAt = newYorkPickup(date, time);
     if (!pickupAt) { setMessage(copy.error); return; }
@@ -75,13 +76,14 @@ export default function CateringCheckoutForm({ selections }: { selections: Selec
           !result.orderId || !result.requestId ||
           !/^https:\/\/([a-z0-9-]+\.)*clover\.com\//i.test(result.checkoutUrl ?? "")) {
         setMessage(copy.error);
+        setNeedsHelp(true);
         return;
       }
       sessionStorage.setItem("nazar-site-order-reference-v1", JSON.stringify({
         orderId: result.orderId, requestId: result.requestId,
       }));
       window.location.assign(result.checkoutUrl!);
-    } catch { setMessage(copy.error); }
+    } catch { setMessage(copy.error); setNeedsHelp(true); }
     finally {
       setBusy(false);
       setToken("");
@@ -104,7 +106,7 @@ export default function CateringCheckoutForm({ selections }: { selections: Selec
         <div className="sm:col-span-2"><TurnstileWidget onToken={onToken} resetSignal={resetSignal} /></div>
         <p className="text-xs text-zinc-600 sm:col-span-2">{copy.tax}</p>
         {message && <p role="alert" className="text-sm text-red-800 sm:col-span-2">{message}</p>}
-        <button type="submit" disabled={busy || !token} className="rounded-full bg-[#1E7A3A] px-6 py-3 font-bold text-white disabled:opacity-50 sm:col-span-2">{busy ? copy.waiting : copy.pay}</button>
+        <button type="submit" disabled={busy || needsHelp || !token} className="rounded-full bg-[#1E7A3A] px-6 py-3 font-bold text-white disabled:opacity-50 sm:col-span-2">{busy ? copy.waiting : copy.pay}</button>
       </form>}
   </section>;
 }
