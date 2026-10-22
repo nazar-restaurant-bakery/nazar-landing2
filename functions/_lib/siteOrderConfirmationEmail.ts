@@ -39,7 +39,7 @@ export async function sendVerifiedSiteOrderEmail(
           text: [`Nazar Restaurant & Bakery`, `Order: ${claim.orderId}`,
             paymentLine, `Requested pickup: ${pickup}`,
             `Paid total: $${(claim.totalCents / 100).toFixed(2)}`,
-            "Questions? Reply to Nazar or call the restaurant."].join("\n") }),
+            "Questions? Call Nazar at +1 (203) 408-2697."].join("\n") }),
       });
     if (response.ok) {
       const result = await response.json() as { success?: boolean;
