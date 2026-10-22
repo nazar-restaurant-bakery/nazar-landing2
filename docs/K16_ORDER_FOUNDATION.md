@@ -21,7 +21,7 @@ checkout PR, after the webhook and staff flow are ready. Keep all live checkout
 flags off until those PRs and the sandbox payment reconciliation pass.
 
 The exact LF migration bytes are SHA256
-`a872960415bcb3f6177461c3e604daf1575fd5df2bf6f84aaf2debf91df68577`.
+`c8d92ad4a69b0c46ea3578054f92bd2aa675bd92ea5e4e2e161f040445aa0953`.
 The operator scripts and the order-17 receipt prerequisite are in the local
 `20_Yonetim/Teslim_Raporlari/K16Foundation_kanit` package. The proposed
 order-18 line belongs in `Migration_Sirasi.md` after coordination review.
