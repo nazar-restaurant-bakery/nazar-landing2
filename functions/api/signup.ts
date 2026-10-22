@@ -388,6 +388,7 @@ export async function onRequestPost(context: Context): Promise<Response> {
   try {
     const challenge = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
+      redirect: "error",
       signal: AbortSignal.timeout(5000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -397,8 +398,22 @@ export async function onRequestPost(context: Context): Promise<Response> {
       }),
     });
     if (!challenge.ok) return unavailable(context, stage, "challenge_unavailable", requestId, kind);
-    const verification = await challenge.json() as { success?: boolean; hostname?: string };
-    if (!verification.success || verification.hostname !== deployment.turnstileExpectedHostname) {
+    // Provider/configuration failures belong to the existing safe 503 incident
+    // flow. Ordinary invalid/expired visitor tokens remain a rejected 403.
+    let verification: { success: boolean; hostname?: string; "error-codes"?: unknown };
+    try {
+      const value: unknown = await challenge.json();
+      if (!value || typeof value !== "object" || Array.isArray(value)
+        || typeof (value as { success?: unknown }).success !== "boolean") {
+        return unavailable(context, stage, "challenge_unavailable", requestId, kind);
+      }
+      verification = value as typeof verification;
+    } catch { return unavailable(context, stage, "challenge_unavailable", requestId, kind); }
+    const errors = verification["error-codes"];
+    if (Array.isArray(errors) && errors.some(code => ["missing-input-secret", "invalid-input-secret", "internal-error"].includes(code))) {
+      return unavailable(context, stage, "challenge_unavailable", requestId, kind);
+    }
+    if (verification.success !== true || verification.hostname !== deployment.turnstileExpectedHostname) {
       return response(403, "verification_failed");
     }
 
