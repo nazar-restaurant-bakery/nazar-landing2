@@ -10,6 +10,7 @@ export type PaymentEnvironment = {
   CLOVER_MERCHANT_ID?: string;
   CLOVER_HOSTED_CHECKOUT_PRIVATE_KEY?: string;
   CLOVER_TAX_RATE_ID?: string;
+  CLOVER_TAX_RATE_MICROS?: string;
 };
 type PaymentRequest = {
   orderId: string;
@@ -21,17 +22,14 @@ type PaymentRequest = {
   lines: PricedTray[];
   siteOrigin: string;
 };
-const PRODUCTION_MERCHANT_ID = "F8Q154GMDKFD1";
-const SANDBOX_MERCHANT_ID = "22JDW74C8E0Y1";
-const TAX_RATE = 735000; // Clover uses 1,000,000 for 10%.
-
 export function paymentProviderConfigured(env: PaymentEnvironment): boolean {
-  const sandbox = env.CLOVER_ENVIRONMENT === "sandbox";
+  const taxRate = Number(env.CLOVER_TAX_RATE_MICROS);
   return (env.PAYMENT_PROVIDER ?? "clover") === "clover" &&
     !!env.CLOVER_HOSTED_CHECKOUT_PRIVATE_KEY &&
     !!env.CLOVER_TAX_RATE_ID &&
     ["sandbox", "production"].includes(env.CLOVER_ENVIRONMENT ?? "") &&
-    env.CLOVER_MERCHANT_ID === (sandbox ? SANDBOX_MERCHANT_ID : PRODUCTION_MERCHANT_ID);
+    /^[A-Za-z0-9]{8,32}$/.test(env.CLOVER_MERCHANT_ID ?? "") &&
+    Number.isSafeInteger(taxRate) && taxRate > 0 && taxRate < 10000000;
 }
 
 export async function createPaymentSession(env: PaymentEnvironment,
@@ -54,7 +52,8 @@ export async function createPaymentSession(env: PaymentEnvironment,
         price: CATERING_PRICES_CENTS[line.id][[10, 20, 30, 50].indexOf(line.size)],
         unitQty: line.quantity,
         note: `Pickup ${order.pickupAt.toISOString()}; order ${order.orderId}${order.note ? `; ${order.note}` : ""}`,
-        taxRates: [{ id: env.CLOVER_TAX_RATE_ID, name: "Sales Tax", rate: TAX_RATE }],
+        taxRates: [{ id: env.CLOVER_TAX_RATE_ID, name: "Sales Tax",
+          rate: Number(env.CLOVER_TAX_RATE_MICROS) }],
       })) },
       redirectUrls: { success: `${order.siteOrigin}/catering?payment=pending`,
         failure: `${order.siteOrigin}/catering?payment=failed`,

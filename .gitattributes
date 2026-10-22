@@ -92,3 +92,4 @@
 /supabase/migrations/20261021001000_ops_campaign_usage_split.sql text eol=lf
 
 /supabase/migrations/20261021001100_qr_vip_funnel.sql text eol=lf
+/supabase/migrations/20261022000100_site_order_foundation.sql text eol=lf
