@@ -2,9 +2,11 @@
 
 22 Ekim 2026 · taban main `0ff9496`. Yalnız yeni /privacy rotası, İngilizce politika metni ve ortak footer'dan Privacy Policy bağlantısı. API, form, Ads/Meta adaptörü, personel rotası, secret ve DB değişikliği yok. Düz metin: `K12_Privacy_Taslak.md`; aynı metin PrivacyPage.tsx'te görünür.
 
-## Talip + Yücel onayı
+## Talip onayı — tüzel ad yok kararı
 
-Bu PR bir politika taslağıdır; yayın/merge Talip'te. Platform, Nazar'dan ayrı hizmet sağlayıcıdır; “Platform Ops Restaurants” bir uygulama adıdır, hukuki şirket unvanı olarak sunulmaz. Yayından önce platform işletmecisinin gerçek hukuki unvanı/iletişim bilgisini, Nazar adına hizmet kapsamını ve `ctnazarbakery@gmail.com` adresinin privacy/deletion taleplerini karşılayacağını doğrulayın; unvan belli olunca ilk paragrafta açıkça adlandırın. Saklama/silme beyanının manuel operasyonla nasıl yerine getirileceği Talip + Yücel tarafından kabul edilmelidir; bu PR otomatik silme işi veya yeni uç nokta kurmaz. Kesin gün sayısı/yanıt süresi uydurulmadı.
+22 Ekim Talip kararı: politika yalnız “Nazar Restaurant & Bakery” adıyla yayımlanır. Sayfada platform işletmecisinin veya restoranın yasal/tüzel unvanı ve “ayrı hizmet sağlayıcı” ifadesi bulunmaz; tüzel unvan ekleme şartı kaldırılmıştır. “Platform Ops Restaurants” yalnız Google raporlama uygulamasının adı olarak açıklanır; şirket unvanı değildir. Yücel onayı gerekmiyor; yayın/merge kararı Talip'te.
+
+Who this covers, Sharing and protection ve Contact and changes bölümlerindeki ilgili hizmet sağlayıcı ifadeleri, ayrıca SEO açıklamasındaki ifade kaldırıldı. Sayfa ve K12_Privacy_Taslak.md eşitlendi. `ctnazarbakery@gmail.com` ve `39 Elm Street, Unit 1, West Haven, CT` korundu. Saklama/silme metni değişmedi; otomatik silme işi veya yeni uç nokta kurulmadı.
 
 Google veri erişimi/kullanımı/paylaşımı, Limited Use, server-side credentials, erişim iptali ve kayıt silme ayrı açıklanır. Google Ads mevcut OAuth scope'u geniştir; fiili erişim Read-only Ads kullanıcısı ve raporlama adaptörüyle sınırlıdır. Meta paragrafı koşulludur: Meta bağlı gibi sunulmaz. `/privacy#data-deletion`, herkese açık silme talimatı bağlantısıdır; callback endpoint değildir. Meta uygulama sahipliği/inceleme sonucuna göre App Dashboard'da URL ve Data Deletion Instructions alanları Talip tarafından ayarlanır. Politika metni tek başına Google/Meta onayı garantisi değildir.
 
@@ -21,3 +23,5 @@ Meta kaynağı: [Meta'nın resmî Marketing API koleksiyonu — access levels](h
 ## Yerel doğrulama
 
 TypeScript, değişen üç UI dosyasında lint, sentetik Production build geçti. Yerel tarayıcı **6/6**: doğrudan public rota/SEO, canonical, sekiz bölüm + deletion mailto, 375px taşma yok, VIP footer bağlantısı, dış trafik/runtime hatası yok. Kanıtlar `K12_Privacy_kanit/`. Canlı site/DB/Google/Meta/secret işlemi ve polling yapılmadı.
+
+22 Ekim düzeltme doğrulaması: sayfa/düz metin birebir eşit, SEO dahil service provider ifadesi yok, uygulama adı ve iletişim bilgileri korundu. Tarayıcı testi yeniden **6/6** geçti; 375px/masaüstü kanıtları yenilendi.

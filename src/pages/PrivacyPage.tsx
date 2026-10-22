@@ -1,7 +1,7 @@
 import { useSeo } from "../hooks/useSeo";
 
 export default function PrivacyPage() {
-  useSeo("Privacy Policy", "How Nazar Restaurant & Bakery and its service provider handle website, customer and connected reporting data.", "/privacy");
+  useSeo("Privacy Policy", "How Nazar Restaurant & Bakery handles website, customer and connected reporting data.", "/privacy");
   return (
     <article className="mx-auto max-w-3xl space-y-7 px-4 py-10 text-sm leading-7 text-zinc-700">
       <header>
@@ -10,7 +10,7 @@ export default function PrivacyPage() {
       </header>
       <section aria-labelledby="privacy-who">
         <h2 id="privacy-who" className="text-xl font-semibold text-zinc-900">Who this covers</h2>
-        <p>This policy covers Nazar Restaurant &amp; Bakery’s website and its connected reporting tools. Nazar handles restaurant customer requests. A separate service provider operates the website and reporting tools on Nazar’s behalf. Platform Ops Restaurants is the Google reporting application’s name; it is not the restaurant’s name.</p>
+        <p>This policy covers Nazar Restaurant &amp; Bakery’s website and its connected reporting tools. Nazar handles restaurant customer requests. Platform Ops Restaurants is the Google reporting application’s name; it is not the restaurant’s name.</p>
       </section>
       <section aria-labelledby="privacy-collect">
         <h2 id="privacy-collect" className="text-xl font-semibold text-zinc-900">Information we use</h2>
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
       </section>
       <section aria-labelledby="privacy-sharing">
         <h2 id="privacy-sharing" className="text-xl font-semibold text-zinc-900">Sharing and protection</h2>
-        <p>Authorized restaurant staff and the service provider use information for the purposes above. Hosting, database, email, security, analytics and ordering providers process information needed to deliver their services. We may disclose information when required by law or to protect people and systems. We restrict access and keep connection credentials on the server, separate from public pages.</p>
+        <p>Authorized restaurant staff use information for the purposes above. Hosting, database, email, security, analytics and ordering providers process information needed to deliver their services. We may disclose information when required by law or to protect people and systems. We restrict access and keep connection credentials on the server, separate from public pages.</p>
       </section>
       <section aria-labelledby="privacy-retention">
         <h2 id="privacy-retention" className="text-xl font-semibold text-zinc-900">Keeping information and your choices</h2>
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
       </section>
       <section aria-labelledby="privacy-contact">
         <h2 id="privacy-contact" className="text-xl font-semibold text-zinc-900">Contact and changes</h2>
-        <p>Contact Nazar Restaurant &amp; Bakery at the email above or 39 Elm Street, Unit 1, West Haven, CT. Nazar will route platform-related requests to its service provider. We post policy changes here and seek any additional consent required before using connected-account data for a new purpose.</p>
+        <p>Contact Nazar Restaurant &amp; Bakery at the email above or 39 Elm Street, Unit 1, West Haven, CT. We post policy changes here and seek any additional consent required before using connected-account data for a new purpose.</p>
       </section>
     </article>
   );

@@ -4,7 +4,7 @@ Last updated: October 22, 2026
 
 ## Who this covers
 
-This policy covers Nazar Restaurant & Bakery’s website and its connected reporting tools. Nazar handles restaurant customer requests. A separate service provider operates the website and reporting tools on Nazar’s behalf. Platform Ops Restaurants is the Google reporting application’s name; it is not the restaurant’s name.
+This policy covers Nazar Restaurant & Bakery’s website and its connected reporting tools. Nazar handles restaurant customer requests. Platform Ops Restaurants is the Google reporting application’s name; it is not the restaurant’s name.
 
 ## Information we use
 
@@ -22,7 +22,7 @@ We do not sell API data, share it with data brokers, use it to build advertising
 
 ## Sharing and protection
 
-Authorized restaurant staff and the service provider use information for the purposes above. Hosting, database, email, security, analytics and ordering providers process information needed to deliver their services. We may disclose information when required by law or to protect people and systems. We restrict access and keep connection credentials on the server, separate from public pages.
+Authorized restaurant staff use information for the purposes above. Hosting, database, email, security, analytics and ordering providers process information needed to deliver their services. We may disclose information when required by law or to protect people and systems. We restrict access and keep connection credentials on the server, separate from public pages.
 
 ## Keeping information and your choices
 
@@ -36,4 +36,4 @@ You can also revoke Google access in [your Google Account connections](https://m
 
 ## Contact and changes
 
-Contact Nazar Restaurant & Bakery at the email above or 39 Elm Street, Unit 1, West Haven, CT. Nazar will route platform-related requests to its service provider. We post policy changes here and seek any additional consent required before using connected-account data for a new purpose.
+Contact Nazar Restaurant & Bakery at the email above or 39 Elm Street, Unit 1, West Haven, CT. We post policy changes here and seek any additional consent required before using connected-account data for a new purpose.
