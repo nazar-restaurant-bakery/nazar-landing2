@@ -11,6 +11,7 @@ import ContactPage from "./pages/ContactPage";
 import VipPage from "./pages/VipPage";
 import SpecialsPage from "./pages/SpecialsPage";
 import CateringPage from "./pages/CateringPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import { browserDeployment } from "./lib/supabase";
 import StaffOffersPage from "./pages/StaffOffersPage";
 import StaffProfileSyncPage from "./pages/StaffProfileSyncPage";
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/vip" element={<VipPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
       </Route>
     </Routes>
   );
