@@ -1,6 +1,7 @@
 // A redirect is never proof of payment. This endpoint is the only path that may
 // mark a standard catering checkout paid, after signature and payment lookup.
 import { verifyCloverWebhookSignature } from "../../_lib/cloverWebhookSignature.ts";
+import { sendVerifiedSiteOrderEmail } from "../../_lib/siteOrderConfirmationEmail.ts";
 
 type Env = {
   CATERING_CHECKOUT_ENABLED?: string;
@@ -8,6 +9,7 @@ type Env = {
   CLOVER_MERCHANT_ID?: string;
   CLOVER_WEBHOOK_SIGNING_SECRET?: string;
   CLOVER_PLATFORM_API_TOKEN?: string;
+  CLOUDFLARE_EMAIL_SEND_TOKEN?: string;
   SUPABASE_SECRET_KEY?: string;
   CATERING_SANDBOX_SUPABASE_URL?: string;
   SITE_PRODUCTION_SUPABASE_URL?: string;
@@ -134,8 +136,13 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       });
       if (coreResult.ok) {
         const state = await coreResult.json() as string;
-        return ["paid", "needs_reschedule", "already_verified"].includes(state)
-          ? reply(200, state) : reply(503, "confirmation_unavailable");
+        if (!["paid", "needs_reschedule", "already_verified"].includes(state)) {
+          return reply(503, "confirmation_unavailable");
+        }
+        // Transactional email is secondary to payment confirmation. It is
+        // claimed once by the database and never changes the webhook result.
+        try { await sendVerifiedSiteOrderEmail(env, databaseUrl, sessionId); } catch { /* no PII in logs */ }
+        return reply(200, state);
       }
       const fault = await coreResult.json().catch(() => null) as
         { code?: string; message?: string } | null;
