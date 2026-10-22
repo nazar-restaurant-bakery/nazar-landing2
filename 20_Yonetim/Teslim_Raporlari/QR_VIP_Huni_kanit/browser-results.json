@@ -1,0 +1,13 @@
+{
+  "passed": 6,
+  "failed": 0,
+  "syntheticOnly": true,
+  "checks": [
+    "Missing RPC is unknown, not zero.",
+    "QR sessions, VIP, actual confirmation and coupon split shown; immature repeat unknown.",
+    "375px no horizontal overflow.",
+    "Foreign tenant clears prior counts.",
+    "403 reveals no counts.",
+    "Loopback only, no provider/GA4/account access or runtime errors."
+  ]
+}

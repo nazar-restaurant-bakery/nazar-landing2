@@ -89,3 +89,10 @@ test('build-time isolation removes production GA4 while Production keeps its ori
   assert.doesNotMatch(transform({VITE_APP_ENV:'isolated-test'}),/googletagmanager|G-LK46HFY46G/);
   assert.doesNotMatch(transform({CF_PAGES_BRANCH:'feat/isolated-test-env'}),/googletagmanager|G-LK46HFY46G/);
 });
+
+test('printed QR VIP payload retains allowlisted tags on signup RPC without outbound subscription',async()=>{
+ const calls=[],pending=[];globalThis.fetch=async(url,init)=>{calls.push({url:String(url),body:JSON.parse(init.body)});return calls.length===1?Response.json({success:true,hostname:expectedHostname}):new Response(null,{status:204});};
+ const utm={utm_source:'qr',utm_medium:'offline',utm_campaign:'qr_paket',landing_page:'/vip'};
+ assert.equal((await onRequestPost({request:request({utm:{...utm,untrusted:'discard'}}),env:server,waitUntil:p=>pending.push(p)})).status,200);await Promise.all(pending);
+ assert.equal(calls.length,2);assert.equal(calls[1].url,target+'/rest/v1/rpc/submit_signup_once');assert.deepEqual(calls[1].body.p_utm,utm);assert.equal(calls[1].body.p_source,'website_vip_page');
+});

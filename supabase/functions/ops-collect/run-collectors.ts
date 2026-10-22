@@ -4,7 +4,7 @@ import { collect as clover } from "./clover_api.ts";
 import { collect as klaviyo } from "./klaviyo.ts";
 import { collect as reviews } from "./places.ts";
 import { collect as site } from "./site_ping.ts";
-import { collect as ga4 } from "./ga4.ts";
+import { collectWithQr as ga4 } from "./ga4.ts";
 import { collect as googleAds } from "./google_ads.ts";
 import { collect as meta } from "./meta.ts";
 export async function collectSources(store: Pick<OpsStore, "snapshot">, ctx: CollectorContext) {

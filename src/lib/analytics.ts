@@ -1,4 +1,6 @@
 import { PHONE_NUMBER_TEL } from "../data/menu.ts";
+import { getUtmOrNull } from "./utm.ts";
+import { qrCardEventParams } from "./qrCard.ts";
 import { isolatedBrowser } from "./deploymentEnvironment.ts";
 
 type EventTag = (command: "event", name: string, parameters: Record<string, string>) => void;
@@ -19,7 +21,7 @@ function trackSavedSignup(name: string, form: string, requestId: string): void {
   try {
     const tag = (window as Window & { gtag?: EventTag }).gtag;
     if (!tag) return;
-    tag("event", name, { form_name: form });
+    tag("event", name, { form_name: form, ...(form === "vip" ? qrCardEventParams(getUtmOrNull()) : {}) });
     sent.add(key);
     try { window.sessionStorage.setItem(key, "1"); } catch { /* Optional storage. */ }
   } catch { /* Measurement must not turn a saved signup into an error. */ }
