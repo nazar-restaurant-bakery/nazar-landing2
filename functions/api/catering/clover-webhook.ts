@@ -11,6 +11,8 @@ type Env = {
   SUPABASE_SECRET_KEY?: string;
   CATERING_SANDBOX_SUPABASE_URL?: string;
   SITE_PRODUCTION_SUPABASE_URL?: string;
+  SITE_BUSINESS_ID?: string;
+  CLOVER_WEBHOOK_VERIFICATION_ENABLED?: string;
 };
 type Context = { request: Request; env: Env };
 type Webhook = { type?: string; status?: string; id?: string; merchantId?: string;
@@ -18,6 +20,7 @@ type Webhook = { type?: string; status?: string; id?: string; merchantId?: strin
 type Payment = { id?: string; amount?: number; result?: string; createdTime?: number };
 type StoredOrder = { id?: string; total_cents?: number; status?: string;
   payment_provider?: string; payment_transaction_id?: string };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function timestampMillis(value: unknown): number | null {
   if (typeof value === "string" && /^(?:\d{10}|\d{13})$/.test(value)) {
@@ -39,6 +42,30 @@ function reply(status: number, code: string): Response {
 }
 
 export async function onRequestPost({ request, env }: Context): Promise<Response> {
+  // Clover can send a one-time callback verification code before it issues a
+  // signing secret. This narrowly gated setup request cannot confirm payments.
+  if (env.CLOVER_WEBHOOK_VERIFICATION_ENABLED === "true" &&
+      env.CLOVER_ENVIRONMENT === "production" &&
+      env.CATERING_CHECKOUT_ENABLED !== "true" &&
+      new URL(request.url).hostname === "www.nazarrestaurantandbakery.com" &&
+      !request.headers.get("Clover-Signature")) {
+    if (Number(request.headers.get("Content-Length") || 0) > 512) return reply(413, "too_large");
+    const candidate = await request.text();
+    if (candidate.length > 512) return reply(413, "too_large");
+    let payload: unknown;
+    try { payload = JSON.parse(candidate); } catch { return reply(400, "invalid_verification"); }
+    if (payload && typeof payload === "object" && !Array.isArray(payload) &&
+        Object.keys(payload).length === 1 &&
+        typeof (payload as { verificationCode?: unknown }).verificationCode === "string" &&
+        /^[A-Za-z0-9-]{8,128}$/.test((payload as { verificationCode: string }).verificationCode)) {
+      // Temporary setup log: Talip reads the code in wrangler tail, enters it
+      // in Clover, then disables the setup flag. No customer or payment data.
+      console.info("k16_clover_webhook_verification_code",
+        (payload as { verificationCode: string }).verificationCode);
+      return reply(200, "verification_received");
+    }
+    return reply(400, "invalid_verification");
+  }
   const sandbox = env.CLOVER_ENVIRONMENT === "sandbox";
   const merchantId = env.CLOVER_MERCHANT_ID;
   const databaseUrl = sandbox ? env.CATERING_SANDBOX_SUPABASE_URL : env.SITE_PRODUCTION_SUPABASE_URL;
@@ -87,6 +114,36 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       return reply(422, "payment_not_confirmed");
     }
 
+    const paidMillis = timestampMillis(payment.createdTime) ??
+      timestampMillis(event.created ?? event.createdTime);
+    if (paidMillis === null || paidMillis < 1000000000000 ||
+        paidMillis > Date.now() + 5 * 60 * 1000) return reply(422, "invalid_payment_time");
+
+    // PR 1's private site-order tables are accessible only through this
+    // service-role RPC. A session unknown there belongs to the legacy catering
+    // flow; every other RPC error fails closed.
+    if (UUID_RE.test(env.SITE_BUSINESS_ID ?? "")) {
+      const coreResult = await fetch(`${databaseUrl}/rest/v1/rpc/site_order_payment_confirm_v1`, {
+        method: "POST", headers: { ...dbHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_business_id: env.SITE_BUSINESS_ID,
+          p_session_id: sessionId, p_merchant_id: merchantId,
+          p_payment_id: event.id, p_amount_cents: payment.amount,
+          p_paid_at: new Date(paidMillis).toISOString(),
+          p_raw_response: { id: payment.id, amount: payment.amount,
+            result: payment.result, createdTime: payment.createdTime ?? null } }),
+      });
+      if (coreResult.ok) {
+        const state = await coreResult.json() as string;
+        return ["paid", "needs_reschedule", "already_verified"].includes(state)
+          ? reply(200, state) : reply(503, "confirmation_unavailable");
+      }
+      const fault = await coreResult.json().catch(() => null) as
+        { code?: string; message?: string } | null;
+      if (fault?.code !== "22023" || fault.message !== "Unknown session") {
+        return reply(503, "confirmation_unavailable");
+      }
+    }
+
     const orderResult = await fetch(`${databaseUrl}/rest/v1/catering_orders?payment_provider=eq.clover&payment_session_id=eq.${encodeURIComponent(sessionId)}&select=id,total_cents,status,payment_provider,payment_transaction_id`, {
       headers: dbHeaders,
     });
@@ -101,10 +158,6 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       return reply(200, "already_confirmed");
     }
     if (orders[0].status !== "pending_payment") return reply(503, "order_not_ready");
-    const paidMillis = timestampMillis(payment.createdTime) ??
-      timestampMillis(event.created ?? event.createdTime);
-    if (paidMillis === null || paidMillis < 1000000000000 ||
-        paidMillis > Date.now() + 5 * 60 * 1000) return reply(422, "invalid_payment_time");
     const confirmed = await fetch(`${databaseUrl}/rest/v1/rpc/confirm_catering_payment_v2`, {
       method: "POST", headers: { ...dbHeaders, "Content-Type": "application/json" },
       body: JSON.stringify({ p_provider: "clover", p_session_id: sessionId, p_payment_id: event.id,
