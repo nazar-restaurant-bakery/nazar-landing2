@@ -10,13 +10,16 @@ const business='a358eba4-b197-4309-805b-46f43a718454',staff='11111111-1111-4111-
 for (const projectRef of ['khgczybubufouraqyrcj', 's'.repeat(20)]) test('isolated ops migration '+projectRef+': staff isolation, claims, payload privacy, exact net commission, budget and trusted offer gate',{skip:!PGlite?'Install isolated PGlite or set PGLITE_MODULE to run this database test.':false},async()=>{
  const db=new PGlite(); const rows=async(sql,args=[])=>(await db.query(sql,args)).rows;
  const run=async(sql,args=[])=>(await rows(sql,args))[0]?.data;
- const role=async(value)=>db.exec(`RESET ROLE;SET ROLE ${value}`);
+ const role=async(value)=>db.exec(`RESET ROLE;SET ROLE ${value};SET request.jwt.claim.role='${value}'`);
  const enqueue=async(action,payload={})=>run('select public.ops_request_action($1,$2::jsonb) data',[action,JSON.stringify({clientRequestId:crypto.randomUUID(),...payload})]);
  const claim=async(id)=>{await role('service_role');return run('select public.ops_claim_action($1,$2) data',[id,staff]);};
  const finish=async(action,status='done',result={code:'test_done',message:'Synthetic aggregate result.'},metrics=[])=>run('select public.ops_finish_action($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb) data',[action.id,action.claim_token,status,JSON.stringify(result),JSON.stringify(metrics),'[]']);
  try {
   await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role;
    CREATE SCHEMA core;CREATE SCHEMA auth;CREATE SCHEMA storage;
+   CREATE TABLE core.businesses(id uuid PRIMARY KEY,timezone text NOT NULL);
+   INSERT INTO core.businesses VALUES('${business}','America/New_York');
+   CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('request.jwt.claim.role',true),'')$$;
    CREATE TABLE core.installation(declared_project_ref text);INSERT INTO core.installation VALUES('${projectRef}');
    CREATE TABLE auth.users(id uuid PRIMARY KEY);INSERT INTO auth.users VALUES('${staff}'),('${guest}');
    CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
@@ -26,8 +29,10 @@ for (const projectRef of ['khgczybubufouraqyrcj', 's'.repeat(20)]) test('isolate
    CREATE TABLE core.commissions(business_id uuid,period_month date,qualified_sales numeric,baseline numeric,refunds numeric,qicr numeric,rate numeric,commission_amount numeric,computed_at timestamptz,UNIQUE(business_id,period_month));
    CREATE TABLE core.signups(business_id uuid,is_test boolean,processed boolean,created_at timestamptz);
    INSERT INTO core.signups VALUES('${business}',false,false,now()-interval '1 day'),('${business}',true,false,now()-interval '1 day'),('33333333-3333-4333-8333-333333333333',false,false,now()-interval '1 day');
-   CREATE TABLE core.offers(id uuid PRIMARY KEY,business_id uuid,name text,active boolean,is_test boolean);
-   INSERT INTO core.offers VALUES('44444444-4444-4444-8444-444444444444','${business}','Synthetic test offer',false,true),('55555555-5555-4555-8555-555555555555','${business}','Synthetic real offer',false,false);
+   CREATE TABLE core.offers(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),business_id uuid,name text,description text,code text,channel_target text DEFAULT 'clover',starts_at date,ends_at date,active boolean,is_test boolean);
+   INSERT INTO core.offers(id,business_id,name,starts_at,ends_at,active,is_test) VALUES
+     ('44444444-4444-4444-8444-444444444444','${business}','Synthetic test offer',current_date,current_date,false,true),
+     ('55555555-5555-4555-8555-555555555555','${business}','Synthetic real offer',current_date + 1,current_date + 1,false,false);
    CREATE FUNCTION public.set_offer_active(p_offer_id uuid,p_active boolean) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$BEGIN UPDATE core.offers SET active=p_active WHERE id=p_offer_id;RETURN jsonb_build_object('id',p_offer_id,'active',p_active);END$$;
    CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
    CREATE TABLE storage.objects(id uuid DEFAULT gen_random_uuid(),bucket_id text,name text);ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;GRANT USAGE ON SCHEMA storage TO authenticated;GRANT SELECT ON storage.objects TO authenticated;
@@ -35,6 +40,8 @@ for (const projectRef of ['khgczybubufouraqyrcj', 's'.repeat(20)]) test('isolate
   await db.exec(await fs.readFile(new URL('./opsDbCommission.fixture.sql',import.meta.url),'utf8'));
   await db.exec("SET app.ops_project_ref='"+projectRef+"'");
   await db.exec(await fs.readFile(new URL('../supabase/migrations/20261020000100_ops_panel.sql',import.meta.url),'utf8'));
+  await db.exec('DROP FUNCTION public.set_offer_active(uuid,boolean)');
+  await db.exec(await fs.readFile(new URL('../supabase/migrations/20261021000950_offer_calendar_activation.sql',import.meta.url),'utf8'));
   await role('anon');await assert.rejects(()=>run('select public.ops_actions_v() data'));
   await role('authenticated');await db.exec(`SET request.jwt.claim.sub='${guest}'`);
   await assert.rejects(()=>run('select public.ops_dashboard_v() data'),/Access denied/);
@@ -85,6 +92,34 @@ for (const projectRef of ['khgczybubufouraqyrcj', 's'.repeat(20)]) test('isolate
   await db.exec(`RESET ROLE;INSERT INTO core.ops_offer_approvals(business_id,offer_id,reference,condition_fingerprint) SELECT '${business}',id,'Synthetic reviewed terms',md5((to_jsonb(o)-'active'-'created_at'-'updated_at')::text) FROM core.offers o WHERE id='55555555-5555-4555-8555-555555555555';SET ROLE authenticated`);
   assert.equal((await run('select public.ops_dashboard_v() data')).offers.find(o=>o.id==='55555555-5555-4555-8555-555555555555').approved,true);
   await db.exec("RESET ROLE;UPDATE core.offers SET name='Synthetic changed terms' WHERE id='55555555-5555-4555-8555-555555555555';SET ROLE authenticated");assert.equal((await run('select public.ops_dashboard_v() data')).offers.find(o=>o.id==='55555555-5555-4555-8555-555555555555').approved,false);
+  await assert.rejects(()=>run("select public.set_offer_active('55555555-5555-4555-8555-555555555555',true) data"),/permission denied|Access denied/);
+  assert.equal((await rows(`select count(*)::int n from public.get_active_offers('${business}')`))[0].n,0,'an activated test offer is invisible to Specials');
+  await db.exec("RESET ROLE;UPDATE core.offers SET starts_at=current_date-7,ends_at=current_date-7 WHERE is_test");
+  const today=(await rows("select (now() at time zone 'America/New_York')::date::text today"))[0].today;
+  const importTemplate=await fs.readFile(new URL('../supabase/offer-calendar/approved-offers.template.sql',import.meta.url),'utf8');
+  const approvedRows=[
+    {name:'Approved today offer',description:'Owner-reviewed synthetic terms.',code:'TEST-TODAY',starts_at:today,ends_at:today,approval_reference:'Synthetic approval 2026-10-21'},
+    {name:'Approved November offer',description:'Owner-reviewed synthetic terms.',code:'TEST-NOV',starts_at:'2027-11-02',ends_at:'2027-11-08',approval_reference:'Synthetic approval 2026-10-21'}
+  ];
+  const importSql=importTemplate.replace('00000000-0000-0000-0000-000000000000',business).replace('$approved$[]$approved$',`$approved$${JSON.stringify(approvedRows)}$approved$`);
+  await db.exec('RESET ROLE');await db.exec(importSql);
+  const imported=(await rows("select id,active from core.offers where code='TEST-NOV'"))[0];
+  assert.equal(imported.active,false,'approved calendar offers import inactive');
+  assert.equal((await rows('select count(*)::int n from core.ops_offer_approvals where offer_id=$1',[imported.id]))[0].n,1);
+  await assert.rejects(()=>db.exec(importSql),/Code or dates conflict/);
+  await db.exec('ROLLBACK');
+  const overlapping=importTemplate.replace('00000000-0000-0000-0000-000000000000',business).replace('$approved$[]$approved$',`$approved$${JSON.stringify([{...approvedRows[0],code:'TEST-OTHER',starts_at:'2027-11-07',ends_at:'2027-11-11'}])}$approved$`);
+  await assert.rejects(()=>db.exec(overlapping),/Code or dates conflict/);
+  await db.exec('ROLLBACK');
+  await role('service_role');
+  assert.equal((await run('select public.set_offer_active($1,true) data',[imported.id])).active,true);
+  await db.exec('RESET ROLE');
+  const todayOffer=(await rows("select id from core.offers where code='TEST-TODAY'"))[0];
+  await role('service_role');
+  assert.equal((await run('select public.set_offer_active($1,true) data',[todayOffer.id])).active,true);
+  await role('anon');
+  assert.deepEqual((await rows(`select name from public.get_active_offers('${business}')`)).map(row=>row.name),['Approved today offer'],'Specials shows only the active offer valid today');
+  await role('authenticated');
   await db.exec(`RESET ROLE;INSERT INTO storage.objects(bucket_id,name)VALUES('nazar-ops','${business}/ops/commission/2020-01-${approved.id}.pdf'),('nazar-ops','other-business/ops/commission/file.pdf');SET ROLE authenticated`);
   assert.equal((await rows('select * from storage.objects')).length,1);
   await db.exec(`SET request.jwt.claim.sub='${guest}'`);assert.equal((await rows('select * from storage.objects')).length,0);

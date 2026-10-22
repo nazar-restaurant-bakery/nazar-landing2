@@ -86,6 +86,8 @@
 /tools/test-env/staff-manage/** text eol=lf
 
 /supabase/migrations/20261021000900_staff_management.sql text eol=lf
+/supabase/migrations/20261021000950_offer_calendar_activation.sql text eol=lf
+/supabase/offer-calendar/approved-offers.template.sql text eol=lf
 
 /supabase/migrations/20261021001000_ops_campaign_usage_split.sql text eol=lf
 
