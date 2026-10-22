@@ -8,6 +8,9 @@ const env = {
   TURNSTILE_SECRET_KEY: "test", CLOVER_HOSTED_CHECKOUT_PRIVATE_KEY: "test",
   CLOVER_MERCHANT_ID: "22JDW74C8E0Y1", CLOVER_ENVIRONMENT: "sandbox",
   CLOVER_TAX_RATE_ID: "SANDBOX_TAX_ID",
+  CLOVER_TAX_RATE_MICROS: "735000",
+  SITE_BUSINESS_ID: "a358eba4-b197-4309-805b-46f43a718454",
+  SITE_PRODUCTION_SUPABASE_URL: "https://khgczybubufouraqyrcj.supabase.co",
   CATERING_SANDBOX_SUPABASE_URL: "https://catering-sandbox.supabase.co",
 };
 const originalFetch = globalThis.fetch;
@@ -68,6 +71,20 @@ test("missing merchant tax reference prevents both sandbox and production checko
   } });
   assert.equal(productionResponse.status, 503);
   assert.deepEqual(await productionResponse.json(), { code: "checkout_unavailable" });
+});
+
+test("tenant and tax settings must be present before checkout", async () => {
+  globalThis.fetch = () => { throw new Error("should not fetch"); };
+  const missingTenant = await onRequestPost({ request: request(order()), env: {
+    ...env, SITE_BUSINESS_ID: undefined,
+  } });
+  assert.equal(missingTenant.status, 503);
+  assert.equal((await missingTenant.json()).checks.businessIdValid, false);
+  const invalidTax = await onRequestPost({ request: request(order()), env: {
+    ...env, CLOVER_TAX_RATE_MICROS: "not-a-rate",
+  } });
+  assert.equal(invalidTax.status, 503);
+  assert.equal((await invalidTax.json()).checks.taxRateValid, false);
 });
 
 test("sandbox catch identifies the failed stage without disclosing exception text", async () => {
