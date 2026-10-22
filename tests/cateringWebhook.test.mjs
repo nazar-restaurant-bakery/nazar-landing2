@@ -31,6 +31,16 @@ test("webhook fails closed without integration credentials", async () => {
   assert.equal((await onRequestPost({ request: await request(event), env: {} })).status, 503);
 });
 
+test("sandbox uses its configured database and rejects a known production URL", async () => {
+  const withoutProductionUrl = { ...env, SITE_PRODUCTION_SUPABASE_URL: undefined };
+  const nonApproved = { ...event, status: "DECLINED" };
+  assert.equal((await onRequestPost({ request: await request(nonApproved),
+    env: withoutProductionUrl })).status, 200);
+  const sameDatabase = { ...env, SITE_PRODUCTION_SUPABASE_URL: env.CATERING_SANDBOX_SUPABASE_URL };
+  assert.equal((await onRequestPost({ request: await request(nonApproved),
+    env: sameDatabase })).status, 503);
+});
+
 test("webhook rejects a bad signature before making external calls", async () => {
   globalThis.fetch = () => { throw new Error("unexpected fetch"); };
   assert.equal((await onRequestPost({ request: await request(event, "wrong-secret"), env })).status, 401);

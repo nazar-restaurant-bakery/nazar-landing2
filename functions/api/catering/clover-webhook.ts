@@ -47,8 +47,8 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       !merchantId || !/^[A-Za-z0-9]{8,20}$/.test(merchantId) ||
       !["sandbox", "production"].includes(env.CLOVER_ENVIRONMENT ?? "") ||
       !databaseUrl || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(databaseUrl) ||
-      (sandbox && (!env.SITE_PRODUCTION_SUPABASE_URL ||
-        databaseUrl === env.SITE_PRODUCTION_SUPABASE_URL))) {
+      (sandbox && !!env.SITE_PRODUCTION_SUPABASE_URL &&
+        databaseUrl === env.SITE_PRODUCTION_SUPABASE_URL)) {
     return reply(503, "webhook_unavailable");
   }
   if (Number(request.headers.get("Content-Length") || 0) > 8192) return reply(413, "too_large");
