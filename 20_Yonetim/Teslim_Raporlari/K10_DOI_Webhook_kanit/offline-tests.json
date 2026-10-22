@@ -1,0 +1,8 @@
+{
+  "scope": "OFFLINE_SYNTHETIC_ONLY",
+  "passed": 26,
+  "total": 26,
+  "databaseConnections": 0,
+  "passwordPrompts": 0,
+  "hostedReceiptsWritten": 0
+}

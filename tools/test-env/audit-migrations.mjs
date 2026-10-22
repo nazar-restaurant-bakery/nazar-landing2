@@ -172,6 +172,14 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   {key:'k7_payment_day_delivery',order:'6b',path:'supabase/migrations/20261020001000_clover_payment_day_totals.sql',sha:'2b5b31f9539d04b08a3ca7e85baf8bb7ded828d498ad051c43c83d2f664515cc'},
   {key:'k8_delivery',order:7,path:'supabase/migrations/20261021000100_clover_webhook.sql',sha:'1d305756deba4b614c6e60198ef7c954bca9008bc944be7e4bea52f4ff29a94e'},
  ];
+ // Additional reviewed DOI/current-main inventory pins.
+ currentMainDeliveries.push({key:'staff_management_delivery',order:15,path:'supabase/migrations/20261021000900_staff_management.sql',sha:'1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68'});
+ currentMainDeliveries.push({key:'ops_campaign_usage_delivery',order:16,path:'supabase/migrations/20261021001000_ops_campaign_usage_split.sql',sha:'8eae6c4407bc33cbc710bb5c9e2ac56cfe1fb36f573b8be47fa0146871cf57e0'});
+ currentMainDeliveries.push({key:'qr_vip_funnel_delivery',order:17,path:'supabase/migrations/20261021001100_qr_vip_funnel.sql',sha:'15477a8c7bef56854af9cec9c01cc9e79189295396cea2e306ca1f722b369722'});
+ const doi=manifest.vip_doi_webhook_delivery;
+ if(!doi||doi.path!=='supabase/migrations/20261022000200_vip_doi_webhook.sql'||doi.sha256_bytes!=='863dd37b0a8a39840747607f638f43bd8d700f3d4944373114304e34712e71a5'||doi.application_order!==19||doi.requires_previous_order!==18||doi.included_in_k3_reset!==false||doi.execution_enabled!==false)
+  issue('DOI_WEBHOOK_DELIVERY_CONTRACT','Order 19 requires approved order 18, never K3 replay or execution.');
+ if(doi){try{const bytes=await fs.readFile(path.join(realRoot,doi.path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!=='863dd37b0a8a39840747607f638f43bd8d700f3d4944373114304e34712e71a5')issue('DOI_WEBHOOK_DELIVERY_BYTES',doi.path);}catch{issue('DOI_WEBHOOK_DELIVERY_MISSING','DOI SQL unavailable');}}
  const k13bDelivery=manifest.k13b_delivery;
  const k13bPath='supabase/migrations/20261021000450_commission_channel_label.sql';
  const k13bSha='1d859b4b56b02b75d9662ba976a1b4f149c53c067c6fd0497e4794cda3e33607';
@@ -231,7 +239,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
    issue('K10_COUPON_DEPENDENCY','Signup-reward coupons require exactly the reviewed K9 and K10 eligibility sources.');
   try{const bytes=await fs.readFile(path.join(realRoot,k10CouponPath));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k10CouponSha)issue('K10_COUPON_DELIVERY_BYTES','Signup-reward coupon reviewed LF delivery bytes changed.');}catch{issue('K10_COUPON_DELIVERY_MISSING','Signup-reward coupon file missing.');}
  }
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],k10Eligibility?[k10Path]:[],k10Coupons?[k10CouponPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],k10Eligibility?[k10Path]:[],k10Coupons?[k10CouponPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path)).concat(doi?[doi.path]:[]);
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');

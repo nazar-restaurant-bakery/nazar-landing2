@@ -90,3 +90,13 @@
 /supabase/migrations/20261021001000_ops_campaign_usage_split.sql text eol=lf
 
 /supabase/migrations/20261021001100_qr_vip_funnel.sql text eol=lf
+
+/supabase/migrations/20261022000200_vip_doi_webhook.sql text eol=lf
+
+/functions/_lib/vipDoiWebhook.ts text eol=lf
+
+/functions/api/webhooks/vip-doi.ts text eol=lf
+
+/tests/vipDoiWebhook*.mjs text eol=lf
+
+/tests/fixtures/siteOrderFoundation.order18.sql text eol=lf

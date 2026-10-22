@@ -1,0 +1,54 @@
+{
+  "file": "20261022000200_vip_doi_webhook.sql",
+  "sha256": "863DD37B0A8A39840747607F638F43BD8D700F3D4944373114304E34712E71A5",
+  "module": "VipDoiWebhook",
+  "dependencies": [
+    {
+      "order": "18",
+      "file": "20261022000100_site_order_foundation.sql",
+      "sha256": "C8D92AD4A69B0C46EA3578054F92BD2AA675BD92EA5E4E2E161F040445AA0953",
+      "checks": "migration_order_18",
+      "receipt": "K16Foundation_kanit/receipts/18-{target}-success.json",
+      "requireOrder": true,
+      "legacy": true,
+      "checkCount": 1,
+      "module": "K16Foundation"
+    }
+  ],
+  "preconditions": [
+    "to_regclass('core.site_orders') IS NOT NULL",
+    "to_regclass('core.vip_doi_webhook_receipts') IS NULL AND to_regclass('core.vip_doi_webhook_attempts') IS NULL",
+    "to_regprocedure('public.coupon_record_confirmed_vip_v1(uuid,uuid,uuid,text,timestamptz,timestamptz,jsonb)') IS NOT NULL",
+    "NOT has_schema_privilege('anon','core','USAGE') AND NOT has_schema_privilege('authenticated','core','USAGE') AND NOT has_schema_privilege('service_role','core','USAGE')"
+  ],
+  "postconditions": [
+    "(SELECT count(*)=2 AND bool_and(c.relrowsecurity) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='core' AND c.relname IN('vip_doi_webhook_receipts','vip_doi_webhook_attempts'))",
+    "NOT has_schema_privilege('anon','core','USAGE') AND NOT has_schema_privilege('authenticated','core','USAGE') AND NOT has_schema_privilege('service_role','core','USAGE')",
+    "NOT has_table_privilege('anon','core.vip_doi_webhook_receipts','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')",
+    "NOT has_table_privilege('authenticated','core.vip_doi_webhook_receipts','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')",
+    "NOT has_table_privilege('service_role','core.vip_doi_webhook_receipts','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')",
+    "(SELECT count(*)=1 AND bool_and(tgenabled='A') FROM pg_trigger WHERE tgrelid='core.vip_doi_webhook_receipts'::regclass AND NOT tgisinternal)",
+    "NOT has_table_privilege('anon','core.vip_doi_webhook_attempts','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')",
+    "NOT has_table_privilege('authenticated','core.vip_doi_webhook_attempts','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')",
+    "NOT has_table_privilege('service_role','core.vip_doi_webhook_attempts','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')",
+    "(SELECT count(*)=1 AND bool_and(tgenabled='A') FROM pg_trigger WHERE tgrelid='core.vip_doi_webhook_attempts'::regclass AND NOT tgisinternal)",
+    "to_regprocedure('public.vip_doi_webhook_match_v1(uuid,text,text)') IS NOT NULL",
+    "(SELECT md5(prosrc)='7161130a66537c89499675b9662218a5' AND prosecdef AND provolatile='s' AND proconfig @> ARRAY['search_path=\"\"'] FROM pg_proc WHERE oid=to_regprocedure('public.vip_doi_webhook_match_v1(uuid,text,text)'))",
+    "NOT EXISTS(SELECT FROM pg_proc p,aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl WHERE p.oid=to_regprocedure('public.vip_doi_webhook_match_v1(uuid,text,text)') AND acl.grantee=0)",
+    "NOT has_function_privilege('anon','public.vip_doi_webhook_match_v1(uuid,text,text)','EXECUTE')",
+    "NOT has_function_privilege('authenticated','public.vip_doi_webhook_match_v1(uuid,text,text)','EXECUTE')",
+    "has_function_privilege('service_role','public.vip_doi_webhook_match_v1(uuid,text,text)','EXECUTE')",
+    "to_regprocedure('public.vip_doi_webhook_confirm_v1(uuid,uuid,uuid,text,timestamptz,timestamptz,jsonb,text)') IS NOT NULL",
+    "(SELECT md5(prosrc)='169cbc6d634aea4347441c603b59dc03' AND prosecdef AND provolatile='v' AND proconfig @> ARRAY['search_path=\"\"'] FROM pg_proc WHERE oid=to_regprocedure('public.vip_doi_webhook_confirm_v1(uuid,uuid,uuid,text,timestamptz,timestamptz,jsonb,text)'))",
+    "NOT EXISTS(SELECT FROM pg_proc p,aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl WHERE p.oid=to_regprocedure('public.vip_doi_webhook_confirm_v1(uuid,uuid,uuid,text,timestamptz,timestamptz,jsonb,text)') AND acl.grantee=0)",
+    "NOT has_function_privilege('anon','public.vip_doi_webhook_confirm_v1(uuid,uuid,uuid,text,timestamptz,timestamptz,jsonb,text)','EXECUTE')",
+    "NOT has_function_privilege('authenticated','public.vip_doi_webhook_confirm_v1(uuid,uuid,uuid,text,timestamptz,timestamptz,jsonb,text)','EXECUTE')",
+    "has_function_privilege('service_role','public.vip_doi_webhook_confirm_v1(uuid,uuid,uuid,text,timestamptz,timestamptz,jsonb,text)','EXECUTE')",
+    "to_regprocedure('public.vip_doi_webhook_observe_v1(uuid,text,text,text)') IS NOT NULL",
+    "(SELECT md5(prosrc)='49b2a3e2516894eb372b6896546b6c28' AND prosecdef AND provolatile='v' AND proconfig @> ARRAY['search_path=\"\"'] FROM pg_proc WHERE oid=to_regprocedure('public.vip_doi_webhook_observe_v1(uuid,text,text,text)'))",
+    "NOT EXISTS(SELECT FROM pg_proc p,aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl WHERE p.oid=to_regprocedure('public.vip_doi_webhook_observe_v1(uuid,text,text,text)') AND acl.grantee=0)",
+    "NOT has_function_privilege('anon','public.vip_doi_webhook_observe_v1(uuid,text,text,text)','EXECUTE')",
+    "NOT has_function_privilege('authenticated','public.vip_doi_webhook_observe_v1(uuid,text,text,text)','EXECUTE')",
+    "has_function_privilege('service_role','public.vip_doi_webhook_observe_v1(uuid,text,text,text)','EXECUTE')"
+  ]
+}

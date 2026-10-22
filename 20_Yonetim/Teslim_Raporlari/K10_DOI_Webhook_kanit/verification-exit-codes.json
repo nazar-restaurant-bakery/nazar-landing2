@@ -1,0 +1,10 @@
+{
+  "targetedNode": 0,
+  "serverTypeScript": 0,
+  "targetedEslint": 0,
+  "baseTsc": 0,
+  "candidateTsc": 0,
+  "baseViteBuild": 0,
+  "candidateViteBuild": 0,
+  "hostedConnections": 0
+}
