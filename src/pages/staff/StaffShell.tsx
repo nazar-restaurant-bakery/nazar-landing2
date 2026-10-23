@@ -21,6 +21,8 @@ import CouponCheckout from "./CouponCheckout";
 import StaffManagement from "./StaffManagement";
 import StaffManagementLink from "../../components/staff/StaffManagementLink";
 import StaffSignIn, { StaffPassword } from "./StaffSignIn";
+import SiteOrderTickets from "../../components/staff/ops/SiteOrderTickets";
+import { visibleStaffTab } from "../../lib/staffVisibility";
 import "./staff.css";
 
 type Phase = "checking" | "allowed" | "denied" | "unavailable";
@@ -47,6 +49,7 @@ export default function StaffShell() {
   const [session, setSession] = useState<Session | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const [staffScopeRevision, setStaffScopeRevision] = useState(0);
+  const [platformView, setPlatformView] = useState<"checking" | "restaurant" | "platform" | "unavailable">("checking");
   const [phase, setPhase] = useState<Phase>("checking");
   const [overview, setOverview] = useState<Overview | null>(null);
   const [includeTests, setIncludeTests] = useState(false);
@@ -99,6 +102,22 @@ export default function StaffShell() {
     // This is a mutable request generation, not a captured DOM ref.
     return () => { alive.current = false; epoch.current++; emailController.current?.abort(); listener.subscription.unsubscribe(); robots.remove(); }; // eslint-disable-line react-hooks/exhaustive-deps
   }, [clearPrivate]);
+
+  useEffect(() => {
+    let active = true;
+    setPlatformView("checking");
+    if (!session || !staffClient || !browserDeployment.businessId) return () => { active = false; };
+    void staffClient.rpc("staff_business_authorized_v1", {
+      p_business_id: null, p_operation: "platform.read",
+    }).then(result => {
+      if (active) {
+        setPlatformView(result.error || typeof result.data !== "boolean"
+          ? "unavailable" : result.data ? "platform" : "restaurant");
+        if (!result.error && result.data === false) setIncludeTests(false);
+      }
+    }, () => { if (active) setPlatformView("unavailable"); });
+    return () => { active = false; };
+  }, [session, staffScopeRevision]);
 
   const refresh = useCallback(async (manual = false) => {
     if (!staffClient || !session || writePending.current || refreshPending.current) return;
@@ -254,17 +273,21 @@ export default function StaffShell() {
 
   const tab = location.pathname.split("/")[2];
   const busy = reading || writing;
+  const platformOperator = platformView === "platform";
   const tabs = [["customers", c.customers], ["catering", c.catering], ["tasks", c.tasks], ["offers", c.offers], ["profile-sync", "Profil senkronu"], ["orders", "Clover siparişleri"], ["coupons", "Kupon"], ["ops", "Ops"], ["system", c.system]];
   return <main className="staff-workspace" lang="tr" dir="ltr">
     {!sessionReady ? <Skeleton /> : !session ? <><StaffSignIn onSigningIn={() => { locallySignedOut.current = false; }} />{message && <p role="status" className="mx-auto max-w-md px-4 text-sm text-amber-800">{message}</p>}</> : <>
-      <header className="border-b border-brand-border bg-white px-4 lg:px-6"><div className="mx-auto flex max-w-[1800px] flex-wrap items-center gap-x-5 gap-y-3 py-3"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand font-bold text-white">N</span><div><p className="text-sm font-bold">{c.brand}</p><p className="text-[11px] text-stone-500">{c.workspace}</p></div></div><nav className="order-3 flex w-full flex-wrap gap-1 lg:order-none lg:w-auto" aria-label={c.workspace}>{tabs.filter(([path]) => path !== "orders" || phase === "allowed").map(([path, label]) => <NavLink key={path} to={`/staff/${path}`} className={({ isActive }) => `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? "bg-brand-primarySoft text-brand-dark" : "text-stone-600 hover:bg-brand-bg"}`}>{label}</NavLink>)}{phase === "allowed" && <StaffManagementLink key={`${session.user.id}:${browserDeployment.businessId}:${staffScopeRevision}`} businessId={browserDeployment.businessId} />}</nav><div className="ml-auto flex min-w-0 flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs" title={c.testsHelp}><input type="checkbox" checked={includeTests} disabled={busy || phase !== "allowed"} onChange={event => toggleTests(event.target.checked)} className="accent-brand" />{c.tests}</label><div className="max-w-48"><p className="truncate text-xs">{session.user.email || "—"}</p><p className="text-[10px] text-stone-500">{c.role}: —</p></div><button type="button" className="text-xs font-semibold text-brand underline" onClick={() => void signOut()}>{c.logout}</button></div></div></header>
+      <header className="border-b border-brand-border bg-white px-4 lg:px-6"><div className="mx-auto flex max-w-[1800px] flex-wrap items-center gap-x-5 gap-y-3 py-3"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand font-bold text-white">N</span><div><p className="text-sm font-bold">{c.brand}</p><p className="text-[11px] text-stone-500">{c.workspace}</p></div></div><nav className="order-3 flex w-full flex-wrap gap-1 lg:order-none lg:w-auto" aria-label={c.workspace}>{phase === "allowed" && platformView !== "checking" && platformView !== "unavailable" && tabs.filter(([path]) => visibleStaffTab(path, platformOperator)).map(([path, label]) => <NavLink key={path} to={`/staff/${path}`} className={({ isActive }) => `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? "bg-brand-primarySoft text-brand-dark" : "text-stone-600 hover:bg-brand-bg"}`}>{label}</NavLink>)}{phase === "allowed" && platformOperator && <StaffManagementLink key={`${session.user.id}:${browserDeployment.businessId}:${staffScopeRevision}`} businessId={browserDeployment.businessId} />}</nav><div className="ml-auto flex min-w-0 flex-wrap items-center gap-3">{platformOperator && <label className="flex items-center gap-2 text-xs" title={c.testsHelp}><input type="checkbox" checked={includeTests} disabled={busy || phase !== "allowed"} onChange={event => toggleTests(event.target.checked)} className="accent-brand" />{c.tests}</label>}<div className="max-w-48"><p className="truncate text-xs">{session.user.email || "—"}</p><p className="text-[10px] text-stone-500">{c.role}: {platformView === "platform" ? "Platform" : platformView === "restaurant" ? "Restoran" : "—"}</p></div><button type="button" className="text-xs font-semibold text-brand underline" onClick={() => void signOut()}>{c.logout}</button></div></div></header>
       <div className="mx-auto max-w-[1800px] px-3 py-4 sm:px-5 lg:px-6"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-stone-500">{c.privacy}</p>{!["ops", "coupons", "team"].includes(tab) && <button type="button" className="staff-button staff-secondary" disabled={busy} onClick={() => void refresh(true)}>{reading ? c.loading : c.refresh}</button>}</div>
         {(message || writeBlocked) && <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{message || c.refreshFirst}</p>}
         {phase === "denied" ? <section className="staff-panel p-6"><h1 className="text-xl font-semibold">{c.accessDenied}</h1><p className="mt-2 text-sm">{c.deniedHelp}</p></section>
           : phase === "unavailable" ? <p role="status" className="staff-panel p-6">{c.unavailable}</p>
-            : phase === "checking" ? <Skeleton /> : <>
+            : phase === "checking" || platformView === "checking" ? <Skeleton />
+            : platformView === "unavailable" ? <p role="status" className="staff-panel p-6">Görünüm rolü doğrulanamadı. Sayfayı yenileyin.</p> : <>
               {(!tab || tab === "crm") && <Navigate to={tab === "crm" ? "/staff/customers" : "/staff/tasks"} replace />}
               {tab && !["customers", "catering", "tasks", "offers", "profile-sync", "orders", "coupons", "team", "ops", "system", "crm"].includes(tab) && <Navigate to="/staff/tasks" replace />}
+              {tab && !["crm"].includes(tab) && !visibleStaffTab(tab, platformOperator) && <Navigate to="/staff/tasks" replace />}
+              {tab && visibleStaffTab(tab, platformOperator) && <>
               {overview && <div hidden={tab !== "customers"}><CustomersView overview={overview} selectedId={selectedCustomer} onSelect={setSelectedCustomer} tasksByCustomer={tasks} tasksLoading={tasksLoading} emailStates={emailStates} onRefreshEmail={id => void refreshEmail(id)} onAddNote={addNote} onCreateTask={createTask} onCompleteTask={id => mutate(() => crmData.completeTask(id), "boolean", c.taskDone, selectedCustomer ? { kind: "tasks", customerId: selectedCustomer } : { kind: "queue" })} onOpenRequest={openRequest} busy={busy} writeBlocked={writeBlocked} /></div>}
               {overview && <div hidden={tab !== "catering"}><CateringView requests={overview.requests} selectedId={selectedRequest} onSelect={setSelectedRequest} decisions={decisions} notifications={notifications} busy={busy} writeBlocked={writeBlocked} accessToken={session.access_token} onUpdate={updateRequest} onQuestion={askQuestion} /></div>}
               {!overview && ["customers", "catering"].includes(tab) && <p role="status">{c.unavailable}</p>}
@@ -274,11 +297,13 @@ export default function StaffShell() {
               {tab === "orders" && <><CloverOrderPullPanel key={`pull-${session.user.id}`} accessToken={session.access_token} /><CloverOrdersPanel key={session.user.id} accessToken={session.access_token} /></>}
               {tab === "coupons" && <CouponCheckout key={`${session.user.id}:${browserDeployment.businessId}`} businessId={browserDeployment.businessId} />}
               {tab === "team" && <StaffManagement key={`${session.user.id}:${browserDeployment.businessId}`} businessId={browserDeployment.businessId} onScopeChange={() => setStaffScopeRevision(v => v + 1)} />}
-              {tab === "ops" && <OpsController key={session.user.id} identity={session.user.id} includeTests={includeTests}
+              {tab === "ops" && !platformOperator && <section className="space-y-4"><h1 className="text-2xl font-semibold">Site siparişleri · mutfak</h1><SiteOrderTickets key={`${session.user.id}:${browserDeployment.businessId}`} identity={session.user.id} businessId={browserDeployment.businessId} /></section>}
+              {tab === "ops" && platformOperator && <OpsController key={session.user.id} identity={session.user.id} includeTests={includeTests}
                 onDenied={() => { clearPrivate(); setPhase("denied"); }} onRefreshLegacy={() => { void refresh(true); }}
                 errorsSection={<SystemView section="errors" aggregateOnly errors={errors} loading={reading} notifications={notifications} requests={overview?.requests || []} email={session.user.email || ""} authorized={phase === "allowed"} onResolve={id => mutate(() => crmData.resolveError(id), "boolean", c.resolved, { kind: "errors" })} busy={busy} writeBlocked={writeBlocked} />}
                 detailsSection={<SystemView section="details" aggregateOnly errors={errors} loading={reading} notifications={notifications} requests={overview?.requests || []} email={session.user.email || ""} authorized={phase === "allowed"} onResolve={id => mutate(() => crmData.resolveError(id), "boolean", c.resolved, { kind: "errors" })} busy={busy} writeBlocked={writeBlocked} />} />}
               {tab === "system" && <><SystemView errors={errors} loading={reading} notifications={notifications} requests={overview?.requests || []} email={session.user.email || ""} authorized={phase === "allowed"} onResolve={id => mutate(() => crmData.resolveError(id), "boolean", c.resolved, { kind: "errors" })} busy={busy} writeBlocked={writeBlocked} /><StaffPassword /></>}
+              </>}
             </>}
       </div>
     </>}
