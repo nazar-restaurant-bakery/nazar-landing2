@@ -23,7 +23,8 @@ function request(data, origin = "https://www.nazarrestaurantandbakery.com") {
 function order() {
   const pickup = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
   pickup.setUTCHours(17, 0, 0, 0);
-  return { name: "Test Customer", email: "customer@example.invalid", phone: "",
+  return { requestId: "87654321-1234-4123-8123-123456789012",
+    name: "Test Customer", email: "customer@example.invalid", phone: "",
     preparationNote: "No onions", fulfillmentMethod: "pickup", requestKind: "standard",
     turnstileToken: "test-token", pickupAt: pickup.toISOString(),
     selections: [{ id: "jajik", size: 10, quantity: 1, price: 1 }] };
@@ -99,7 +100,7 @@ test("sandbox catch identifies the failed stage without disclosing exception tex
   assert.deepEqual(await productionResponse.json(), { code: "checkout_unavailable" });
 });
 
-test("sandbox trims secrets before verification and insert headers", async () => {
+test("sandbox trims secrets before verification and order-create headers", async () => {
   let calls = 0;
   globalThis.fetch = async (_address, options) => {
     calls++;
@@ -116,16 +117,16 @@ test("sandbox trims secrets before verification and insert headers", async () =>
   } });
   assert.equal(calls, 2);
   assert.deepEqual(await response.json(),
-    { code: "checkout_unavailable", stage: "insert", error: "TypeError" });
+    { code: "checkout_unavailable", stage: "order_create", error: "TypeError" });
 });
 
-test("sandbox identifies Clover session and order update exceptions", async () => {
-  for (const failingStage of ["clover_session", "update"]) {
+test("sandbox identifies Clover session and payment-session exceptions", async () => {
+  for (const failingStage of ["clover_session", "session_set"]) {
     let calls = 0;
     globalThis.fetch = async (_address, options) => {
       calls++;
       if (calls === 1) return Response.json({ success: true, hostname: "www.nazarrestaurantandbakery.com" });
-      if (calls === 2) return Response.json([{ id: "12345678-1234-1234-1234-123456789012" }]);
+      if (calls === 2) return Response.json("12345678-1234-4123-8123-123456789012");
       if (calls === 3) {
         assert.equal(options.headers.Authorization, "Bearer private-key");
         if (failingStage === "clover_session") throw new SyntaxError("private clover failure");
@@ -174,10 +175,9 @@ test("server owns stored amount and checkout item price", async () => {
   globalThis.fetch = async (address, options) => {
     calls.push({ address: String(address), options });
     if (calls.length === 1) return Response.json({ success: true, hostname: "www.nazarrestaurantandbakery.com" });
-    if (calls.length === 2) return Response.json([{ id: "12345678-1234-1234-1234-123456789012" }]);
+    if (calls.length === 2) return Response.json("12345678-1234-4123-8123-123456789012");
     if (calls.length === 3) return Response.json({ href: "https://checkout.clover.com/pay/test", checkoutSessionId: "session-test" });
-    return Response.json([{ id: "12345678-1234-1234-1234-123456789012", status: "pending_payment",
-      payment_provider: "clover", payment_session_id: "session-test" }]);
+    return Response.json(true);
   };
   const response = await onRequestPost({ request: request({
     ...order(), selections: [{ id: "jajik", size: 10, quantity: 2, price: 1 }],
@@ -185,27 +185,30 @@ test("server owns stored amount and checkout item price", async () => {
   assert.equal(response.status, 200);
   assert.equal((await response.json()).code, "checkout_ready");
   const stored = JSON.parse(calls[1].options.body);
-  assert.equal(stored.subtotal_cents, 10000);
-  assert.equal(stored.tax_cents, 735);
-  assert.equal(stored.total_cents, 10735);
+  assert.ok(calls[1].address.endsWith("/rpc/site_order_create_v1"));
+  assert.equal(stored.p_subtotal_cents, 10000);
+  assert.equal(stored.p_tax_cents, 735);
+  assert.equal(stored.p_kind, "catering");
+  assert.equal(stored.p_request_id, order().requestId);
+  assert.match(stored.p_request_hash, /^[0-9a-f]{64}$/);
   const clover = JSON.parse(calls[2].options.body);
   assert.equal(clover.shoppingCart.lineItems[0].price, 5000);
   assert.equal(clover.shoppingCart.lineItems[0].unitQty, 2);
   assert.equal(clover.shoppingCart.lineItems[0].taxRates[0].rate, 735000);
   assert.equal(clover.shoppingCart.lineItems[0].taxRates[0].id, "SANDBOX_TAX_ID");
-  assert.equal(calls[3].options.method, "PATCH");
-  assert.equal(JSON.parse(calls[3].options.body).payment_provider, "clover");
-  assert.equal(JSON.parse(calls[3].options.body).payment_session_id, "session-test");
+  assert.equal(calls[3].options.method, "POST");
+  assert.ok(calls[3].address.endsWith("/rpc/site_order_session_set_v1"));
+  assert.equal(JSON.parse(calls[3].options.body).p_session_id, "session-test");
 });
 
-test("checkout fails closed when the order status was not saved", async () => {
+test("checkout fails closed when the payment session was not saved", async () => {
   let calls = 0;
   globalThis.fetch = async () => {
     calls++;
     if (calls === 1) return Response.json({ success: true, hostname: "www.nazarrestaurantandbakery.com" });
-    if (calls === 2) return Response.json([{ id: "12345678-1234-1234-1234-123456789012" }]);
+    if (calls === 2) return Response.json("12345678-1234-4123-8123-123456789012");
     if (calls === 3) return Response.json({ href: "https://checkout.clover.com/pay/test", checkoutSessionId: "session-test" });
-    return Response.json([]);
+    return Response.json(false);
   };
   assert.equal((await onRequestPost({ request: request(order()), env })).status, 503);
 });
