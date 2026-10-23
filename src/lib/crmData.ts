@@ -1,6 +1,6 @@
 import { getStaffSupabase } from "./staffSupabase";
 import { safeCrmRequest } from "./crmUi";
-import { browserDeployment, NAZAR_BUSINESS_ID } from "./supabase";
+import { NAZAR_BUSINESS_ID } from "./supabase";
 import type { EmailStatusResult } from "./crmEmailStatus";
 import type { CrmQueueName } from "./crmQueue";
 
@@ -32,8 +32,9 @@ export type FormErrors = { total_open: number; items: FormError[] };
 export type MutationResult = Promise<boolean>;
 export type EmailState = { loading: boolean; result: EmailStatusResult | null };
 
-// Preserve isolated Preview provider guards.
-export const staffClient = !browserDeployment.isolated ? getStaffSupabase() : null;
+// The shared client validates the complete isolated target before enabling Auth
+// or RPCs. Provider HTTP routes retain their own isolated-environment guards.
+export const staffClient = getStaffSupabase();
 const rpc = (name: string, params?: Record<string, unknown>) => safeCrmRequest(() => staffClient
   ? staffClient.rpc(name, params) : Promise.resolve({ data: null, error: { code: "MISSING_CONFIG" } }));
 export const crmData = {
