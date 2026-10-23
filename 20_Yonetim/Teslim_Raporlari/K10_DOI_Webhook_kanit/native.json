@@ -1,0 +1,21 @@
+{
+  "checks": [
+    "missing order18 rejects before creation",
+    "same operator pre/post catalog conditions pass on actual PostgreSQL",
+    "accepted issuer bytes and ACL unchanged",
+    "authenticated synthetic Flow callback -> existing DOI verifier -> one coupon/outbox; replay one receipt; zero sends",
+    "checkbox without DOI produces no coupon and durable safe retry record",
+    "provider unsubscribe remains K4 protected, no coupon",
+    "local unsubscribe cannot be lifted by callback",
+    "ambiguous signup and other tenant are never guessed",
+    "hosted-style is_test records excluded by matcher",
+    "two simultaneous database sessions commit one coupon and one receipt",
+    "anonymous/staff functions denied; all direct roles denied; RLS + immutable audit"
+  ],
+  "passed": 11,
+  "hosted": false,
+  "providerCalls": 0,
+  "emails": 0,
+  "scope": "OWNED_LOOPBACK_POSTGRES_18_6_SYNTHETIC_ONLY",
+  "run": "local-only retained outside PR"
+}

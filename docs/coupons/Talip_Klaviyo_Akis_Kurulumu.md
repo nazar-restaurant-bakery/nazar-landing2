@@ -40,3 +40,44 @@ Bu belge **taslak kurulum** içindir. Bu çalışma Klaviyo hesabını değişti
 - İnceleme sonrası da **168 saat muhafazakâr bekleme** vardır. Böylece çözülen kayıt süresiz kilit oluşturmaz; otomatik zaman aşımıyla belirsizlik silinmez. Sonradan gerçek teslimat kanıtı gelirse en yeni teslimatın sınırı yine uygulanır. Kanıt yoksa durum açık kalır; gönderildi/gönderilmedi uydurulmaz.
 
 Dayanaklar: [tetik değişimi](https://help.klaviyo.com/hc/en-us/articles/115002775052), [yeniden giriş / past profiles](https://help.klaviyo.com/hc/en-us/articles/360003040052), [Draft/Manual/Live](https://help.klaviyo.com/hc/en-us/articles/115002774932), [GET Events, revision 2026-07-15](https://developers.klaviyo.com/en/v2026-07-15/reference/get_events), [native Received Email alanları](https://developers.klaviyo.com/en/v1-2/reference/klaviyo-metrics-attributes). Received Email için ücretli KDP webhook'u kurulmaz; mevcut Events API salt okunur kullanılır.
+
+
+## 6. DOI → kupon: ayrı Flow webhook — 22 Ekim 2026
+
+Bu bölüm **Nazar VIP — DOI → Kupon** adlı ayrı, **yalnız webhook içeren** Flow içindir. Yukarıdaki **Nazar VIP — Welcome** email Flow'u değiştirilmez. Şimdiki teslim Draft PR'dır; bu tarifi hazırlamak Flow/anahtar/Live veya gerçek email işlemi yapmaz. **Sıra 18 K16 → sıra 19 DOI** aynı hedefte kabul edilmeden alıcı açılmaz. [Teknik sözleşme ve Free plan belge dayanağı](https://github.com/nazar-restaurant-bakery/nazar-landing2/blob/feat/vip-doi-coupon-webhook/docs/coupons/doi-flow-webhook.md).
+
+### A. Önce hesap, izin ve sunucu hazırlığı
+
+1. Klaviyo'ya kendin giriş yap. Hesap adını **Nazar Restaurant & Bakery**, Billing planını **Free** olarak kontrol et. Bu adım plan değiştirmez. **Advanced KDP → Webhooks / Code** ekranına gitme; bu iki özellik ücretli ürünün ayrı yoludur.
+2. Kendi kullanıcı hesabında **MFA / two-step authentication** açık ve rolün Owner/Admin/Manager olmalı. Giriş, doğrulama ve hesap işlemlerini yalnız sen yaparsın; password/kod paylaşılmaz. [Resmî Flow webhook şartları](https://developers.klaviyo.com/en/docs/how_to_add_a_webhook_action_to_a_flow).
+3. **Audience → Lists & segments → mevcut Nazar VIP listesi → Settings → Consent / Opt-in process**. **Double opt-in** olmalı. Aynı listenin ID'sini URL'den kaydet; yeni liste açma. Native signup yolundaki mevcut listeyle aynı olmalı. Farklıysa devam etme; bu tarif suppression kaldırma veya single opt-in'e geçirme yolu değildir.
+4. Codex teslimindeki `docs/coupons/doi-flow-webhook.md` ayar tablosunu aç. Talip'in onayladığı kurulumda Cloudflare **nazar-restaurant-website / Production** için başlangıçta `VIP_DOI_ENABLED=false`; hedef proje, liste/hesap ID'si ve mevcut Accounts/Profiles/Lists **Read** anahtarı girilir. Bu alıcı event key veya abonelik yazma scope'u istemez. Sandbox'ta yalnız TEST_ önekli adlar ve `mock` kullanılır; Production kimlik bilgileri taşınmaz.
+5. Bitwarden'da ayrı **Nazar — DOI Flow webhook** kaydı oluştur. En az 32 URL-safe rastgele karakterli makine anahtarı üret. Aynı değeri yalnız Cloudflare Secret **VIP_DOI_WEBHOOK_KEY** ve aşağıdaki Authorization header'a gir. Bu API key veya staff/database password değildir. Sohbete, JSON body'ye, URL'ye veya Git'e yazma.
+
+### B. Yeni taslağı kur — bir adım, bir işlem
+
+6. **Flows → Create flow → Build your own / Create from scratch**. Ad: **Nazar VIP — DOI → Kupon**. **Draft** olarak oluştur.
+7. Trigger türünü **Added to list / List** seç; 3. adımda doğruladığın **mevcut Nazar VIP listesi**ni seç → **Save / Confirm trigger**. Listeye katılım yalnız uyandırma sinyalidir; sunucu her seferinde gerçek DOI tarihini/üyeliği yeniden doğrular.
+8. **Re-entry criteria → No re-entry** varsa seç → **Save**. **Add past profiles / back-populate** kullanma. Aynı kuponun tekrarına DB ayrıca engel olur; eski aboneleri bu kurulumla topluca işleme.
+9. Trigger'ın hemen altına tek **Webhook** action sürükle. **Email, SMS, profile update, delay, ikinci webhook veya Welcome emaili ekleme.** Webhook kartı görünmüyor, kilitli veya **Upgrade** istiyorsa kaydetme/plan değiştirme; durumu bildir. Free uygunluğu için belge zinciri: [Free özellikleri](https://help.klaviyo.com/hc/en-us/articles/1260805595309), [Free otomasyon](https://www.klaviyo.com/pricing), [Flow / ücretli KDP ayrımı](https://help.klaviyo.com/hc/en-us/articles/18622300908955). Hesaba özel UI erişimi bu PR hazırlığında denenmiş sayılmaz.
+10. Webhook **Destination URL** alanına gelecekte kabul edilmiş Production alıcısı için tam adresi gir: **https://www.nazarrestaurantandbakery.com/api/webhooks/vip-doi**. Sonuna query/anahtar ekleme, başka siteye yönlendirme kullanma. Draft henüz yayın yapmaz; bu adres kodun dağıtıldığını kanıtlamaz.
+11. **Add Headers → Name: Authorization → Value: Bearer** ve ardından **bir boşluk + Bitwarden'daki makine anahtarı**. Header adı `Authorization`; Value `Bearer …` biçimindedir. **Content-Type = application/json** ekle. Klaviyo otomatik **X-Klaviyo-Flow-ID** gönderir; bunu tek başına güvenlik anahtarı sanma.
+12. **Body / JSON** alanına aşağıdaki yapıyı gir. `VIP_LIST_ID` yerine 3. adımdaki gerçek liste ID'sini yaz; JSON'da yer tutucu kalmasın. `email` satırındaki şablon değişkenini gerçek bir müşteri emailiyle değiştirme. **View profile properties** panelinden Email değişkeninin `person.email` olduğunu kontrol et; `lower` normalizasyonudur.
+
+```json
+{"version":1,"email":"{{ person.email|lower }}","listId":"VIP_LIST_ID"}
+```
+
+13. Body'ye **businessId, customerId, signupId, subscribed=true, kupon kodu, API key veya consent_timestamp ekleme**. Hedef işletme env'den; kimlik/DOI tarihi API ve yerel kayıt eşleşmesinden gelir. Alan eklenirse alıcı isteği reddeder.
+14. **Save** ile ayarları kaydet; kart/Flow durumu **Draft** kalmalı. Arayüz Save'in webhook'u Live yapacağını söylüyorsa bu aşamada basma. **Review and turn on / Live / Test webhook / Send test** kullanılmaz. Welcome Flow'u da Draft kalır. Flow URL'sindeki ID'yi kaydet; Cloudflare **VIP_DOI_FLOW_ID** değeri bu DOI Flow ID'sidir, Welcome ID'si değildir.
+
+### C. Kabul sırası — bu PR tesliminde çalıştırılmaz
+
+15. Önce PR inceleme ve **sıra 18 → sıra 19 Sandbox kurulumu**. Yerel sentetik sağlayıcı + gerçek PostgreSQL testi otomatik kuponu ve eşzamanlı tekrar güvenliğini kanıtlar. Hosted Sandbox **mock** alıcı olumlu DOI uydurmaz: geçerli dış kanıt olmayınca 503, yanlış kimlikte 403 beklenir. Mevcut sentetik SQL onay kuru testi, gerçek Klaviyo DOI/Flow kabulünün yerine geçmez. Sadece TEST modunu live'a çevirerek veya `is_test` işaretini silerek bu sınırı aşma.
+16. Talip ayrı Production kabulü verdiğinde: aynı migration üretime uygulanır, onaylı kod dağıtılır, ayrı DOI ayarları girilir; **VIP_DOI_ENABLED=false** başlangıcı doğrulanır. Free profil/gönderim kotasında gerçek tek gönüllünün DOI emaili için yer olduğu kontrol edilir; plan/ücret değişimi gerekiyorsa durulur. Bu Flow'da mesaj yok; Welcome kapalı kalır.
+17. Sunucu hazır ve Talip açılışı onayladıysa **yalnız DOI webhook action'ını Live** yap. Sonra Cloudflare `VIP_DOI_MODE=live`, gerçek tarihli **VIP_DOI_APPROVAL_ID**, `VIP_DOI_ENABLED=true` → doğru güncel onaylı sürümü yeniden dağıt. Doğru DOI Flow/liste/hesap ID'sini son kez kontrol et. Welcome/email action'ı Live yapılmaz.
+18. Talip veya onaylı gerçek gönüllü yeni VIP talebini bir kez gönderir ve gelen gerçek DOI bağlantısını kendisi onaylar. Sonra **Flows → DOI Flow → Webhook → View all activity**: 200 ve `confirmation_recorded` aranır. Bu yalnız DB onayıdır; email gönderimi veya kampanya aktifliği değildir. DB'de aktif uygun kampanyayla aynı kişiye **bir confirmation evidence + bir kupon + bir outbox** ve tekil receipt doğrulanır; kupon kodu/kişisel veri rapora kopyalanmaz. **message_log'a bu alıcıdan gönderim yazılmaz.** Kuponun emaille teslimi ayrı K6/Welcome kabulüdür.
+19. **503 / Waiting to retry** görülürse yeni form veya ikinci email gönderme; Klaviyo'nun sınırlı otomatik tekrar teslimi aynı işlemi güvenle yeniden dener. **200 / local_request_ambiguous / unmatched / recipient_blocked** kupon başarısı değildir; önce yerel kayıt/izin incelenir. E-posta/anahtar/API cevabı paylaşmadan yalnız güvenli kod ve saati kaydet. Retry bütçesi sonunda başarısızsa Talip'in denetim/elle tekrar kararı gerekir; polling veya günlük kupon zamanlayıcısı eklenmez.
+20. Acil kapatma: DOI webhook action **Draft**; Cloudflare **VIP_DOI_ENABLED=false** → aynı onaylı kodu yeniden dağıt. Mevcut kupon/kanıt/audit geçmişi silinmez. Welcome ve K6 ayrı kalır. Sistemi durdurmak için unsubscribe/suppression veya müşterinin izni değiştirilmez.
+
+**Kuru test koşulu:** PR'ın Sandbox sürümü ve migration kabulü olmadan müşteri kayıt/onay provası başlamaz. Gerçek DOI onayı Klaviyo'da, kanıt ve kupon gerçeği bizim DB'de tutulur; webhook bu iki sistemi bağlar.

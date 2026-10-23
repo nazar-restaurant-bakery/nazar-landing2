@@ -175,6 +175,11 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   {key:'k7_payment_day_delivery',order:'6b',path:'supabase/migrations/20261020001000_clover_payment_day_totals.sql',sha:'2b5b31f9539d04b08a3ca7e85baf8bb7ded828d498ad051c43c83d2f664515cc'},
   {key:'k8_delivery',order:7,path:'supabase/migrations/20261021000100_clover_webhook.sql',sha:'1d305756deba4b614c6e60198ef7c954bca9008bc944be7e4bea52f4ff29a94e'},
  ];
+ currentMainDeliveries.push({key:"offer_calendar_delivery",order:null,path:"supabase/migrations/20261021000950_offer_calendar_activation.sql",sha:"32bc4ec03223f785c308462d3ebad3f4d24a810f5614d0077b35143899931718"});
+ const doi=manifest.vip_doi_webhook_delivery;
+ if(!doi||doi.path!=='supabase/migrations/20261022000200_vip_doi_webhook.sql'||doi.sha256_bytes!=='863dd37b0a8a39840747607f638f43bd8d700f3d4944373114304e34712e71a5'||doi.application_order!==19||doi.requires_previous_order!==18||doi.included_in_k3_reset!==false||doi.execution_enabled!==false)
+  issue('DOI_WEBHOOK_DELIVERY_CONTRACT','Order 19 requires approved order 18, never K3 replay or execution.');
+ if(doi){try{const bytes=await fs.readFile(path.join(realRoot,doi.path));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!=='863dd37b0a8a39840747607f638f43bd8d700f3d4944373114304e34712e71a5')issue('DOI_WEBHOOK_DELIVERY_BYTES',doi.path);}catch{issue('DOI_WEBHOOK_DELIVERY_MISSING','DOI SQL unavailable');}}
  const k13bDelivery=manifest.k13b_delivery;
  const k16Foundation=manifest.k16_foundation_delivery;
  const k16Path='supabase/migrations/20261022000100_site_order_foundation.sql';
@@ -279,7 +284,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
    issue('K10_COUPON_DEPENDENCY','Signup-reward coupons require exactly the reviewed K9 and K10 eligibility sources.');
   try{const bytes=await fs.readFile(path.join(realRoot,k10CouponPath));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k10CouponSha)issue('K10_COUPON_DELIVERY_BYTES','Signup-reward coupon reviewed LF delivery bytes changed.');}catch{issue('K10_COUPON_DELIVERY_MISSING','Signup-reward coupon file missing.');}
  }
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],k16Foundation?[k16Path]:[],k16Staff?[k16StaffPath]:[],k16Customer?[k16CustomerPath]:[],k10Eligibility?[k10Path]:[],k10Coupons?[k10CouponPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path));
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],k16Foundation?[k16Path]:[],k16Staff?[k16StaffPath]:[],k16Customer?[k16CustomerPath]:[],k10Eligibility?[k10Path]:[],k10Coupons?[k10CouponPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path)).concat(doi?[doi.path]:[]);
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');

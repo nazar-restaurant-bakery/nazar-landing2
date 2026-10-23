@@ -1,0 +1,21 @@
+{
+  "base": "82b9e731cf02238398d80cc07cd761dc84610973",
+  "productionBuildFiles": 213,
+  "byteIdentical": 209,
+  "normalizedEqualFiles": 213,
+  "publicBuildExactlyEqual": false,
+  "normalizedPublicBuildEqual": true,
+  "normalization": "Only emitted index/jsQR/StaffPage asset filenames and their literal references; no JS tokens or business logic normalized",
+  "APP_ENV_present": false,
+  "TEST_variables_present": false,
+  "syntheticPublicValuesOnly": true,
+  "protectedSourceDiff": [],
+  "hostedConnections": 0,
+  "deployments": 0,
+  "testSummary": [
+    "\u2139 tests 157",
+    "\u2139 pass 157",
+    "\u2139 fail 0",
+    "\u2139 skipped 0"
+  ]
+}
