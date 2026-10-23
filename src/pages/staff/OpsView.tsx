@@ -16,6 +16,8 @@ import { opsAge, opsCurrency, opsMetricNumber, opsPercent } from "../../componen
 import { observedSiteFailure } from "../../components/staff/ops/opsMetricVisibility";
 import LoyaltyMetricTiles from "../../components/staff/ops/LoyaltyMetricTiles";
 import type { LoyaltyMetrics, LoyaltyReadState } from "../../lib/loyaltyMetrics";
+import SiteOrderTickets from "../../components/staff/ops/SiteOrderTickets";
+import { browserDeployment } from "../../lib/supabase";
 
 export interface OpsViewProps {
   identity: string;
@@ -71,6 +73,7 @@ export default function OpsView({ identity, includeTests=false, funnelRevision=0
     <StatusStrip connections={backendPending ? null : connections?.filter(item => item.source !== "scheduler") || null} loading={loading} disabled={busy} onRefresh={onRefresh} onCollect={() => setSelectedAction("collect")} collectConfirmation={selectedAction === "collect" ? <ActionColumn confirmationOnly dashboard={dashboard} connections={connections} actions={actions} selectedAction="collect" onSelectAction={setSelectedAction} onRequest={onRequest} busy={busy} blocked={writeBlocked} backendPending={backendPending} /> : null} />
     <p className="text-xs text-stone-500">{c.snapshotScope} {c.realTotals}</p>
     {dashboard && <QrVipFunnel key={identity} identity={identity} businessId={dashboard.business_id} includeTests={includeTests} revision={funnelRevision} />}
+    <SiteOrderTickets key={`${identity}:${browserDeployment.businessId}`} identity={identity} businessId={browserDeployment.businessId} />
     <LoyaltyMetricTiles data={loyalty} state={loyaltyState} />
     <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="grid min-w-0 items-stretch gap-4 md:grid-cols-2" data-testid="ops-metric-grid">
