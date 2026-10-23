@@ -196,6 +196,36 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
     issue('K16_FOUNDATION_BYTES',k16Path);
   }catch{issue('K16_FOUNDATION_MISSING',k16Path);}
  }
+ const k16Staff=manifest.k16_staff_workflow_delivery;
+ const k16StaffPath='supabase/migrations/20261022000300_site_order_staff_workflow.sql';
+ const k16StaffSha='d105dbad61eae50c4c650704fd4bb603c92c0e0eb1ec6d5e86cb0a22c70ae06f';
+ if(k16Staff){
+  if(typeof k16Staff!=='object'||Object.keys(k16Staff).sort().join(',')!==
+   'application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
+   ||k16Staff.path!==k16StaffPath||k16Staff.sha256_bytes!==k16StaffSha
+   ||k16Staff.application_order!==20||k16Staff.requires_previous_order!==19
+   ||k16Staff.execution_enabled!==false||k16Staff.included_in_k3_reset!==false)
+   issue('K16_STAFF_CONTRACT','K16 staff workflow stays at proposed order 20, outside the historical replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k16StaffPath));
+   if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k16StaffSha)
+    issue('K16_STAFF_BYTES',k16StaffPath);
+  }catch{issue('K16_STAFF_MISSING',k16StaffPath);}
+ }
+ const k16Customer=manifest.k16_customer_confirmation_delivery;
+ const k16CustomerPath='supabase/migrations/20261022000400_site_order_customer_confirmation.sql';
+ const k16CustomerSha='bbc52a7ecf8424468719d871de6a19587de8a3a6b74727d7633ea5414ce1d386';
+ if(k16Customer){
+  if(typeof k16Customer!=='object'||Object.keys(k16Customer).sort().join(',')!==
+   'application_order,execution_enabled,included_in_k3_reset,path,requires_previous_order,sha256_bytes'
+   ||k16Customer.path!==k16CustomerPath||k16Customer.sha256_bytes!==k16CustomerSha
+   ||k16Customer.application_order!==21||k16Customer.requires_previous_order!==20
+   ||k16Customer.execution_enabled!==false||k16Customer.included_in_k3_reset!==false)
+   issue('K16_CUSTOMER_CONTRACT','K16 customer confirmation remains a forward-only candidate after staff workflow.');
+  try{const bytes=await fs.readFile(path.join(realRoot,k16CustomerPath));
+   if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k16CustomerSha)
+    issue('K16_CUSTOMER_BYTES',k16CustomerPath);
+  }catch{issue('K16_CUSTOMER_MISSING',k16CustomerPath);}
+ }
  const k13bPath='supabase/migrations/20261021000450_commission_channel_label.sql';
  const k13bSha='1d859b4b56b02b75d9662ba976a1b4f149c53c067c6fd0497e4794cda3e33607';
  if(k13bDelivery){
@@ -254,7 +284,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
    issue('K10_COUPON_DEPENDENCY','Signup-reward coupons require exactly the reviewed K9 and K10 eligibility sources.');
   try{const bytes=await fs.readFile(path.join(realRoot,k10CouponPath));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k10CouponSha)issue('K10_COUPON_DELIVERY_BYTES','Signup-reward coupon reviewed LF delivery bytes changed.');}catch{issue('K10_COUPON_DELIVERY_MISSING','Signup-reward coupon file missing.');}
  }
- const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],k16Foundation?[k16Path]:[],k10Eligibility?[k10Path]:[],k10Coupons?[k10CouponPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path)).concat(doi?[doi.path]:[]);
+ const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],k16Foundation?[k16Path]:[],k16Staff?[k16StaffPath]:[],k16Customer?[k16CustomerPath]:[],k10Eligibility?[k10Path]:[],k10Coupons?[k10CouponPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path)).concat(doi?[doi.path]:[]);
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');

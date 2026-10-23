@@ -33,6 +33,11 @@ function clean(value: unknown, maximum: number): string | null {
   return trimmed.length <= maximum ? trimmed : null;
 }
 
+async function requestHash(value: unknown): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value)));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export async function onRequestPost({ request, env }: Context): Promise<Response> {
   const pageUrl = new URL(request.url);
   if (request.headers.get("Origin") !== pageUrl.origin) return reply(403, "forbidden");
@@ -81,7 +86,9 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
   const phone = clean(input.phone, 30);
   const note = clean(input.preparationNote, 300);
   const token = clean(input.turnstileToken, 2048);
+  const requestId = clean(input.requestId, 36);
   if (!name || !email || !EMAIL_RE.test(email) || phone === null || note === null || !token ||
+      !requestId || !UUID_RE.test(requestId) ||
       input.fulfillmentMethod !== "pickup" || input.requestKind !== "standard") {
     return reply(400, "invalid_input");
   }
@@ -93,7 +100,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     pickupAt = validatePickupSlot(input.pickupAt, new Date());
   } catch { return reply(400, "invalid_selection_or_pickup_time"); }
 
-  let stage: "turnstile" | "insert" | "clover_session" | "update" = "turnstile";
+  let stage: "turnstile" | "order_create" | "clover_session" | "session_set" = "turnstile";
   try {
     const challenge = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -110,49 +117,48 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       return reply(403, "verification_failed");
     }
 
-    // This is an estimate until Clover's actual checkout amount is validated in
-    // sandbox. Payment creation remains gated off in production until then.
+    // The server owns prices and tax; the browser's displayed subtotal is never
+    // accepted as a payment amount.
     const taxCents = priced.lines.reduce((sum, line) =>
       sum + Math.round(line.lineTotalCents * taxRateMicros / 10000000), 0);
     const totalCents = priced.subtotalCents + taxCents;
-    stage = "insert";
+    stage = "order_create";
     const dbHeaders = { apikey: supabaseKey!,
-      "Content-Type": "application/json", Prefer: "return=representation" };
-    const created = await fetch(`${databaseUrl}/rest/v1/catering_orders`, {
+      "Content-Type": "application/json" };
+    const orderHash = await requestHash({ name, email, phone, note, pickupAt: pickupAt.toISOString(),
+      lines: priced.lines, subtotalCents: priced.subtotalCents, taxCents });
+    const created = await fetch(`${databaseUrl}/rest/v1/rpc/site_order_create_v1`, {
       method: "POST", headers: dbHeaders,
       body: JSON.stringify({
-        business_id: env.SITE_BUSINESS_ID, customer_name: name, customer_email: email,
-        customer_phone: phone || null, fulfillment_method: "pickup",
-        requested_pickup_at: pickupAt.toISOString(), preparation_note: note,
-        tray_lines: priced.lines, subtotal_cents: priced.subtotalCents,
-        tax_cents: taxCents, total_cents: totalCents, status: "pending_checkout",
+        p_business_id: env.SITE_BUSINESS_ID, p_request_id: requestId, p_request_hash: orderHash,
+        p_kind: "catering", p_fulfillment: "pickup", p_customer_name: name,
+        p_customer_email: email, p_customer_phone: phone || null,
+        p_requested_at: pickupAt.toISOString(), p_lines: priced.lines,
+        p_note: note, p_subtotal_cents: priced.subtotalCents,
+        p_tax_cents: taxCents, p_department: "catering",
       }),
     });
     if (!created.ok) return reply(503, "order_storage_unavailable");
-    const rows = await created.json() as { id?: string }[];
-    const orderId = rows?.[0]?.id;
-    if (!orderId || !/^[0-9a-f-]{36}$/i.test(orderId)) return reply(503, "order_storage_unavailable");
+    const orderId = await created.json() as string;
+    if (!UUID_RE.test(orderId)) return reply(503, "order_storage_unavailable");
 
     stage = "clover_session";
     const session = await createPaymentSession(providerEnv, { orderId, customerName: name,
       customerEmail: email, customerPhone: phone || "", pickupAt, note: note || "",
       lines: priced.lines, siteOrigin: pageUrl.origin });
-    stage = "update";
-    const updated = await fetch(`${databaseUrl}/rest/v1/catering_orders?id=eq.${orderId}&status=eq.pending_checkout`, {
-      method: "PATCH", headers: dbHeaders,
-      body: JSON.stringify({ status: "pending_payment", payment_provider: session.provider,
-        payment_session_id: session.id }),
+    stage = "session_set";
+    const updated = await fetch(`${databaseUrl}/rest/v1/rpc/site_order_session_set_v1`, {
+      method: "POST", headers: dbHeaders,
+      body: JSON.stringify({ p_business_id: env.SITE_BUSINESS_ID,
+        p_site_order_id: orderId, p_environment: env.CLOVER_ENVIRONMENT,
+        p_merchant_id: env.CLOVER_MERCHANT_ID, p_session_id: session.id }),
     });
     if (!updated.ok) return reply(503, "order_storage_unavailable");
-    const updatedRows = await updated.json() as { id?: string; status?: string;
-      payment_provider?: string; payment_session_id?: string }[];
-    if (updatedRows.length !== 1 || updatedRows[0].id !== orderId ||
-        updatedRows[0].status !== "pending_payment" ||
-        updatedRows[0].payment_provider !== session.provider ||
-        updatedRows[0].payment_session_id !== session.id) {
+    if (await updated.json() !== true) {
       return reply(503, "order_storage_unavailable");
     }
-    return reply(200, "checkout_ready", { orderId, checkoutUrl: session.url });
+    return reply(200, "checkout_ready", { orderId, requestId, checkoutUrl: session.url,
+      totalCents });
   } catch (error) {
     const errorType = error instanceof TypeError ? "TypeError" :
       error instanceof SyntaxError ? "SyntaxError" :

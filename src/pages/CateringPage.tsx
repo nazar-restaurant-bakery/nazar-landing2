@@ -1,6 +1,8 @@
 // src/pages/CateringPage.tsx
 import React from "react";
 import CateringRequestForm from "../components/CateringRequestForm";
+import CateringCheckoutForm from "../components/CateringCheckoutForm";
+import CateringPaymentReturn from "../components/CateringPaymentReturn";
 import { useLang } from "../components/Language";
 import { t } from "../components/i18n";
 import { CATERING_CUSTOM_ITEM_IDS, CATERING_SIZES, CATERING_TRAYS, cateringItemName } from "../data/cateringMenus";
@@ -10,6 +12,7 @@ import type { CateringChoice } from "../lib/signup";
 import { clearSignupDraft, currentSignupStorage, readSignupDraft, saveSignupDraft } from "../lib/signupRecovery";
 
 const MENU_DRAFT_KEY = "nazar-catering-menu-draft-v1";
+const checkoutEnabled = import.meta.env.VITE_CATERING_CHECKOUT_ENABLED === "true";
 const allowedCustomIds = new Set<string>(CATERING_CUSTOM_ITEM_IDS);
 const allowedTrayIds = new Set<string>(CATERING_TRAYS.map((tray) => tray.id));
 
@@ -102,6 +105,8 @@ export default function CateringPage() {
     return { id, size, title: tray?.title[lang] ?? id, price: tray?.prices[CATERING_SIZES.indexOf(size)] ?? 0 };
   }) : [];
   const traySubtotal = selectedTrays.reduce((sum, tray) => sum + tray.price, 0);
+  const paymentReturn = typeof window === "undefined" ? null :
+    new URLSearchParams(window.location.search).get("payment");
 
   function toggleCustomItem(id: string) {
     setChoice((current) => {
@@ -137,6 +142,8 @@ export default function CateringPage() {
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-10">
+      {checkoutEnabled && paymentReturn && ["pending", "failed", "cancelled"].includes(paymentReturn) &&
+        <CateringPaymentReturn payment={paymentReturn} />}
       <div id="catering-intro" className="rounded-3xl border border-[#e7dccb] bg-[#faf5eb] p-6 sm:p-8">
         <div className="grid gap-6 md:grid-cols-2 md:gap-10">
           <div>
@@ -286,6 +293,8 @@ export default function CateringPage() {
               {t("catering.continueToQuote", lang)}
             </button>
           </div>
+          {checkoutEnabled && (!choice || choice.type !== "trays" || choice.itemIds.length === 0) &&
+            <CateringCheckoutForm selections={selectedTrays} />}
       </div>
     </section>
   );
