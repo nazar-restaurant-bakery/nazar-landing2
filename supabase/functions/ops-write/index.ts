@@ -10,7 +10,7 @@ export async function previewHash(business:string,target:string) {
 class GateError extends Error {status:number;code:string;constructor(status:number,code:string){super(code);this.status=status;this.code=code;}}
 export async function handleWrite(req:Request,env:Env,request:typeof fetch=fetch) {
  const origin=req.headers.get("origin");
- const headers={"Content-Type":"application/json","Access-Control-Allow-Origin":origin||"null","Access-Control-Allow-Headers":"authorization,apikey,content-type","Access-Control-Allow-Methods":"POST,OPTIONS","Vary":"Origin"};
+ const headers={"Content-Type":"application/json","Access-Control-Allow-Origin":origin||"null","Access-Control-Allow-Headers":"authorization,apikey,content-type,x-client-info","Access-Control-Allow-Methods":"POST,OPTIONS","Vary":"Origin"};
  const reply=(status:number,body:unknown)=>new Response(JSON.stringify(body),{status,headers});
  if(!allowedOrigin(origin,env))return reply(403,{code:"forbidden"});
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers});

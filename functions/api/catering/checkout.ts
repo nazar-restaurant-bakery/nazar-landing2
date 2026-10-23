@@ -13,13 +13,15 @@ type Env = {
   CLOVER_MERCHANT_ID?: string;
   CLOVER_ENVIRONMENT?: string;
   CATERING_SANDBOX_SUPABASE_URL?: string;
+  SITE_PRODUCTION_SUPABASE_URL?: string;
+  SITE_BUSINESS_ID?: string;
+  CLOVER_TAX_RATE_MICROS?: string;
   PAYMENT_PROVIDER?: string;
 };
 type Context = { request: Request; env: Env };
 
-const SUPABASE_URL = "https://khgczybubufouraqyrcj.supabase.co";
-const BUSINESS_ID = "a358eba4-b197-4309-805b-46f43a718454";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function reply(status: number, code: string, extra: Record<string, unknown> = {}): Response {
   return Response.json({ code, ...extra }, { status, headers: { "Cache-Control": "no-store" } });
@@ -42,7 +44,8 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     CLOVER_HOSTED_CHECKOUT_PRIVATE_KEY: env.CLOVER_HOSTED_CHECKOUT_PRIVATE_KEY?.trim(),
     CLOVER_TAX_RATE_ID: env.CLOVER_TAX_RATE_ID?.trim() };
   const sandbox = env.CLOVER_ENVIRONMENT === "sandbox";
-  const databaseUrl = sandbox ? env.CATERING_SANDBOX_SUPABASE_URL : SUPABASE_URL;
+  const databaseUrl = sandbox ? env.CATERING_SANDBOX_SUPABASE_URL : env.SITE_PRODUCTION_SUPABASE_URL;
+  const taxRateMicros = Number(env.CLOVER_TAX_RATE_MICROS);
   // The isolated sandbox may reveal which predicate failed, never its value.
   const checks = {
     enabled: env.CATERING_CHECKOUT_ENABLED === "true",
@@ -53,11 +56,14 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     providerConfigured: paymentProviderConfigured(providerEnv),
     databaseUrlPresent: !!databaseUrl,
     databaseUrlValid: !!databaseUrl && /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(databaseUrl),
-    sandboxDatabaseIsolated: !sandbox || databaseUrl !== SUPABASE_URL,
+    sandboxDatabaseIsolated: !sandbox || (!!env.SITE_PRODUCTION_SUPABASE_URL &&
+      databaseUrl !== env.SITE_PRODUCTION_SUPABASE_URL),
+    businessIdValid: UUID_RE.test(env.SITE_BUSINESS_ID ?? ""),
+    taxRateValid: Number.isSafeInteger(taxRateMicros) && taxRateMicros > 0 && taxRateMicros < 10000000,
   };
   if (!checks.enabled || !checks.supabaseKeyPrefix || !checks.turnstileSecretPresent ||
       !checks.providerConfigured || !checks.taxRateIdPresent || !checks.databaseUrlPresent || !checks.databaseUrlValid ||
-      !checks.sandboxDatabaseIsolated) {
+      !checks.sandboxDatabaseIsolated || !checks.businessIdValid || !checks.taxRateValid) {
     return reply(503, "checkout_unavailable", sandbox ? { checks } : {});
   }
 
@@ -107,7 +113,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     // This is an estimate until Clover's actual checkout amount is validated in
     // sandbox. Payment creation remains gated off in production until then.
     const taxCents = priced.lines.reduce((sum, line) =>
-      sum + Math.round(line.lineTotalCents * 735 / 10000), 0);
+      sum + Math.round(line.lineTotalCents * taxRateMicros / 10000000), 0);
     const totalCents = priced.subtotalCents + taxCents;
     stage = "insert";
     const dbHeaders = { apikey: supabaseKey!,
@@ -115,7 +121,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     const created = await fetch(`${databaseUrl}/rest/v1/catering_orders`, {
       method: "POST", headers: dbHeaders,
       body: JSON.stringify({
-        business_id: BUSINESS_ID, customer_name: name, customer_email: email,
+        business_id: env.SITE_BUSINESS_ID, customer_name: name, customer_email: email,
         customer_phone: phone || null, fulfillment_method: "pickup",
         requested_pickup_at: pickupAt.toISOString(), preparation_note: note,
         tray_lines: priced.lines, subtotal_cents: priced.subtotalCents,

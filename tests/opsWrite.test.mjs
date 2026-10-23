@@ -32,6 +32,7 @@ test('dry-run wrapper preserves verified user JWT, supplies no actor override or
  const h=harness(),hash=await previewHash(business,target);
  for(const operation of ['preview','approve','execute']){
   const r=await h.invoke({operation,preview_hash:hash});assert.equal(r.status,200);
+  assert.equal(r.headers.get('Access-Control-Allow-Headers'),'authorization,apikey,content-type,x-client-info');
   assert.doesNotMatch(await r.text(),/synthetic-service|claim_token/);
  }
  assert.equal(h.claims,1);assert.equal(h.finals,1);
@@ -58,4 +59,29 @@ test('kill switch, consumed approval and timeout never trigger a blind retry',as
 test('browser actor parameters are rejected rather than trusted',async()=>{
  const h=harness();const r=await h.invoke({operation:'execute',preview_hash:await previewHash(business,target),p_staff_id:user});
  assert.equal(r.status,400);assert.equal(h.seen.length,0);
+});
+
+test('Supabase browser preflight permits x-client-info without invoking auth or RPC',async()=>{
+ const origin='https://www.nazarrestaurantandbakery.com';
+ const requested='authorization,apikey,content-type,x-client-info';
+ const r=await handleWrite(new Request('https://example.invalid',{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':requested}}),env,async()=>{assert.fail('preflight must not call auth or RPC');});
+ assert.equal(r.status,204);
+ assert.equal(r.headers.get('Access-Control-Allow-Origin'),origin);
+ assert.equal(r.headers.get('Access-Control-Allow-Headers'),requested);
+ assert.equal(r.headers.get('Access-Control-Allow-Methods'),'POST,OPTIONS');
+ assert.equal(r.headers.get('Vary'),'Origin');
+ assert.equal(await r.text(),'');
+});
+
+test('POST responses retain the preflight header list and still require a JWT',async()=>{
+ const r=await handleWrite(new Request('https://example.invalid',{method:'POST',headers:{Origin:'https://www.nazarrestaurantandbakery.com','Content-Type':'application/json','x-client-info':'synthetic-client'},body:'{}'}),env,async()=>{assert.fail('missing JWT must not call auth or RPC');});
+ assert.equal(r.status,401);
+ assert.equal(r.headers.get('Access-Control-Allow-Headers'),'authorization,apikey,content-type,x-client-info');
+ assert.deepEqual(await r.json(),{code:'unauthorized'});
+});
+
+test('adding the Supabase client header does not permit an untrusted origin',async()=>{
+ const r=await handleWrite(new Request('https://example.invalid',{method:'OPTIONS',headers:{Origin:'https://untrusted.invalid','Access-Control-Request-Headers':'x-client-info'}}),env,async()=>{assert.fail('untrusted origin must not call auth or RPC');});
+ assert.equal(r.status,403);
+ assert.deepEqual(await r.json(),{code:'forbidden'});
 });

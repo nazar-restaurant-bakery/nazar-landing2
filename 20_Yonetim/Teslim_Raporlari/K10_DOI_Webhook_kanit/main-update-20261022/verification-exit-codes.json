@@ -1,0 +1,29 @@
+{
+  "targeted_node": {
+    "passed": 157,
+    "failed": 0,
+    "skipped": 0
+  },
+  "native_postgres": {
+    "scenarios_passed": 11,
+    "provider_calls": 0,
+    "emails": 0
+  },
+  "strict_server_types_exit": 0,
+  "targeted_eslint_exit": 0,
+  "base_typescript_exit": 0,
+  "candidate_typescript_exit": 0,
+  "base_vite_exit": 0,
+  "candidate_vite_exit": 0,
+  "sql19_sha256": "863dd37b0a8a39840747607f638f43bd8d700f3d4944373114304e34712e71a5",
+  "merge_main": "82b9e731cf02238398d80cc07cd761dc84610973",
+  "main_inventory_preserved": [
+    "k16_foundation_delivery",
+    "staff_management_delivery",
+    "ops_campaign_usage_delivery",
+    "qr_vip_funnel_delivery"
+  ],
+  "offer_calendar_unnumbered": true,
+  "cloudflare": "verified after push; see final local deployment receipt",
+  "hosted_sql_applied_by_this_run": false
+}

@@ -1,0 +1,13 @@
+# VIP / catering Siteverify evidence
+
+Baseline reviewed: main `7baf907`, 22 October 2026. Both `VipSignupForm.tsx` and `CateringRequestForm.tsx` send `turnstileToken` through `src/lib/signup.ts` to `/api/signup`. `functions/api/signup.ts` already posts `{secret: deployment.turnstileSecret, response: token}` to `https://challenges.cloudflare.com/turnstile/v0/siteverify`, before `submit_signup_once`. `resolveServerEnvironment` selects Production `TURNSTILE_SECRET_KEY`; the client site key is never used as its replacement. Failed verification already prevents signup persistence.
+
+The actual gap was error classification, not an absent validation call: an HTTP-200 response with `invalid-input-secret` was treated as a normal visitor rejection and never entered the server incident log/alert path. This PR sends missing/invalid secret, provider internal failure and malformed JSON/schema into the existing `challenge_unavailable` 503 flow, with an opaque error reference and existing gated monitoring. Boolean success is required; redirects are rejected. No raw provider response, token, secret, hostname or customer content is added to logs. Ordinary expired/duplicate visitor tokens remain 403 and use the existing form error UI, without flooding server incident alerts. A hostname mismatch is also rejected.
+
+There is no new migration, secret, widget, UI, consent or sandbox configuration. Production widget/site key selection remains in deployment configuration. Isolated builds retain dummy site key `1x00000000000000000000AA` and dummy secret `1x0000000000000000000000000000000AA`; isolated failures cannot invoke Production incident/email services.
+
+Tests: 63/63 across server verification, signup, incident monitoring, sandbox isolation and browser error-reference handling. All requests mocked; no live form, email or CRM record created. TypeScript and targeted lint pass.
+
+Acceptance after Talip merges/deploys through the established Pages Functions deployment path: on the first real VIP submission, confirm `/api/signup` completes its server validation, the form is accepted only on successful verification and the new widget's Cloudflare Siteverify warning clears (allow for panel reporting latency). Client-side “Success” means a token was issued, not that the server has validated it. The warning alone does not prove missing code or identify a wrong secret; this change does not claim the new secret was wrong. Until that real check, live Turnstile closure remains pending. Do not generate a production lead or replay a consumed token just to clear the warning.
+
+Reference: [Cloudflare server-side validation](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/).

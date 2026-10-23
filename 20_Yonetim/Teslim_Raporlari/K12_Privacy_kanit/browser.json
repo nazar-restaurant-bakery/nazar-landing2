@@ -1,0 +1,13 @@
+{
+  "passed": 6,
+  "failed": 0,
+  "checks": [
+    "Public direct route and SEO title",
+    "Canonical privacy URL",
+    "Eight sections and working deletion contact link",
+    "375px no horizontal overflow",
+    "Footer link reaches privacy from VIP",
+    "No runtime errors, provider calls, account or analytics traffic"
+  ],
+  "synthetic": true
+}

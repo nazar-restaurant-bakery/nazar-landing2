@@ -18,6 +18,7 @@ export default function Footer() {
             >
               Join the VIP Club →
             </Link>
+            <Link to="/privacy" className="underline underline-offset-2">Privacy Policy</Link>
             <span>© {new Date().getFullYear()} Nazar. All rights reserved.</span>
           </div>
         </div>
