@@ -1,6 +1,6 @@
 # K16 — Pickup takvim kısıtı — 23 Ekim 2026
 
-Taban: main `308cab9`. Draft PR; merge Talip'te. Canlı form, ödeme, DB, hesap veya dağıtım işlemi yapılmadı.
+Taban: main `308cab9`. [Draft PR #101](https://github.com/nazar-restaurant-bakery/nazar-landing2/pull/101); merge Talip'te. Canlı form, ödeme, DB, hesap veya dağıtım işlemi yapılmadı.
 
 ## Değişiklik
 
