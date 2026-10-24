@@ -11,7 +11,9 @@ export function liveReceiptProvider(key:string,fetcher:typeof fetch=fetch):Recei
   for(const [k,v] of Object.entries(query)){
    if(!['filter','page[size]','fields[event]','include','fields[profile]','fields[metric]'].includes(k))throw Error('receipt_read_rejected');url.searchParams.set(k,v);
   }
-  const r=await fetcher(url.href,{method:'GET',headers:{Authorization:'Klaviyo-API-Key '+key,revision:'2026-07-15',Accept:'application/vnd.api+json'},redirect:'error',signal:AbortSignal.timeout(5000)});
+  // workerd supports manual, not error. Never follow redirects with the key;
+  // accept only 200 below, before reading any provider body.
+  const r=await fetcher(url.href,{method:'GET',headers:{Authorization:'Klaviyo-API-Key '+key,revision:'2026-07-15',Accept:'application/vnd.api+json'},redirect:'manual',signal:AbortSignal.timeout(5000)});
   if(r.status!==200)throw Error('receipt_read_unavailable');
   const text=await r.text();if(text.length>1000000)throw Error('receipt_too_large');return JSON.parse(text);
  }};

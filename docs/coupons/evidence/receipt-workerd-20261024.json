@@ -1,0 +1,59 @@
+{
+  "scope": "K10_RECEIPT_LOCAL_WORKERD_ONLY",
+  "base_sha": "f429ff4ff5ef7d47c9edf002eca92efd55569630",
+  "before": {
+    "legacy_error_reproduced": true,
+    "legacy_outbound": 0,
+    "valid_200_reconciliation_failed": true
+  },
+  "after": {
+    "passed": 96,
+    "failed": 0,
+    "skipped": 0,
+    "workerd_tests": 30,
+    "existing_mock_tests": 66
+  },
+  "runtime": {
+    "miniflare": "5.20261006.2-beta",
+    "workerd": "1.20261006.1",
+    "esbuild": "0.28.2",
+    "compatibility_date": "2026-10-06"
+  },
+  "redirect_statuses_tested": [
+    301,
+    302,
+    303,
+    307,
+    308
+  ],
+  "redirect_stages": [
+    "accounts",
+    "metrics",
+    "events"
+  ],
+  "all_outbound_synthetic_intercepted": true,
+  "real_provider_requests": 0,
+  "hosted_sql": false,
+  "real_event_or_email": false,
+  "secret_or_flow_changed": false,
+  "deployed": false,
+  "pickup_pr_101_sha_preserved": "0286d3b35508fb8dfe0ccee8a2f436ce05738468",
+  "signup_pr_102_sha_preserved": "86ad1364fdb2207b2e316eb2a2b09953921e3c73",
+  "hosted_acceptance": "NOT_PERFORMED",
+  "initial_base_sha": "308cab975c8629b669af573b2b52097690367ff3",
+  "integration": {
+    "code_head": "922a20f476d621cac5da4f6a6618bb1472ea6ac2",
+    "passed": 96,
+    "failed": 0,
+    "skipped": 0,
+    "project_typecheck": "PASSED",
+    "receipt_typecheck": "PASSED",
+    "pickup_unchanged": true,
+    "build": "PASSED",
+    "build_modules": 164,
+    "non_blocking_build_warnings": [
+      "browserslist_data_age",
+      "chunk_over_500kb"
+    ]
+  }
+}
