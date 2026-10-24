@@ -101,3 +101,6 @@
 /supabase/migrations/20261022000300_site_order_staff_workflow.sql text eol=lf
 /supabase/migrations/20261022000400_site_order_customer_confirmation.sql text eol=lf
 /supabase/migrations/20261023000100_customer_test_classification.sql text eol=lf
+# Archive only: Production-only21a repair is outside normal migrations/reset.
+/supabase/repairs/** text eol=lf
+/tests/customerMarkerPrerequisiteDb.test.mjs text eol=lf
