@@ -41,16 +41,34 @@ export function bootstrapStore(config:CouponConfig,fetcher:typeof fetch=fetch):C
   if(r.status!==200)throw Error('bootstrap_rpc_unavailable');return JSON.parse(await boundedJsonText(r,budget,128000));
  }};
 }
-export function bootstrapProvider(config:CouponConfig,fetcher:typeof fetch=fetch):BootstrapProvider {
- const bounded=bootstrapBoundedFetcher(fetcher);
- const coupon=liveCouponProvider(config,bounded),receipt=liveReceiptProvider(config.receiptKey||'',bounded);
+export type BootstrapAccountTiming={now:()=>number;sleep:(milliseconds:number)=>Promise<void>};
+const accountTiming:BootstrapAccountTiming={now:Date.now,sleep:ms=>new Promise(resolve=>setTimeout(resolve,ms))};
+/** One queue across all three credentials, bootstrap instance only. No retries or cache.
+ * Cooldown starts after each response (including failures), before transport creates
+ * its five-second network signal. This cannot coordinate other requests/processes. */
+export function bootstrapAccountPacer(timing:BootstrapAccountTiming=accountTiming){
+ let tail:Promise<unknown>=Promise.resolve(),next=timing.now()+4200;
+ return <T>(read:()=>Promise<T>):Promise<T>=>{
+  const pending=tail.then(async()=>{
+   const wait=Math.max(0,next-timing.now());if(wait)await timing.sleep(wait);
+   try{return await read();}finally{next=timing.now()+4200;}
+  });
+  tail=pending.catch(()=>{});return pending;
+ };
+}
+export function bootstrapProvider(config:CouponConfig,fetcher:typeof fetch=fetch,timing?:BootstrapAccountTiming):BootstrapProvider {
+ const bounded=bootstrapBoundedFetcher(fetcher),pace=bootstrapAccountPacer(timing);
+ const rawCoupon=liveCouponProvider(config,bounded),receipt=liveReceiptProvider(config.receiptKey||'',bounded);
+ const coupon:CouponProvider={...rawCoupon,
+  get:(path,query)=>path==='/accounts'?pace(()=>rawCoupon.get(path,query)):rawCoupon.get(path,query),
+  eventAccount:()=>pace(()=>rawCoupon.eventAccount())};
  async function get(url:URL){
   if(config.mode!=='live'||url.origin!=='https://a.klaviyo.com'||url.username||url.password||url.hash||url.pathname!=='/api/metrics/')throw Error('inventory_read_rejected');
   const r=await bounded(url.href,{method:'GET',redirect:'manual',signal:AbortSignal.timeout(5000),headers:{Authorization:'Klaviyo-API-Key '+config.receiptKey,revision:'2026-07-15',Accept:'application/vnd.api+json'}});
   if(r.status!==200)throw Error('inventory_unavailable');const text=await r.text();if(text.length>1000000)throw Error('inventory_too_large');return JSON.parse(text);
  }
  return {coupon,async inventory(){
-  const accounts=await receipt.get('/accounts');if(!obj(accounts)||!Array.isArray(accounts.data)||accounts.data.length!==1||!obj(accounts.data[0])||accounts.data[0].id!==config.accountId)throw Error('inventory_account_mismatch');
+  const accounts=await pace(()=>receipt.get('/accounts'));if(!obj(accounts)||!Array.isArray(accounts.data)||accounts.data.length!==1||!obj(accounts.data[0])||accounts.data[0].id!==config.accountId)throw Error('inventory_account_mismatch');
   const metrics:Json[]=[],seen=new Set<string>(),ids=new Set<string>();let url:URL|null=new URL('https://a.klaviyo.com/api/metrics/');
   while(url){
    if(seen.size>=100||seen.has(url.href))throw Error('inventory_page_loop');seen.add(url.href);

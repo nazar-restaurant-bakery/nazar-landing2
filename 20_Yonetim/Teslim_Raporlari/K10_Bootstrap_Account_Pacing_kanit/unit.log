@@ -1,0 +1,37 @@
+✔ bounds actual streamed UTF8 bytes rather than string characters (36.881ms)
+✔ chunked and accumulated GET budgets fail closed (0.7339ms)
+✔ content length rejects before body read and invalid UTF8 is rejected (2.8931ms)
+✔ stalled stream is canceled with bounded timeout (13.9473ms)
+✔ POST202 and redirect bodies are not read or followed (0.5645ms)
+✔ bootstrap migration is inventoried LF-only, unnumbered, default non-executable and excluded from historical reset (571.9333ms)
+✔ removal, checksum drift, automatic execution or sequence invention cannot pass inventory (103.9765ms)
+✔ complete inventory uses pinned authenticated GET without redirect following (4228.4869ms)
+✔ inventory rejects foreign origin before a second metrics request (4239.1136ms)
+✔ inventory rejects wrong path before a second metrics request (4202.1092ms)
+✔ inventory rejects embedded credentials before a second metrics request (4201.2188ms)
+✔ inventory rejects fragment before a second metrics request (4202.5912ms)
+✔ inventory rejects filtered incomplete inventory before a second metrics request (4200.5423ms)
+✔ inventory rejects loop before a second metrics request (4202.8589ms)
+✔ inventory accepts no status 201 (4202.31ms)
+✔ inventory accepts no status 202 (4201.2282ms)
+✔ inventory accepts no status 301 (4201.5047ms)
+✔ inventory accepts no status 302 (4201.9422ms)
+✔ inventory accepts no status 307 (4200.811ms)
+✔ inventory accepts no status 308 (4200.7192ms)
+✔ inventory accepts no status 401 (4201.4816ms)
+✔ inventory accepts no status 429 (4202.4018ms)
+✔ inventory accepts no status 500 (4200.9549ms)
+✔ wrong account cannot read inventory (4203.1067ms)
+✔ bootstrap cannot invoke arbitrary database RPC or profile/subscription writes (2.3286ms)
+✔ default-disabled route performs no RPC or provider request (3.7689ms)
+✔ browser-origin and injected arbitrary protocol are rejected without side effects (1.3471ms)
+✔ normal process activation cannot enable bootstrap; preview never inherits production keys (1.6819ms)
+✔ provider normalization preserves original event identity and coupon content (0.8357ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 71780.3641

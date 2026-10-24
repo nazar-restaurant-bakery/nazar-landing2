@@ -1,0 +1,29 @@
+{
+  "native": {
+    "pass": 128,
+    "fail": 0,
+    "skip": 0
+  },
+  "functions_tsc_exit": 0,
+  "hosted": false,
+  "real_provider_requests": 0,
+  "real_sql": false,
+  "store": "in-memory synthetic RPC; not PostgreSQL",
+  "files": {
+    "functions/_lib/couponBootstrap.ts": "5eb42771e6902b5984e732e52dc52db73351a484559810a86253ca6f395f34b6",
+    "tests/couponBootstrapWorkerd.test.mjs": "913433f469a1303fe46a7517a506f7c2d22102247aeacd7ed5e04c571f26fc1e",
+    "supabase/migrations/20261024000200_coupon_first_event_bootstrap.sql": "149d2dcaad4749f77fc9abec6ec6e7c913f2dc0f8b2c7a1355049f544436829e"
+  },
+  "transport_unit": {
+    "pass": 29,
+    "fail": 0,
+    "skip": 0
+  },
+  "functions_build_exit": 0,
+  "log_sha256": {
+    "build.log": "391c01107ee24c7e1097302192e76c72caac9058726d6c47ac81c9eeadede0a7",
+    "native.log": "789681b29e78294e5f7e984f11fe41a325b9f4219782b831f8b1c7df7ee55dc7",
+    "tsc.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "unit.log": "fb5f3e6354ae5b4f47967939573a6b99d71eaae96c89bc17bfd8f622b9c05433"
+  }
+}
