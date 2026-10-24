@@ -388,7 +388,9 @@ export async function onRequestPost(context: Context): Promise<Response> {
   try {
     const challenge = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
-      redirect: "error",
+      // workerd rejects redirect:"error" before sending the request. Manual
+      // never follows Location; the !ok check below also rejects every 3xx.
+      redirect: "manual",
       signal: AbortSignal.timeout(5000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
