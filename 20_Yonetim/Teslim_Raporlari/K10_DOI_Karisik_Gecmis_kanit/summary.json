@@ -1,0 +1,25 @@
+{
+  "scope": "owned loopback PostgreSQL 18.6 full baseline + actual K3/K4/K5/K6/K9/K10/receipt/classifier/bootstrap DDL",
+  "pass": 40,
+  "fail": 0,
+  "skip": 0,
+  "exit_code": 0,
+  "application_order": null,
+  "execution_enabled": false,
+  "hosted": false,
+  "real_provider_calls": 0,
+  "real_event_email": false,
+  "original_helper_prosrc_md5": "2e59cde921d93fa1b3f403369aa7d029",
+  "all_other_core_public_function_definitions_unchanged": true,
+  "helper_acl_unchanged": true,
+  "production_shaped_business_offer_marker_absence": true,
+  "files": {
+    "supabase/migrations/20261024000300_doi_mixed_signup_eligibility.sql": "4fc76439f4956fa556e6ee6f5a9c2b5c8c600ae59dab3d616c94dcff9022d07e",
+    "supabase/migrations/20261019000300_klaviyo_profile_sync.sql": "d28672a87149839c71e44c72116ebbf3b96b2e76c7ec42a2a79c1f7b9f4fabc2",
+    "supabase/migrations/20261024000200_coupon_first_event_bootstrap.sql": "149d2dcaad4749f77fc9abec6ec6e7c913f2dc0f8b2c7a1355049f544436829e",
+    "tests/doiMixedSignupEligibilityDb.test.mjs": "042881980b33ebb9b5819892b3ccee8bbb5133e7c93dd61641b311ca5f218045",
+    "tools/test-env/audit-migrations.mjs": "887161ce69a1ace2f4f001001f3ace4545365f747dcbfe4eec6e8dc566c69fc0",
+    "tools/test-env/migration-manifest.json": "ce23dc3844d80f97fc82eb66523381e9efb41afad8c9e558df2950e3f8977451"
+  },
+  "native_log_sha256": "70d1a2365ddcf1addd21d07e5aa35dd7f71e4e90301b842a1caf3606efd62562"
+}

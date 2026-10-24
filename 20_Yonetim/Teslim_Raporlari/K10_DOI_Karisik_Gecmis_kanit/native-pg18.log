@@ -1,0 +1,48 @@
+✔ old helper rejects mixed history despite real DOI, no-test behavior unchanged (315.9182ms)
+✔ Production-shaped business/offer marker absence is supported before forward SQL (269.2525ms)
+✔ forward migration preserves all other function definitions, ACL and existing rows (361.0515ms)
+✔ same customer with two historical tests and exact genuine DOI becomes eligible (263.3791ms)
+✔ existing K6 gate and actual bootstrap permit accept evidenced history without bypass (444.3695ms)
+✔ same DOI cannot produce a second coupon job or permit (649.6274ms)
+✔ test customer remains denied (528.263ms)
+✔ unsubscribed customer remains denied (719.1748ms)
+✔ suppressed customer remains denied (1000.5247ms)
+✔ negative provider observation unsubscribed remains denied (740.9064ms)
+✔ negative provider observation suppressed remains denied (653.9007ms)
+✔ blocked_at remains denied even confirmed status (663.2319ms)
+✔ test-style current email denied despite older genuine DOI (884.7823ms)
+✔ changed ordinary email fails proof binding (1062.9484ms)
+✔ newer unevidenced website_vip_page signup denied (865.3264ms)
+✔ newer unevidenced catering signup denied (937.1915ms)
+✔ later test signup denied (1150.0378ms)
+✔ equal-time test signup denied rather than UUID order (1108.9823ms)
+✔ mixed history rejects missing DOI (610.55ms)
+✔ mixed history rejects false DOI (601.2191ms)
+✔ mixed history rejects missing provider source (764.6603ms)
+✔ mixed history rejects marketing denied (808.612ms)
+✔ mixed history rejects pending consent (1457.1124ms)
+✔ mixed history rejects different list (1427.4341ms)
+✔ mixed history rejects JSON email hash mismatch (1237.5566ms)
+✔ mixed history rejects confirmation before request (885.7701ms)
+✔ mixed history rejects future checked evidence (715.7555ms)
+✔ signup email must match current identity (787.4808ms)
+✔ signup must request email consent (1048.168ms)
+✔ catering cannot stand in for genuine VIP request (581.4672ms)
+✔ K5 eligible mixed history exports latest genuine signup and can enqueue profile-only job (781.1534ms)
+✔ existing K6 reserve claim consuming-context path all accepts exact mixed-history proof (774.0664ms)
+✔ new negative observation still blocks mixed-history K6 claim (729.8192ms)
+✔ new negative observation still blocks mixed-history K6 context (976.3736ms)
+✔ receipt activation respects new negative observation and K6 unknown finalize remains immutable (2757.3957ms)
+✔ wrong business and missing customer fail closed (324.1344ms)
+✔ anon authenticated and service role still cannot directly execute private helper (418.8894ms)
+✔ DOI evidence remains immutable; no test history removal or flag clearing (370.6046ms)
+✔ inventory pins new LF SQL, execution disabled, order unassigned (117.6459ms)
+✔ migration refuses unreviewed/reapplied helper fingerprint (212.441ms)
+ℹ tests 40
+ℹ suites 0
+ℹ pass 40
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 44474.4706
