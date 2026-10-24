@@ -1,0 +1,12 @@
+✔ official July schema pins supported sparse IDs and primary relationship linkage (0.9062ms)
+✔ detailed query matches July fieldset/include/page contract without resource expansions (26.9643ms)
+✔ minimal event-scope probe remains unchanged (1.2061ms)
+✔ official contract validator rejects unrecognized profile field (1.741ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 286.8102
