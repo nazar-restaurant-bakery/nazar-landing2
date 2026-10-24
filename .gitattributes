@@ -114,3 +114,8 @@
 /tests/bootstrapReadBudget.test.mjs text eol=lf
 /tests/fixtures/couponBootstrapNative.mjs text eol=lf
 /docs/coupon-first-event-bootstrap.md text eol=lf
+
+# Reviewed forward DOI eligibility candidate; preserve operator SHA bytes.
+/supabase/migrations/20261024000300_doi_mixed_signup_eligibility.sql text eol=lf
+/tests/doiMixedSignupEligibilityDb.test.mjs text eol=lf
+/20_Yonetim/Teslim_Raporlari/K10_DOI_Karisik_Gecmis_kanit/** text eol=lf
