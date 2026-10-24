@@ -104,3 +104,13 @@
 # Archive only: Production-only21a repair is outside normal migrations/reset.
 /supabase/repairs/** text eol=lf
 /tests/customerMarkerPrerequisiteDb.test.mjs text eol=lf
+
+# Closed first-event setup candidate: no execution approval.
+/supabase/migrations/20261024000200_coupon_first_event_bootstrap.sql text eol=lf
+/functions/_lib/couponBootstrap.ts text eol=lf
+/functions/_lib/bootstrapReadBudget.ts text eol=lf
+/functions/api/internal/coupon-bootstrap.ts text eol=lf
+/tests/couponBootstrap*.mjs text eol=lf
+/tests/bootstrapReadBudget.test.mjs text eol=lf
+/tests/fixtures/couponBootstrapNative.mjs text eol=lf
+/docs/coupon-first-event-bootstrap.md text eol=lf

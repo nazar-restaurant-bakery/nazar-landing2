@@ -186,7 +186,7 @@ function validEvent(body: Json): boolean {
   const d = body.data; if (Object.keys(body).join() !== "data" || !obj(d) || Object.keys(d).sort().join() !== "attributes,type" || d.type !== "event" || !obj(d.attributes)) return false;
   const a = d.attributes;
   return Object.keys(a).sort().join() === "metric,profile,properties,unique_id" && uuid(a.unique_id) && obj(a.properties)
-    && Object.keys(a.properties).sort().join() === "campaign_id,channels,coupon_code,coupon_id,coupon_qr_image_url,coupon_qr_payload,expires_at,message_key,minimum_amount_cents"
+    && (Object.keys(a.properties).sort().join() === "campaign_id,channels,coupon_code,coupon_id,coupon_qr_image_url,coupon_qr_payload,expires_at,message_key,minimum_amount_cents" || (Object.keys(a.properties).sort().join() === "bootstrap_event_unique_id,campaign_id,channels,coupon_code,coupon_id,coupon_qr_image_url,coupon_qr_payload,expires_at,message_key,minimum_amount_cents" && a.properties.bootstrap_event_unique_id === a.unique_id))
     && obj(a.metric) && Object.keys(a.metric).join() === "data" && obj(a.metric.data) && Object.keys(a.metric.data).sort().join() === "attributes,type" && a.metric.data.type === "metric"
     && obj(a.metric.data.attributes) && a.metric.data.attributes.name === COUPON_WELCOME_METRIC
     && Object.keys(a.metric.data.attributes).join() === "name" && obj(a.profile) && Object.keys(a.profile).join() === "data"
@@ -194,9 +194,17 @@ function validEvent(body: Json): boolean {
     && email(a.profile.data.attributes.email) && Object.keys(a.profile.data.attributes).join() === "email";
 }
 
+export type CouponDispatchProtocol = {
+ claim(): Promise<unknown>;
+ preflight(job: Job): Promise<unknown>;
+ bind(job: Job, reservationId: string, profileId: string): Promise<unknown>;
+ properties(job: Job, base: Json): Json;
+};
+export { properties as couponWelcomeProperties, profile as couponProviderProfile, marketing as couponProfileMarketing, clear as couponMarketingClear, negative as couponMarketingNegative, account as couponProviderAccount };
+
 /** Durable outbox + K6. A 202 finalizes K6 as UNKNOWN, never SENT; no automatic retry. */
-export async function processCouponWelcome({ store, provider, businessId, accountId, qrOrigin, couponId = null, now = Date.now, timeoutMs = 5000 }: {
-  store: CouponStore; provider: CouponProvider; businessId: string; accountId: string; qrOrigin: string; couponId?: string | null; now?: () => number; timeoutMs?: number;
+export async function processCouponWelcome({ store, provider, businessId, accountId, qrOrigin, couponId = null, now = Date.now, timeoutMs = 5000, protocol }: {
+  store: CouponStore; provider: CouponProvider; businessId: string; accountId: string; qrOrigin: string; couponId?: string | null; now?: () => number; timeoutMs?: number; protocol?: CouponDispatchProtocol;
 }): Promise<CouponResult> {
   if (!uuid(businessId) || (couponId !== null && !uuid(couponId)) || !ident(accountId) || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 10000) return result(provider, "blocked", "invalid_input");
   let j: Job | null = null; let reservation: string | null = null; let lease: string | null = null;
@@ -216,14 +224,15 @@ export async function processCouponWelcome({ store, provider, businessId, accoun
     return result(provider, outcome, code);
   };
   try {
-    const claimed = await store.rpc("coupon_welcome_claim_v1", { p_business_id: businessId, p_coupon_id: couponId });
+    const claimed = protocol ? await protocol.claim() : await store.rpc("coupon_welcome_claim_v1", { p_business_id: businessId, p_coupon_id: couponId });
     if (!obj(claimed) || claimed.allowed !== true) return result(provider, "blocked", obj(claimed) ? safeCode(claimed.code) : "outbox_unconfirmed");
     if (!job(claimed, businessId)) return result(provider, "unknown", "invalid_outbox_context");
     j = structuredClone(claimed);
-    const p = properties(j, qrOrigin);
+    const baseProperties = properties(j, qrOrigin);
+    const p = baseProperties && (protocol ? protocol.properties(j, baseProperties) : baseProperties);
     if (!p) return finish("blocked", "invalid_coupon_properties");
     if(provider.mode==='live'){
-      const ready=await store.rpc('coupon_delivery_preflight_v1',{p_business_id:businessId,p_job_id:j.jobId});
+      const ready=protocol ? await protocol.preflight(j) : await store.rpc('coupon_delivery_preflight_v1',{p_business_id:businessId,p_job_id:j.jobId});
       if(!obj(ready)||ready.allowed!==true||ready.accountId!==accountId)return finish('blocked','delivery_setup_required');
     }
     const payloadHash = await digest(JSON.stringify(p));
@@ -250,7 +259,7 @@ export async function processCouponWelcome({ store, provider, businessId, accoun
     }
     // The final outbox read is followed by K6's consuming current-state grant.
     const fresh = await store.rpc("coupon_welcome_context_v1", { p_job_id: j.jobId, p_job_lease_id: j.jobLeaseId });
-    if (!job(fresh, businessId) || fresh.jobId !== j.jobId || fresh.jobLeaseId !== j.jobLeaseId || fresh.couponId !== j.couponId || JSON.stringify(properties(fresh, qrOrigin)) !== JSON.stringify(p)
+    if (!job(fresh, businessId) || fresh.jobId !== j.jobId || fresh.jobLeaseId !== j.jobLeaseId || fresh.couponId !== j.couponId || JSON.stringify(protocol && properties(fresh, qrOrigin) ? protocol.properties(fresh, properties(fresh, qrOrigin)!) : properties(fresh, qrOrigin)) !== JSON.stringify(p)
       || fresh.recipient !== j.recipient || fresh.customerId !== j.customerId || fresh.messageKey !== j.messageKey
       || fresh.eventUniqueId !== j.eventUniqueId) return finish("blocked", "outbox_context_changed");
     const gate = await store.rpc("message_send_context_v1", { p_reservation_id: reservation, p_lease_id: lease });
@@ -262,7 +271,7 @@ export async function processCouponWelcome({ store, provider, businessId, accoun
       || ctx.suppressedAt !== null || ctx.providerBlockedStatus !== null || !date(ctx.dispatchExpiresAt)
       || ctx.dispatchExpiresAt !== c.dispatchExpiresAt || Date.parse(ctx.dispatchExpiresAt) <= now()) return finish("blocked", "gate_context_denied");
     if(provider.mode==='live'){
-      const binding=await store.rpc('coupon_delivery_bind_v1',{p_business_id:businessId,p_job_id:j.jobId,p_job_lease_id:j.jobLeaseId,p_reservation_id:reservation,p_profile_id:currentProfile.id});
+      const binding=protocol ? await protocol.bind(j, reservation, String(currentProfile.id)) : await store.rpc('coupon_delivery_bind_v1',{p_business_id:businessId,p_job_id:j.jobId,p_job_lease_id:j.jobLeaseId,p_reservation_id:reservation,p_profile_id:currentProfile.id});
       if(!obj(binding)||binding.allowed!==true||binding.code!=='delivery_bound')return finish('blocked','delivery_binding_unconfirmed');
     }
     const body: Json = { data: { type: "event", attributes: { properties: p,
