@@ -10,7 +10,7 @@ import {fileURLToPath} from 'node:url';
 export const repo=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
 export const migrationPath='supabase/migrations/20261023000100_customer_test_classification.sql';
 export const literal=value=>value===null?'NULL':"'"+String(value).replaceAll("'","''")+"'";
-export async function fixture(){
+export async function fixture({currentCouponSchema=false}={}){
  const bin=await realpath(process.env.CUSTOMER_MARKER_PG_BIN||join(process.env.USERPROFILE,'scoop/apps/postgresql/18.6-4/bin'));
  const exe=name=>join(bin,name+(process.platform==='win32'?'.exe':''));
  const run=await mkdtemp(join(repo,'.customer-marker-native-'));
@@ -60,6 +60,30 @@ export async function fixture(){
    sql(await readFile(join(repo,'supabase/migrations',path),'utf8'));
   const business=baseline.match(/CONSTRAINT businesses_id_check CHECK \(\(id = '([0-9a-f-]+)'::uuid\)\)/)[1];
   sql(`INSERT INTO core.businesses(id,name,intake_enabled,is_test) VALUES('${business}','Synthetic local marker fixture',true,true)`);
-  return{raw,sql,stop,business,literal,identity,apply:async()=>sql(await readFile(join(repo,migrationPath),'utf8'))};
+  const applied=[];
+  if(currentCouponSchema){
+   // Actual full tables/functions, no K9 bootstrap or substitute gate tables.
+   // Ops supports an explicit installation setting: use a LOCAL declaration,
+   // never a hosted URL/ref as a connection target or a production guard bypass.
+   sql("INSERT INTO core.installation(version,declared_project_ref) VALUES('local-native-only','local_native_customer_marker')");
+   // Supabase-owned platform surface required by the actual Ops storage policy.
+   // Only platform Auth/Storage are facades; every core application object below
+   // is created from the full baseline / original migration, never a stub.
+   sql(`CREATE SCHEMA storage;
+    CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean NOT NULL DEFAULT false,file_size_limit bigint,allowed_mime_types text[]);
+    CREATE TABLE storage.objects(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),bucket_id text REFERENCES storage.buckets(id),name text);
+    ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;`);
+   for(const path of ['20261020000100_ops_panel.sql','20261020000700_clover_order_core.sql',
+    '20261020000800_message_send_gate.sql','20261020000900_clover_optional_scope_status.sql',
+    '20261020001000_clover_payment_day_totals.sql','20261021000100_clover_webhook.sql',
+    '20261021000200_campaign_engine.sql','20261021000600_campaign_eligibility_check.sql',
+    '20261021000800_signup_reward_coupons.sql','20261021000825_coupon_delivery_reconciliation.sql']){
+    const bytes=await readFile(join(repo,'supabase/migrations',path));
+    const text=bytes.toString('utf8').replaceAll('\r\n','\n');
+    sql((path==='20261020000100_ops_panel.sql'?"SET app.ops_project_ref='local_native_customer_marker';\n":'')+text);
+    applied.push({path:'supabase/migrations/'+path,canonicalLf:text});
+   }
+  }
+  return{raw,sql,stop,business,literal,identity,applied,apply:async()=>sql(await readFile(join(repo,migrationPath),'utf8'))};
  }catch(error){await stop();throw error;}
 }
