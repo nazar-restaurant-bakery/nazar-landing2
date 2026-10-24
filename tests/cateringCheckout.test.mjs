@@ -23,6 +23,7 @@ function request(data, origin = "https://www.nazarrestaurantandbakery.com") {
 function order() {
   const pickup = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
   pickup.setUTCHours(17, 0, 0, 0);
+  if (pickup.getUTCDay() === 3) pickup.setUTCDate(pickup.getUTCDate() + 1);
   return { requestId: "87654321-1234-4123-8123-123456789012",
     name: "Test Customer", email: "customer@example.invalid", phone: "",
     preparationNote: "No onions", fulfillmentMethod: "pickup", requestKind: "standard",
@@ -211,4 +212,15 @@ test("checkout fails closed when the payment session was not saved", async () =>
     return Response.json(false);
   };
   assert.equal((await onRequestPost({ request: request(order()), env })).status, 503);
+});
+
+
+test("Wednesday checkout is rejected before verification or payment calls", async () => {
+  globalThis.fetch = async () => { throw new Error("Must not call any external endpoint"); };
+  const day = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+  while (day.getUTCDay() !== 3) day.setUTCDate(day.getUTCDate() + 1);
+  day.setUTCHours(17, 0, 0, 0);
+  const response = await onRequestPost({request: request({...order(),pickupAt:day.toISOString()}),env});
+  assert.equal(response.status,400);
+  assert.equal((await response.json()).code,"invalid_selection_or_pickup_time");
 });

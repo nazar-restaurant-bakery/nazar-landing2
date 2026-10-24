@@ -1,3 +1,4 @@
+import { isPickupClosed, newYorkDate } from "../../src/lib/cateringPickup.ts";
 export const CATERING_LEAD_TIME_MS = 72 * 60 * 60 * 1000;
 // A Clover Hosted Checkout session lasts 15 minutes. Reserve 5 more minutes
 // so a successful payment near expiration does not invalidate the chosen slot.
@@ -21,6 +22,9 @@ export function validatePickupSlot(value: unknown, checkoutStartedAt: Date): Dat
     throw new RangeError("Pickup must allow 72 hours after payment");
   }
   const parts = Object.fromEntries(newYorkClock.formatToParts(slot).map(({ type, value: part }) => [type, part]));
+  if (isPickupClosed(newYorkDate(slot))) {
+    throw new RangeError("Pickup is unavailable on Wednesdays in New York");
+  }
   const hour = Number(parts.hour);
   const minute = Number(parts.minute);
   if (hour < 11 || hour > 19 || (hour === 19 && minute !== 0) || minute % 30 !== 0) {
