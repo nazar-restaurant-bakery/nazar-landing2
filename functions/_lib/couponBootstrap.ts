@@ -83,7 +83,8 @@ export function bootstrapProvider(config:CouponConfig,fetcher:typeof fetch=fetch
  },async events(profileId,metricId,after){
   if(!ident(profileId)||(metricId!==undefined&&!ident(metricId))||(after!==undefined&&!time(after)))throw Error('event_read_rejected');
   const terms=[`equals(profile_id,${JSON.stringify(profileId)})`];if(metricId)terms.push(`equals(metric_id,${JSON.stringify(metricId)})`);if(after)terms.push(`greater-or-equal(datetime,${after})`);
-  return receipt.get('/events',metricId ? {filter:`and(${terms.join(',')})`,'page[size]':'100',include:'metric,profile','fields[profile]':'id','fields[metric]':'id,name,integration'} : {filter:terms[0],'page[size]':'1','fields[event]':'datetime'});
+  // Primary event linkage is verified below; profile expansion requires extra read scope.
+  return receipt.get('/events',metricId ? {filter:`and(${terms.join(',')})`,'page[size]':'100','fields[event]':'datetime,event_properties,uuid'} : {filter:terms[0],'page[size]':'1','fields[event]':'datetime'});
  }};
 }
 function context(x:unknown,config:CouponConfig,permitId:string):x is Json {

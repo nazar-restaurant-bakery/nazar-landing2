@@ -25,6 +25,7 @@ const wrapper=`
 import {bootstrapProvider,bootstrapStore,verifyCouponBootstrapEvent,processCouponBootstrap} from './functions/_lib/couponBootstrap.ts';
 import {couponWelcomeProperties,handleCouponProcessRequest,COUPON_WELCOME_METRIC} from './functions/_lib/couponWelcome.ts';
 import {boundedJsonText} from './functions/_lib/bootstrapReadBudget.ts';
+import {liveReceiptProvider} from './functions/_lib/couponDelivery.ts';
 import {onRequest as bootstrapRoute} from './functions/api/internal/coupon-bootstrap.ts';
 import {onRequest as normalRoute} from './functions/api/internal/coupon-welcome.ts';
 const businessId='10000000-0000-4000-8000-000000000001',couponId='20000000-0000-4000-8000-000000000001';
@@ -87,6 +88,7 @@ export default {async fetch(request){
   }
   else if(op==='aggregate') {for(let i=0;i<5;i++)await provider.coupon.get('/accounts');value={};}
   else if(op==='rpcBudget'){value=await bootstrapStore(config).rpc('coupon_bootstrap_preview_v1',{p_permit_id:permitId});}
+  else if(op==='legacyEvents'){value=await liveReceiptProvider(config.receiptKey).get('/events',{filter:'equals(profile_id,"PROFILE")',include:'metric,profile','fields[profile]':'id','fields[metric]':'id,name,integration'});}
   else if(op==='readAccount')value=await provider.coupon.get('/accounts');
   else if(op==='eventAccount')value=await provider.coupon.eventAccount();
   else if(op==='profile')value=await provider.coupon.get('/profiles',{filter:'equals(email,"synthetic@example.invalid")','additional-fields[profile]':'subscriptions','page[size]':'2'});
@@ -115,6 +117,7 @@ async function outbound(request){
  if(url.origin==='https://abcdefghijklmnopqrst.supabase.co'&&url.pathname==='/rest/v1/rpc/coupon_bootstrap_preview_v1'&&request.method==='POST')return WorkerResponse.json({padding:'x'.repeat(128001)});
  if(url.pathname==='/api/accounts/'&&scenario.accountFailAt===calls.filter(c=>c.path==='/api/accounts/').length)return new WorkerResponse('PRIVATE_SYNTHETIC_PROVIDER_BODY',{status:429});
  if(url.origin!=='https://a.klaviyo.com')return new WorkerResponse('SYNTHETIC_OUTBOUND_DENIED',{status:418});
+ if(scenario.noProfileRead&&record.authorization==='Klaviyo-API-Key '+RECEIPT&&url.searchParams.get('include')?.split(',').includes('profile'))return new WorkerResponse('PRIVATE_SYNTHETIC_SCOPE_DENIED',{status:403});
  if(scenario.path===url.pathname&&(!scenario.method||scenario.method===request.method)){
   if(scenario.status)return new WorkerResponse(scenario.status===204?null:'PRIVATE_SYNTHETIC_PROVIDER_BODY',{status:scenario.status,headers:{Location:scenario.location||'https://credential-trap.invalid/key-trap'}});
   if(scenario.body==='utf8-limit')return WorkerResponse.json({padding:'é'.repeat(500000)});
@@ -134,7 +137,13 @@ async function outbound(request){
   return WorkerResponse.json({data,links:{next}});
  }
  if(url.pathname==='/api/profiles/'||url.pathname==='/api/lists/LIST/profiles/')return WorkerResponse.json({data:[{id:'PROFILE',attributes:{email:'synthetic@example.invalid',subscriptions:{email:{marketing:{consent:'SUBSCRIBED',can_receive_email_marketing:true,suppression:[],list_suppressions:[],double_optin:true,consent_timestamp:'2026-10-24T15:01:00Z'}}}}}]});
- if(url.pathname==='/api/events/')return WorkerResponse.json({data:[normalized()],links:{next:null}});
+ if(url.pathname==='/api/events/'){
+  const row=normalized();
+  if(scenario.badLink==='missing-profile')delete row.relationships.profile;
+  if(scenario.badLink==='wrong-profile')row.relationships.profile.data.id='OTHER';
+  if(scenario.badLink==='wrong-metric')row.relationships.metric.data.id='OTHER';
+  return WorkerResponse.json({data:[row],links:{next:null}});
+ }
  return new WorkerResponse('DENIED',{status:418});
 }
 describe('coupon bootstrap actual workerd transport',{skip:toolingReason},()=>{
@@ -154,7 +163,7 @@ describe('coupon bootstrap actual workerd transport',{skip:toolingReason},()=>{
    const {r,body}=await run(op);assert.equal(r.status,200);assert.equal(body.ok,true);assert.equal(calls.length,count);
    const last=calls.at(-1);assert.equal(new URL(last.url).origin,'https://a.klaviyo.com');assert.equal(last.path,path);assert.equal(last.method,method);assert.equal(last.authorization,'Klaviyo-API-Key '+key);assert.equal(last.revision,'2026-07-15');
    if(method==='POST'){assert.equal(body.status,202);assert.equal(last.body.data.attributes.unique_id,'30000000-0000-4000-8000-000000000001');assert.equal('bootstrap_event_unique_id'in last.body.data.attributes.properties,op==='eventMarker');}
-   if(op==='events'){const query=new URL(last.url).searchParams;assert.equal(query.get('include'),'metric,profile');assert.equal(query.get('fields[metric]'),'id,name,integration');assert.equal(query.get('fields[profile]'),'id');assert.equal(query.get('page[size]'),'100');}
+   if(op==='events'){const query=new URL(last.url).searchParams;assert.equal(query.has('include'),false);assert.equal(query.has('fields[metric]'),false);assert.equal(query.has('fields[profile]'),false);assert.equal(query.get('fields[event]'),'datetime,event_properties,uuid');assert.equal(query.get('page[size]'),'100');}
   });
   for(const status of [301,302,303,307,308])test(`${op}: ${status} never follows or forwards key`,async()=>{
    scenario={path,method,status};const {r,body}=await run(op);assert.equal(calls.length,count);assert.ok(calls.every(c=>new URL(c.url).origin==='https://a.klaviyo.com'));
@@ -203,6 +212,19 @@ describe('coupon bootstrap actual workerd transport',{skip:toolingReason},()=>{
   assert.equal(body.second.code,'bootstrap_not_claimable');assert.equal(calls.filter(c=>c.method==='POST').length,1);
   assert.deepEqual(body.accountTimes,[4200,8400,12600,16800,21000,25200]);
   assert.deepEqual(calls.filter(c=>c.path==='/api/accounts/').map(c=>c.authorization),[RECEIPT,READ,EVENT,READ,EVENT,RECEIPT].map(k=>'Klaviyo-API-Key '+k));
+ });
+ test('receipt key without profiles read rejects legacy expansion and accepts primary event linkage',async()=>{
+  scenario={noProfileRead:true};assert.equal((await run('legacyEvents')).r.status,503);assert.equal(calls.length,1);
+  calls=[];assert.equal((await run('events')).r.status,200);assert.equal(calls.length,1);assert.equal(new URL(calls[0].url).searchParams.has('include'),false);
+ });
+ test('actual bootstrap verifier works without profile expansion permission or included resources',async()=>{
+  scenario={noProfileRead:true};const body=await(await mf.dispatchFetch(ORIGIN+'/verify')).json();assert.equal(body.result.code,'bootstrap_event_verified');assert.equal(body.records,1);assert.ok(calls.every(c=>c.method==='GET'));
+ });
+ test('denied event GET remains unknown without recording proof or sending an event',async()=>{
+  scenario={path:'/api/events/',method:'GET',status:403};const body=await(await mf.dispatchFetch(ORIGIN+'/verify')).json();assert.equal(body.result.code,'bootstrap_event_read_unconfirmed');assert.equal(body.records,0);assert.ok(calls.every(c=>c.method==='GET'));
+ });
+ for(const badLink of ['missing-profile','wrong-profile','wrong-metric'])test(`no expansion does not relax primary relationship checks: ${badLink}`,async()=>{
+  scenario={noProfileRead:true,badLink};const body=await(await mf.dispatchFetch(ORIGIN+'/verify')).json();assert.notEqual(body.result.code,'bootstrap_event_verified');assert.equal(body.records,0);assert.ok(calls.every(c=>c.method==='GET'));
  });
  test('normal handler cannot receive a protocol port via HTTP JSON',async()=>{const r=await mf.dispatchFetch(ORIGIN+'/inject-normal');assert.equal(r.status,400);assert.equal(calls.length,0);});
 });

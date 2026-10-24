@@ -1,0 +1,263 @@
+{
+  "source": "https://raw.githubusercontent.com/klaviyo/openapi/930eb41fdc3917bc9ae3c69c04078341cd84fe68/openapi/stable/apis/get_events.json",
+  "version": "2026-07-15",
+  "source_sha256": "d81ec2b3fc30d79825f29e2b682261156579716f67056f7e01d6a3c024bff464",
+  "parameters": [
+    {
+      "name": "fields[attribution]",
+      "in": "query",
+      "description": "For more information please visit https://developers.klaviyo.com/en/v2026-07-15/reference/api-overview#sparse-fieldsets",
+      "required": false,
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "id"
+          ]
+        }
+      },
+      "explode": false
+    },
+    {
+      "name": "fields[event]",
+      "in": "query",
+      "description": "For more information please visit https://developers.klaviyo.com/en/v2026-07-15/reference/api-overview#sparse-fieldsets",
+      "required": false,
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "datetime",
+            "event_properties",
+            "id",
+            "timestamp",
+            "uuid"
+          ]
+        }
+      },
+      "explode": false
+    },
+    {
+      "name": "fields[metric]",
+      "in": "query",
+      "description": "For more information please visit https://developers.klaviyo.com/en/v2026-07-15/reference/api-overview#sparse-fieldsets",
+      "required": false,
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "created",
+            "id",
+            "integration",
+            "name",
+            "updated"
+          ]
+        }
+      },
+      "explode": false
+    },
+    {
+      "name": "fields[profile]",
+      "in": "query",
+      "description": "For more information please visit https://developers.klaviyo.com/en/v2026-07-15/reference/api-overview#sparse-fieldsets",
+      "required": false,
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "created",
+            "email",
+            "external_id",
+            "first_name",
+            "id",
+            "image",
+            "last_event_date",
+            "last_name",
+            "locale",
+            "location",
+            "location.address1",
+            "location.address2",
+            "location.city",
+            "location.country",
+            "location.ip",
+            "location.latitude",
+            "location.longitude",
+            "location.region",
+            "location.timezone",
+            "location.zip",
+            "organization",
+            "phone_number",
+            "properties",
+            "title",
+            "updated"
+          ]
+        }
+      },
+      "explode": false
+    },
+    {
+      "name": "filter",
+      "in": "query",
+      "description": "For more information please visit https://developers.klaviyo.com/en/v2026-07-15/reference/api-overview#filtering<br>Allowed field(s)/operator(s):<br>`metric_id`: `equals` (string)<br>`profile_id`: `equals` (string)<br>`profile`: `has`<br>`metric`: `has`<br>`datetime`: `greater-or-equal`, `greater-than`, `less-or-equal`, `less-than` (date-time)<br>`timestamp`: `greater-or-equal`, `greater-than`, `less-or-equal`, `less-than` (number)",
+      "schema": {
+        "type": "string",
+        "example": "equals(metric_id,'example')"
+      }
+    },
+    {
+      "name": "include",
+      "in": "query",
+      "description": "For more information please visit https://developers.klaviyo.com/en/v2026-07-15/reference/api-overview#relationships",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "attributions",
+            "metric",
+            "profile"
+          ]
+        }
+      },
+      "explode": false
+    },
+    {
+      "name": "page[cursor]",
+      "in": "query",
+      "description": "For more information please visit https://developers.klaviyo.com/en/v2026-07-15/reference/api-overview#pagination",
+      "required": false,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "page[size]",
+      "in": "query",
+      "description": "Default: 200. Min: 1. Max: 1000.",
+      "required": false,
+      "schema": {
+        "type": "integer",
+        "default": 200,
+        "maximum": 1000,
+        "minimum": 1
+      }
+    },
+    {
+      "name": "sort",
+      "in": "query",
+      "description": "For more information please visit https://developers.klaviyo.com/en/v2026-07-15/reference/api-overview#sorting",
+      "schema": {
+        "type": "string",
+        "enum": [
+          "datetime",
+          "-datetime",
+          "timestamp",
+          "-timestamp"
+        ]
+      }
+    },
+    {
+      "name": "revision",
+      "in": "header",
+      "description": "API endpoint revision (format: YYYY-MM-DD[.suffix])",
+      "required": true,
+      "schema": {
+        "type": "string",
+        "default": "2026-07-15"
+      }
+    }
+  ],
+  "scopes": [
+    "events:read"
+  ],
+  "event_required": [
+    "type",
+    "id",
+    "attributes",
+    "links"
+  ],
+  "relationships": {
+    "type": "object",
+    "properties": {
+      "profile": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "$ref": "#/components/schemas/ProfileEnum"
+              },
+              "id": {
+                "description": "Profile ID of the associated profile, if available",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          },
+          "links": {
+            "$ref": "#/components/schemas/RelationshipLinks"
+          }
+        }
+      },
+      "metric": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "$ref": "#/components/schemas/MetricEnum"
+              },
+              "id": {
+                "description": "The Metric ID",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          },
+          "links": {
+            "$ref": "#/components/schemas/RelationshipLinks"
+          }
+        }
+      },
+      "attributions": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "id"
+              ],
+              "properties": {
+                "type": {
+                  "$ref": "#/components/schemas/AttributionEnum"
+                },
+                "id": {
+                  "description": "Attributions for this event",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/RelationshipLinks"
+          }
+        }
+      }
+    }
+  }
+}

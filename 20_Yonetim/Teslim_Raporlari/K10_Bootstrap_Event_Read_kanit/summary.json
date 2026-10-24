@@ -1,0 +1,41 @@
+{
+  "base": "e4a2fc0",
+  "scope": "bootstrapProvider.events detailed GET only",
+  "native_pass": 134,
+  "native_fail": 0,
+  "native_skip": 0,
+  "contract_pass": 4,
+  "functions_tsc_exit": 0,
+  "functions_build_exit": 0,
+  "official_openapi_revision": "2026-07-15",
+  "official_openapi_sha256": "d81ec2b3fc30d79825f29e2b682261156579716f67056f7e01d6a3c024bff464",
+  "public_files_unchanged_from_main": 207,
+  "src_unchanged_from_main": true,
+  "normal_send_receipt_sql_unchanged": [
+    "functions/_lib/couponDelivery.ts",
+    "functions/_lib/couponWelcome.ts",
+    "supabase/migrations/20261024000200_coupon_first_event_bootstrap.sql",
+    "supabase/migrations/20261024000300_doi_mixed_signup_eligibility.sql"
+  ],
+  "actual_provider_http403_observed": false,
+  "receipt_scope_metadata_reported_by_root": [
+    "accounts:read",
+    "events:read",
+    "metrics:read"
+  ],
+  "authenticated_provider_calls": 0,
+  "real_event_email": false,
+  "hosted_sql": false,
+  "operator_package_edited": false,
+  "files": {
+    "functions/_lib/couponBootstrap.ts": "dfdd2dc6ff8279e63be8c03637f62ec0d318c71c90a3e1936e8c8d39970cf47b",
+    "tests/couponBootstrapWorkerd.test.mjs": "8e114f8d4575c4586331d2a89eb2e78376a83714fc31ce9b1f6ea924f72f8768",
+    "tests/couponBootstrapEventQueryContract.test.mjs": "eee874032edcef1f97f9b1dfbcf2ea802ec0b78179246a7fa3fc5bf77c490ba6",
+    "tests/fixtures/klaviyoGetEvents20260715.json": "c31f72d525fff40b5edb941de92b2ce0c9121c29e0ac103c49a61547e553a230"
+  },
+  "logs": {
+    "build.log": "db34e1dc61d3bd5192b7160c2de1d3b5a1b2d90ac7b3a1d6eacba203bf409e74",
+    "contract.log": "3e840b6afb0c23e161280260e9f78e957ef3283477503854c8f575c67aef83bb",
+    "native.log": "4cfdddcf522d38906c0bba8cbc6d35a6732372e523b5abfab1adce2b10deae94"
+  }
+}

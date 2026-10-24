@@ -119,3 +119,7 @@
 /supabase/migrations/20261024000300_doi_mixed_signup_eligibility.sql text eol=lf
 /tests/doiMixedSignupEligibilityDb.test.mjs text eol=lf
 /20_Yonetim/Teslim_Raporlari/K10_DOI_Karisik_Gecmis_kanit/** text eol=lf
+
+/tests/fixtures/klaviyoGetEvents20260715.json text eol=lf
+
+/20_Yonetim/Teslim_Raporlari/K10_Bootstrap_Event_Read_kanit/** text eol=lf
