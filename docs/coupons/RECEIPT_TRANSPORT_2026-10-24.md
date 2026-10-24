@@ -1,6 +1,6 @@
 # K10 receipt transport — 24 October 2026
 
-Scope: existing `liveReceiptProvider` GET transport only. Separate worktree/branch `tmp/nazar-receipt-workers-redirect` / `fix/coupon-receipt-workers-redirect`, based on main `308cab975c8629b669af573b2b52097690367ff3`. Open PR inventory was checked before development; no receipt transport PR existed. Pickup #101 (`0286d3b35508fb8dfe0ccee8a2f436ce05738468`) and signup #102 (`86ad1364fdb2207b2e316eb2a2b09953921e3c73`) were not changed. This is a coordinator delivery, not instructions to Talip.
+Scope: existing `liveReceiptProvider` GET transport only. Separate worktree/branch `tmp/nazar-receipt-workers-redirect` / `fix/coupon-receipt-workers-redirect`, rebased on main `f429ff4ff5ef7d47c9edf002eca92efd55569630` (initial base `308cab9`). Open PR inventory was checked before development; no receipt transport PR existed. Pickup #101 (`0286d3b35508fb8dfe0ccee8a2f436ce05738468`) and signup #102 (`86ad1364fdb2207b2e316eb2a2b09953921e3c73`) were not changed. This is a coordinator delivery, not instructions to Talip.
 
 ## Finding and change
 
@@ -28,3 +28,12 @@ Missing optional native tooling is explicitly reported as skipped, never counted
 ## Boundary and remaining acceptance
 
 Draft PR targets main; merge remains with Talip/coordinator. No main push, hosted/account/secret/Flow/event/email/deployment operation was performed. Management files were not edited. This removes only the runtime transport blocker; it does not resolve the first-event setup cycle or authorize a real Welcome acceptance run. Hosted acceptance remains gated by the separate K10 plan. No direct operator action is issued in this delivery.
+
+
+## Main integration — #102 merged
+
+Existing PR #104 was rebased without conflict onto main `f429ff4ff5ef7d47c9edf002eca92efd55569630`. The integrated code head before this report update is `922a20f476d621cac5da4f6a6618bb1472ea6ac2`. Scope remains the same five files; #102 signup changes are inherited from main, not edited by this PR. Pickup #101 remains `0286d3b35508fb8dfe0ccee8a2f436ce05738468`.
+
+The new main integration justified a fresh full regression run: **96/96 passed, zero skipped** (30 native workerd + 66 mock). TypeScript project build and explicit receipt/server-module type check passed. No hosted acceptance or Production deployment performed by this task.
+
+Production-mode Vite build passed (164 modules). Existing non-blocking Browserslist age and >500 kB chunk warnings were reported; no dependency or chunking change was introduced. `git diff --check` passed.
