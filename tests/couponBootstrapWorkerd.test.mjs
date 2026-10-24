@@ -22,7 +22,7 @@ const ORIGIN='https://www.nazarrestaurantandbakery.com';
 const READ='pk_synthetic_read_123456',EVENT='pk_synthetic_event_123456',RECEIPT='pk_synthetic_receipt_123456';
 let mf,temp,calls=[],scenario={};
 const wrapper=`
-import {bootstrapProvider,bootstrapStore,verifyCouponBootstrapEvent} from './functions/_lib/couponBootstrap.ts';
+import {bootstrapProvider,bootstrapStore,verifyCouponBootstrapEvent,processCouponBootstrap} from './functions/_lib/couponBootstrap.ts';
 import {couponWelcomeProperties,handleCouponProcessRequest,COUPON_WELCOME_METRIC} from './functions/_lib/couponWelcome.ts';
 import {boundedJsonText} from './functions/_lib/bootstrapReadBudget.ts';
 import {onRequest as bootstrapRoute} from './functions/api/internal/coupon-bootstrap.ts';
@@ -40,8 +40,38 @@ export default {async fetch(request){
   const trap={async rpc(){throw Error('UNEXPECTED_STORE_CALL');}},provider={mode:'live',async get(){throw Error('UNEXPECTED_PROVIDER_CALL');},async eventAccount(){throw Error('UNEXPECTED_PROVIDER_CALL');},async event(){throw Error('UNEXPECTED_PROVIDER_CALL');}};
   return handleCouponProcessRequest(new Request('https://www.nazarrestaurantandbakery.com/api/internal/coupon-welcome',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.processKey},body:JSON.stringify({action:'welcome',businessId,couponId,protocol:{claim:'injected'}})}),config,{store:trap,provider});
  }
- const provider=bootstrapProvider(config);
+ let tick=0;const accountTimes=[];
+ const transport=async(input,init)=>{if(new URL(String(input)).pathname==='/api/accounts/')accountTimes.push(tick);return fetch(input,init);};
+ const provider=bootstrapProvider(config,transport,{now:()=>tick,sleep:async ms=>{tick+=ms;}});
  try{
+  if(url.pathname==='/real-pacing'){
+   const times=[],signals=[];const actual=bootstrapProvider(config,async(input,init)=>{times.push(Date.now());signals.push(init.signal.aborted);return fetch(input,init);});
+   const start=Date.now();await Promise.all([actual.coupon.get('/accounts'),actual.coupon.eventAccount()]);
+   return Response.json({firstDelay:times[0]-start,gap:times[1]-times[0],signals});
+  }
+  if(url.pathname==='/dispatch'){
+   let attempts=0,state='reviewed';const rpcs=[],outcomes=[];
+   const reservationId='90000000-0000-4000-8000-000000000001',leaseId='a0000000-0000-4000-8000-000000000001';
+   const context=()=>({...job,allowed:true,permitId,state,attempts,accountId:'ACCOUNT',profileId:'PROFILE',vipListId:'LIST',qrOrigin:config.qrOrigin,expiresAt:'2026-10-24T18:00:00Z',recoverUntil:'2026-10-25T18:00:00Z',confirmedAt:'2026-10-24T15:00:00Z'});
+   let payloadSha256;
+   const store={async rpc(name,args){rpcs.push(name);
+    if(name==='coupon_bootstrap_preview_v1')return context();
+    if(name==='coupon_bootstrap_claim_v1'){if(attempts)return {allowed:false,code:'bootstrap_not_claimable'};attempts=1;state='claimed';return context();}
+    if(name==='coupon_bootstrap_preflight_v1')return {allowed:true,accountId:'ACCOUNT'};
+    if(name==='message_send_reserve_v1'){payloadSha256=args.p_payload_sha256;return {allowed:true,reservationId,status:'reserved',code:'reserved'};}
+    if(name==='message_send_claim_v1')return {allowed:true,reservationId,leaseId,status:'claimed',code:'claimed',dispatchExpiresAt:'2026-10-24T17:01:00Z'};
+    if(name==='coupon_welcome_context_v1')return context();
+    if(name==='message_send_context_v1')return {allowed:true,code:'dispatch_authorized',status:'sending',reservationId,context:{businessId,customerId:job.customerId,messageKey:job.messageKey,payloadSha256,messageKind:'flow',leaseId,email:job.recipient,emailStatus:'subscribed',isTest:false,suppressedAt:null,providerBlockedStatus:null,dispatchExpiresAt:'2026-10-24T17:01:00Z'}};
+    if(name==='coupon_bootstrap_dispatch_bind_v1'){state='dispatch_bound';return {allowed:true,code:'bootstrap_dispatch_bound'};}
+    if(name==='message_send_finalize_v1')return {idempotent:false,status:args.p_outcome};
+    if(name==='coupon_welcome_finish_v1'){outcomes.push(args.p_outcome);return {acknowledged:true,status:args.p_outcome};}
+    if(name==='coupon_bootstrap_finish_v1'){state=state==='claimed'?'blocked':'awaiting_event';return {acknowledged:true};}
+    throw Error('UNEXPECTED_RPC');
+   }};
+   const first=await processCouponBootstrap({config,store,provider,permitId,now:()=>Date.parse('2026-10-24T17:00:00Z')});
+   const second=attempts?await processCouponBootstrap({config,store,provider,permitId,now:()=>Date.parse('2026-10-24T17:00:00Z')}):null;
+   return Response.json({first,second,attempts,state,rpcs,outcomes,accountTimes});
+  }
   if(url.pathname==='/verify'){
    const records=[],hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(expected))))].map(n=>n.toString(16).padStart(2,'0')).join('');
    const context={...job,allowed:true,permitId,state:'awaiting_event',attempts:1,accountId:'ACCOUNT',profileId:'PROFILE',vipListId:'LIST',qrOrigin:config.qrOrigin,expiresAt:'2026-10-24T16:30:00Z',recoverUntil:'2026-10-25T17:00:00Z',confirmedAt:'2026-10-24T15:00:00Z',dispatchedAt:'2026-10-24T16:00:00Z',reservationId:'90000000-0000-4000-8000-000000000001',payloadSha256:hash};
@@ -83,6 +113,7 @@ async function outbound(request){
  const url=new URL(request.url),record={url:request.url,path:url.pathname,method:request.method,authorization:request.headers.get('authorization'),revision:request.headers.get('revision')};
  if(request.method==='POST')record.body=await request.json();calls.push(record);
  if(url.origin==='https://abcdefghijklmnopqrst.supabase.co'&&url.pathname==='/rest/v1/rpc/coupon_bootstrap_preview_v1'&&request.method==='POST')return WorkerResponse.json({padding:'x'.repeat(128001)});
+ if(url.pathname==='/api/accounts/'&&scenario.accountFailAt===calls.filter(c=>c.path==='/api/accounts/').length)return new WorkerResponse('PRIVATE_SYNTHETIC_PROVIDER_BODY',{status:429});
  if(url.origin!=='https://a.klaviyo.com')return new WorkerResponse('SYNTHETIC_OUTBOUND_DENIED',{status:418});
  if(scenario.path===url.pathname&&(!scenario.method||scenario.method===request.method)){
   if(scenario.status)return new WorkerResponse(scenario.status===204?null:'PRIVATE_SYNTHETIC_PROVIDER_BODY',{status:scenario.status,headers:{Location:scenario.location||'https://credential-trap.invalid/key-trap'}});
@@ -97,7 +128,7 @@ async function outbound(request){
  if(request.method!=='GET')return new WorkerResponse('DENIED',{status:418});
  if(url.pathname==='/api/accounts/')return WorkerResponse.json({data:[{id:'ACCOUNT'}]});
  if(url.pathname==='/api/metrics/'){
-  let next=null,data=[metric()];
+  let next=null,data=scenario.dispatch?[]:[metric()];
   if(scenario.next){next=scenario.next;data=[];}
   if(scenario.twoPages){const second=url.searchParams.get('page[cursor]')==='SECOND';next=second?null:'https://a.klaviyo.com/api/metrics/?page[cursor]=SECOND';data=[metric(second?'SECOND':'METRIC')];}
   return WorkerResponse.json({data,links:{next}});
@@ -149,5 +180,29 @@ describe('coupon bootstrap actual workerd transport',{skip:toolingReason},()=>{
  test('actual bootstrapStore POST JSON has independent 128K streamed read cap',async()=>{const result=await run('rpcBudget');assert.equal(result.r.status,503);assert.equal(result.body.reason,'bootstrap_read_limit');assert.equal(calls.length,1);assert.equal(new URL(calls[0].url).origin,'https://abcdefghijklmnopqrst.supabase.co');});
  test('native bounded reader cancels a stalled stream at its deadline',async()=>{const result=await run('budgetStall');assert.equal(result.r.status,200);assert.equal(result.body.ok,true);assert.equal(result.body.cancelled,true);assert.equal(calls.length,0);});
  test('actual provider stalled GET fails within request/body deadline',async()=>{scenario={path:'/api/profiles/',body:'stall'};const start=Date.now();assert.equal((await run('profile')).r.status,503);assert.ok(Date.now()-start<9000);assert.equal(calls.length,1);});
+ test('real native timers serialize concurrent account reads and start transport timeout after waiting',async()=>{
+  const body=await(await mf.dispatchFetch(ORIGIN+'/real-pacing')).json();
+  assert.ok(body.firstDelay>=4200,JSON.stringify(body));assert.ok(body.gap>=4200,JSON.stringify(body));
+  assert.deepEqual(body.signals,[false,false]);assert.equal(calls.length,2);
+ });
+ for(const accountFailAt of [1,2,3,4,5,6])test(`dispatch account ${accountFailAt} 429: no retry, no event, claim boundary respected`,async()=>{
+  scenario={dispatch:true,accountFailAt};const body=await(await mf.dispatchFetch(ORIGIN+'/dispatch')).json();
+  assert.equal(calls.filter(c=>c.path==='/api/accounts/').length,accountFailAt);
+  assert.equal(calls.filter(c=>c.method==='POST').length,0);
+  assert.equal(body.attempts,accountFailAt<=3?0:1);
+  assert.equal(body.state,accountFailAt<=3?'reviewed':'blocked');
+  assert.equal(body.first.status,'unknown');
+  assert.equal(body.first.code,accountFailAt<=3?'bootstrap_unconfirmed':'processing_unconfirmed');
+  if(accountFailAt>3){assert.equal(body.second.code,'bootstrap_not_claimable');assert.deepEqual(body.outcomes,['unknown']);}
+  assert.equal(body.accountTimes[0],4200);
+  for(let i=1;i<body.accountTimes.length;i++)assert.ok(body.accountTimes[i]-body.accountTimes[i-1]>=4200);
+ });
+ test('dispatch six account checks share pacing across credentials and claim, one event only',async()=>{
+  scenario={dispatch:true};const body=await(await mf.dispatchFetch(ORIGIN+'/dispatch')).json();
+  assert.equal(body.first.status,'provider_accepted',JSON.stringify(body));assert.equal(body.attempts,1);assert.equal(body.state,'awaiting_event');
+  assert.equal(body.second.code,'bootstrap_not_claimable');assert.equal(calls.filter(c=>c.method==='POST').length,1);
+  assert.deepEqual(body.accountTimes,[4200,8400,12600,16800,21000,25200]);
+  assert.deepEqual(calls.filter(c=>c.path==='/api/accounts/').map(c=>c.authorization),[RECEIPT,READ,EVENT,READ,EVENT,RECEIPT].map(k=>'Klaviyo-API-Key '+k));
+ });
  test('normal handler cannot receive a protocol port via HTTP JSON',async()=>{const r=await mf.dispatchFetch(ORIGIN+'/inject-normal');assert.equal(r.status,400);assert.equal(calls.length,0);});
 });
