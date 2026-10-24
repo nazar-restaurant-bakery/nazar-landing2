@@ -245,6 +245,19 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   try{const bytes=await fs.readFile(path.join(realRoot,policy.path));if(sha256Lf(bytes.toString('utf8'))!==policy.sha)issue('CURRENT_MAIN_DELIVERY_BYTES',policy.path);}
   catch{issue('CURRENT_MAIN_DELIVERY_MISSING',policy.path);}
  }
+ // Candidate only: no sequence number or execution approval has been assigned.
+ const customerClassifier=manifest.customer_test_classification_delivery;
+ const customerClassifierPath='supabase/migrations/20261023000100_customer_test_classification.sql';
+ const customerClassifierSha='697d2102b2cca67db7b2189daa88e2babc5ec463eb566ee5b74e48e52c951c79';
+ if(customerClassifier){
+  if(typeof customerClassifier!=='object'||Object.keys(customerClassifier).sort().join(',')!=='application_order,execution_enabled,included_in_k3_reset,path,sha256_bytes'
+   ||customerClassifier.path!==customerClassifierPath||customerClassifier.sha256_bytes!==customerClassifierSha
+   ||customerClassifier.application_order!==null||customerClassifier.execution_enabled!==false||customerClassifier.included_in_k3_reset!==false)
+   issue('CUSTOMER_TEST_DELIVERY_CONTRACT','Customer marker candidate awaits sequence review and cannot execute or enter K3 replay.');
+  try{const bytes=await fs.readFile(path.join(realRoot,customerClassifierPath));
+   if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==customerClassifierSha)issue('CUSTOMER_TEST_DELIVERY_BYTES',customerClassifierPath);
+  }catch{issue('CUSTOMER_TEST_DELIVERY_MISSING',customerClassifierPath);}
+ }
  // K10 is an inventory-only forward delivery over these exact K9 bytes. This
  // records a reviewed dependency, not a global application order or permission
  // to execute it. Neither K11 nor K15 is a prerequisite of the read-only check.
@@ -285,6 +298,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
   try{const bytes=await fs.readFile(path.join(realRoot,k10CouponPath));if(bytes.includes(13)||createHash('sha256').update(bytes).digest('hex')!==k10CouponSha)issue('K10_COUPON_DELIVERY_BYTES','Signup-reward coupon reviewed LF delivery bytes changed.');}catch{issue('K10_COUPON_DELIVERY_MISSING','Signup-reward coupon file missing.');}
  }
  const declaredCanonical=[...canonical,...additive].map(entry=>entry?.path).filter(p=>typeof p==='string').concat(opsDelivery?[opsDelivery.path]:[],k7Delivery?[k7Path]:[],k7OptionalDelivery?[k7OptionalPath]:[],k9Delivery?[k9Path]:[],k11Delivery?[k11Path]:[],k13EngineDelivery?[k13EnginePath]:[],k13Delivery?[k13Path]:[],k13bDelivery?[k13bPath]:[],k16Foundation?[k16Path]:[],k16Staff?[k16StaffPath]:[],k16Customer?[k16CustomerPath]:[],k10Eligibility?[k10Path]:[],k10Coupons?[k10CouponPath]:[],currentMainDeliveries.filter(p=>manifest[p.key]).map(p=>p.path)).concat(doi?[doi.path]:[]);
+ if(customerClassifier)declaredCanonical.push(customerClassifierPath);
  for(const file of actualCanonical)if(!declaredCanonical.includes(file))issue('UNINVENTORIED_CANONICAL_SQL',file);
  const held=manifest.baseline?.held_ops_path;
  if(held!=='supabase/migrations/20261018_ops_panel.sql')issue('HELD_SCOPE_INVALID','Expected held PR53 migration boundary.');
