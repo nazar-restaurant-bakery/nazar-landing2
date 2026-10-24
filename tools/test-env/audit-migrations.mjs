@@ -167,6 +167,7 @@ export async function auditMigrations({root=defaultRoot,manifest:provided}={}){
  // Newly merged main deliveries remain inventory-only. Verify their canonical
  // Git/LF identity without rewriting Windows CRLF checkouts of existing SQL.
  const currentMainDeliveries=[
+  {key:'coupon_bootstrap_delivery',order:null,path:'supabase/migrations/20261024000200_coupon_first_event_bootstrap.sql',sha:'149d2dcaad4749f77fc9abec6ec6e7c913f2dc0f8b2c7a1355049f544436829e'},
   {key:'staff_management_delivery',order:15,path:'supabase/migrations/20261021000900_staff_management.sql',sha:'1fac9f6ed72ed1d5992425d1eef87b8e00baa54523f099e49771d62bf3ea0a68'},
   {key:'ops_campaign_usage_delivery',order:16,path:'supabase/migrations/20261021001000_ops_campaign_usage_split.sql',sha:'8eae6c4407bc33cbc710bb5c9e2ac56cfe1fb36f573b8be47fa0146871cf57e0'},
   {key:'qr_vip_funnel_delivery',order:17,path:'supabase/migrations/20261021001100_qr_vip_funnel.sql',sha:'15477a8c7bef56854af9cec9c01cc9e79189295396cea2e306ca1f722b369722'},
