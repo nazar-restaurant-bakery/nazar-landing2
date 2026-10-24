@@ -23,5 +23,5 @@ test('receipt transport is GET only, pinned revision and fixed host; no arbitrar
  const calls=[];const p=liveReceiptProvider('pk_synthetic_read_12345',async(u,o)=>{calls.push([u,o]);return Response.json({data:[]});});
  for(const path of ['/profiles','/events/../accounts','/profile-subscription-bulk-create-jobs','https://evil.invalid'])await assert.rejects(p.get(path));
  assert.equal(calls.length,0);await p.get('/accounts');await p.get('/events',{'page[size]':'100'});
- assert.ok(calls.every(([u,o])=>new URL(u).hostname==='a.klaviyo.com'&&o.method==='GET'&&o.redirect==='error'&&o.headers.revision==='2026-07-15'));
+ assert.ok(calls.every(([u,o])=>new URL(u).hostname==='a.klaviyo.com'&&o.method==='GET'&&o.redirect==='manual'&&o.headers.revision==='2026-07-15'));
 });
