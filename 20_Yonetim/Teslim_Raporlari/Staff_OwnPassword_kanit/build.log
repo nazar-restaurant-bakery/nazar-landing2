@@ -13,7 +13,7 @@ dist/assets/jsQR-BXGB6Hzo.js        129.98 kB │ gzip:  47.49 kB
 dist/assets/StaffPage-DI_xPXuV.js   186.58 kB │ gzip:  48.93 kB
 dist/assets/index-B_QESCgZ.js       606.64 kB │ gzip: 176.18 kB
 ✓ built in 7.22s
-[plugin builtin:reporter] 
+[plugin builtin:reporter]
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
