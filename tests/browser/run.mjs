@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { staffCopy as c } from '../../src/lib/staffCopy.ts';
 import { opsCopy as o } from '../../src/lib/opsCopy.ts';
 import { runOpsScenarios } from './opsScenarios.mjs';
+import { runStaffPasswordScenarios } from './staffPasswordScenarios.mjs';
 import { runStaffManagementScenarios } from './staffManagementScenarios.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -28,7 +29,7 @@ const output = outputFlag >= 0 ? path.resolve(process.argv[outputFlag + 1]) : pa
 const grepFlag = process.argv.indexOf('--grep');
 const grep = grepFlag >= 0 ? new RegExp(process.argv[grepFlag + 1], 'i') : null;
 await fs.mkdir(output, { recursive: true });
-const server = await createServer({ configFile: false, root: here, envDir: here, appType: 'spa', plugins: [react(), { name: 'synthetic-production-host', transform(source, id) { if (id.endsWith('/src/lib/supabase.ts')) return source.replace('window.location.hostname', JSON.stringify('synthetic-production.invalid')); } }],
+const server = await createServer({ configFile: false, root: here, envDir: here, cacheDir: path.join(output,'vite-cache'), appType: 'spa', plugins: [react(), { name: 'synthetic-production-host', transform(source, id) { if (id.endsWith('/src/lib/supabase.ts')) return source.replace('window.location.hostname', JSON.stringify('synthetic-production.invalid')); } }],
   define: { 'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://khgczybubufouraqyrcj.supabase.co'), 'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('sb_publishable_OFFLINE_SYNTHETIC_ONLY'), 'import.meta.env.VITE_NAZAR_BUSINESS_ID': JSON.stringify('a358eba4-b197-4309-805b-46f43a718454') },
   resolve: { alias: { '@supabase/supabase-js': path.join(here, 'mockSdk.js') } },
   server: { host: '127.0.0.1', port: 0, strictPort: false, hmr: false, fs: { allow: [repo] } },
@@ -392,6 +393,7 @@ try {
   }, '/staff/coupons');
   await runOpsScenarios({ run, visible, screenshot, exact, snapshot, calls, setMode, c });
   await runStaffManagementScenarios({run,visible,exact,calls,screenshot});
+  await runStaffPasswordScenarios({run,visible,exact,calls,snapshot,screenshot,c});
 } finally {
   await browser.close(); await server.close();
   const report = { scope: 'Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.',

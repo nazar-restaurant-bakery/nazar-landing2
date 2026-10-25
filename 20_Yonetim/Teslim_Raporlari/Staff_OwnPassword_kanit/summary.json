@@ -1,0 +1,32 @@
+{
+  "own_browser": {
+    "pass": 17,
+    "fail": 0
+  },
+  "native_auth": {
+    "pass": 8,
+    "fail": 0,
+    "scope": "actual local PG18.6 full baseline and actual14b/15 staff RPC DDL; SQLSTATE42501, not hosted REST403"
+  },
+  "visibility_unit": {
+    "pass": 2,
+    "fail": 0
+  },
+  "type_exit": 0,
+  "lint_exit": 0,
+  "build_exit": 0,
+  "baseline_regressions": 0,
+  "baseline_known_failures": 25,
+  "all_broad_tests_pass": false,
+  "main_public_files_unchanged": 207,
+  "protected_main_files_unchanged": 418,
+  "staff_password_handler_unchanged": true,
+  "source_sha256": {
+    "src/lib/staffCopy.ts": "c26e7997be3c750b1f2fece0c076e341799c5a35b09ab796e5c14c5491f96f09",
+    "src/lib/staffVisibility.ts": "74de753c2bdd6d0635ed4c4269d64da9a03fb24b8add8961179c7f94fad47d76",
+    "src/pages/staff/StaffShell.tsx": "44ed23fadeb376cce1aeda3677e7869e4f63c1a8af62bbcd70bf1665e89303ba"
+  },
+  "hosted_changes": false,
+  "real_auth_password_updated": false,
+  "real_invite_or_email_sent": false
+}

@@ -120,6 +120,7 @@ async function rpc(name, params) {
   const managementResult=staffManagementMock.rpc(name,params);
   if(managementResult!==undefined)return managementResult;
   if (name === 'staff_business_authorized_v1') {
+    if (params?.p_operation === 'platform.read' && params?.p_business_id === null) return state.mode==='password-role-unavailable'?result(null,{code:'SYNTHETIC_ROLE_UNAVAILABLE'}):result(!state.mode.startsWith('password-'));
     if (params?.p_operation !== 'campaign.staff_mark' || params?.p_business_id !== 'a358eba4-b197-4309-805b-46f43a718454') return unknown(name + ' parameters', params);
     return result(state.mode !== 'coupon-platform-only');
   }
@@ -207,7 +208,13 @@ export function createClient(url, key) {
       state.signedIn = true; emit('SIGNED_IN', clone(session)); return { data: { session: clone(session) }, error: null };
     },
     async signInWithOtp(params) { remember('auth.signInWithOtp', { email: params.email, options: params.options }); return { error: { status: 429 } }; },
-    async updateUser() { remember('auth.updateUser'); return { error: null }; },
+    async updateUser(params) {
+      // Record shape only: synthetic password values must never enter evidence logs.
+      remember('auth.updateUser', { keys: Object.keys(params).sort(), passwordOnly: Object.keys(params).length === 1 && typeof params.password === 'string' });
+      await pause('auth.updateUser');
+      if (state.mode === 'password-throw') throw Error('SYNTHETIC_PRIVATE_AUTH_DETAIL');
+      return { error: !state.signedIn || state.mode === 'password-401' ? {status:401,message:'SYNTHETIC_PRIVATE_AUTH_DETAIL'} : null };
+    },
   } };
 }
 window.fetch = async (input, init) => {
@@ -244,6 +251,7 @@ window.__staffMock = {
   hold(name) { state.holdNames.push(name); },
   release() { const held = state.held.splice(0); for (const h of held) h.resolve(); },
   signOut() { state.signedIn = false; emit('SIGNED_OUT', null); },
+  switchIdentity() { session.user={...session.user,id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',email:'other-staff@example.invalid'};emit('SIGNED_IN',clone(session)); },
   resume() { state.mode = 'normal'; state.signedIn = true; emit('SIGNED_IN', clone(session)); },
   seedNotes(notes) { state.customers[0].notes = clone(notes); },
 };

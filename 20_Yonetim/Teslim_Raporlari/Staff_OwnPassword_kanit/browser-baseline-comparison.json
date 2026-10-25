@@ -1,0 +1,59 @@
+{
+  "base": "c6f9b838730168be941d9683a44e1a5949f14e02",
+  "method": "Same localhost synthetic SDK/browser fixture; temporary Vite pre-transform substitutes only StaffShell/staffVisibility/staffCopy with exact git main bytes for baseline; isolated run caches. No checkout/reset or live calls.",
+  "baseline": {
+    "pass": 53,
+    "fail": 25,
+    "total": 78
+  },
+  "candidate": {
+    "pass": 70,
+    "fail": 25,
+    "total": 95
+  },
+  "common_cases": 78,
+  "changed_pass_fail_results": [],
+  "new_password_cases": {
+    "pass": 17,
+    "fail": 0
+  },
+  "shared_existing_failures": [
+    "24 Denied direct route /staff/catering",
+    "24 Denied direct route /staff/crm",
+    "24 Denied direct route /staff/customers",
+    "24 Denied direct route /staff/offers",
+    "24 Denied direct route /staff/ops",
+    "24 Denied direct route /staff/system",
+    "24 Denied direct route /staff/tasks",
+    "37 Ops menu route has nine tiles, scheduler status and seven actions; System stays separate",
+    "38 Missing ops migration preserves complete waiting layout without queue writes",
+    "39 Ops permission denial clears records and hides every metric",
+    "40 Ops refresh reads snapshots only; source failure keeps verified values",
+    "41 Disconnected action requires confirmation and logs not_connected without provider work",
+    "42 Collect confirmation can cancel and a double click cannot enqueue twice",
+    "43 Lost running acknowledgement needs manual reconciliation without another enqueue",
+    "44 Coupon menu opens scoped checkout and logout clears it",
+    "44 Lost queue acknowledgement resumes existing ID only after explicit confirmation",
+    "45 Other staff queued work cannot expose a resume control",
+    "46 CSV upload preserves private rows outside the visible panel and queues exact range",
+    "47 CSV oversized file never reaches an action request",
+    "48 Test offer action uses only a server catalog ID and explicit target state",
+    "49 Late ops read after logout cannot restore metrics or job state",
+    "50 Ops panel displays totals and diagnostic aggregates without customer contact text",
+    "51 Ops mobile 375px has a single metric column and no horizontal overflow",
+    "52 Running action polls only the action log and stops at two minutes without retry",
+    "53 Lost CSV acknowledgement retains file and date drafts until explicit reconciliation"
+  ],
+  "first_unisolated_run": {
+    "pass": 69,
+    "total": 95,
+    "extra_timeout_case": "18 Sign-in network error is recoverable",
+    "isolated_both_pass": true
+  },
+  "broad_suite_all_pass": false,
+  "baseline_source_sha256": {
+    "src/pages/staff/StaffShell.tsx": "2a4825af550a9b6c12375234e85c0c750441fa4bf8782f933e29d1b7ad83237a",
+    "src/lib/staffVisibility.ts": "4887d36db379c64eca75f233e879df42e6715bb5a8ae0cf112c1d2efeac8b932",
+    "src/lib/staffCopy.ts": "063f2415d56e7b1e6de8c0f58bf276c28558dfb96a39bbb1a8e37dc0b3bb04f7"
+  }
+}

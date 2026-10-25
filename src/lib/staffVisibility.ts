@@ -1,5 +1,5 @@
 // Presentation-only grouping. Database authorization remains the source of truth.
-export const restaurantTabs = ["customers", "catering", "tasks", "offers", "orders", "coupons", "ops"] as const;
+export const restaurantTabs = ["customers", "catering", "tasks", "offers", "orders", "coupons", "ops", "password"] as const;
 export const platformTabs = ["profile-sync", "system", "team"] as const;
 
 export function visibleStaffTab(tab: string, platformOperator: boolean): boolean {
