@@ -1,0 +1,16 @@
+✔ actual staff_members_list_v1 denies manager with SQLSTATE42501 (84.3574ms)
+✔ actual staff_members_list_v1 denies staff with SQLSTATE42501 (69.5436ms)
+✔ actual staff_members_list_v1 denies platformOnly with SQLSTATE42501 (95.1249ms)
+✔ actual staff_members_list_v1 denies inactive with SQLSTATE42501 (110.4486ms)
+✔ existing staff management authority remains available to owner (161.084ms)
+✔ existing staff management authority remains available to platformMember (197.1354ms)
+✔ wrong business owner cannot read members (116.8489ms)
+✔ ordinary staff still has tenant CRM read without staff.manage (223.294ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14135.2784

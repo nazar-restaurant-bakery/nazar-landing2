@@ -1,0 +1,9 @@
+{
+  "source": "Koordinasyon candidate-review.json",
+  "review_sha256": "f4106ccb1c5147055ea9f4018f494a8fe49571b1020e49e963e3a484b4fc1ec1",
+  "critical_findings": [],
+  "reviewed_app_sources_still_match": true,
+  "independent_browser_pass": 23,
+  "independent_browser_fail": 0,
+  "note": "23 = own17 + independent6 extra security checks; separate reviewer run, not additional unique production tests."
+}

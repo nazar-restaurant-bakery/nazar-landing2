@@ -1,0 +1,20 @@
+rolldown-vite v7.2.5 building client environment for production...
+[2K
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+transforming...✓ 166 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                       4.04 kB │ gzip:   1.47 kB
+dist/assets/StaffPage-BpYwMRUX.css    1.28 kB │ gzip:   0.50 kB
+dist/assets/index-NNv9F_TB.css       33.87 kB │ gzip:   6.92 kB
+dist/assets/jsQR-BXGB6Hzo.js        129.98 kB │ gzip:  47.49 kB
+dist/assets/StaffPage-DI_xPXuV.js   186.58 kB │ gzip:  48.93 kB
+dist/assets/index-B_QESCgZ.js       606.64 kB │ gzip: 176.18 kB
+✓ built in 7.22s
+[plugin builtin:reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
