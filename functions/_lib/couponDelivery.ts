@@ -37,7 +37,7 @@ export async function reconcileCouponDelivery({store,provider,businessId,couponI
   const integration=a&&object(a.integration)?a.integration:null;
   if(!data||data.id!==c.metricId||!a||a.name!=='Received Email'||!integration||integration.name!=='Klaviyo'
    ||typeof integration.category!=='string'||integration.category.toLowerCase()!=='internal')return result('blocked','native_received_metric_unconfirmed');
-  const events=await provider.get('/events',{filter:`and(equals(metric_id,${JSON.stringify(c.metricId)}),equals(profile_id,${JSON.stringify(c.profileId)}),greater-or-equal(datetime,${new Date(c.dispatchedAt).toISOString()}))`,'page[size]':'100','fields[event]':'datetime,event_properties,uuid',include:'metric,profile','fields[profile]':'id','fields[metric]':'id'});
+  const events=await provider.get('/events',{filter:`and(equals(metric_id,${JSON.stringify(c.metricId)}),equals(profile_id,${JSON.stringify(c.profileId)}),greater-or-equal(datetime,${new Date(c.dispatchedAt).toISOString()}))`,'page[size]':'100','fields[event]':'datetime,event_properties,uuid'});
   if(!object(events)||!Array.isArray(events.data)||!object(events.links)||events.links.next!==null)return result('pending','receipt_page_incomplete');
   const matches=events.data.filter(e=>{
    if(!object(e)||!id(e.id)||!object(e.attributes)||!object(e.attributes.event_properties)||!object(e.relationships))return false;

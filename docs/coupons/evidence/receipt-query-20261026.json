@@ -1,0 +1,42 @@
+{
+  "scope": "K10_RECEIPT_QUERY_SCOPE_LOCAL_ONLY",
+  "baseSha": "bca318313faeeda1d725063b5a01a8f7913d0346",
+  "testedAtUtc": "2026-10-26T21:41:52.274659+00:00",
+  "stats": {
+    "tests": 200,
+    "pass": 200,
+    "fail": 0,
+    "skipped": 0
+  },
+  "testFiles": [
+    "couponDelivery.test.mjs",
+    "couponReceiptEventQueryContract.test.mjs",
+    "couponDeliveryWorkerd.test.mjs",
+    "couponBootstrapReceiptWorkerd.test.mjs",
+    "couponBootstrapEventQueryContract.test.mjs",
+    "couponBootstrapWorkerd.test.mjs"
+  ],
+  "nativeWorkerd": true,
+  "runtime": {
+    "miniflare": "5.20261019.2-beta",
+    "workerd": "1.20261019.1",
+    "esbuild": "0.28.2",
+    "compatibilityDate": "2026-10-06"
+  },
+  "officialSpec": {
+    "revision": "2026-07-15",
+    "sha256": "d81ec2b3fc30d79825f29e2b682261156579716f67056f7e01d6a3c024bff464",
+    "fixture": "tests/fixtures/klaviyoGetEvents20260715.json"
+  },
+  "productionChange": "Only remove include and related profile/metric fieldsets from receipt event GET. Filter/page/fields[event]/strict matcher unchanged.",
+  "normalProcessingFlagsAbsentInRouteTest": true,
+  "allOutboundSyntheticIntercepted": true,
+  "realProviderRequests": 0,
+  "hostedSql": false,
+  "eventOrEmailSent": false,
+  "secretScopeChanged": false,
+  "deployed": false,
+  "hostedAcceptance": "NOT_PERFORMED",
+  "typecheck": "PASSED",
+  "sourceSha256": "bf9100ed4d3802b4ee2dc4dd4e8fd0143dfe8ec9f4b28f802e6e519d34f000dc"
+}
