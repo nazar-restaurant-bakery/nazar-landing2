@@ -1,4 +1,5 @@
-import { couponConfig, couponStore, handleCouponProcessRequest, liveCouponProvider, type CouponProvider } from "../../_lib/couponWelcome.ts";
+import {normalCouponProviders} from '../../_lib/couponAutomationTransport.ts';
+import { couponConfig, couponStore, handleCouponProcessRequest, type CouponProvider } from "../../_lib/couponWelcome.ts";
 type Context = { request: Request; env: Record<string, string | undefined> };
 
 /** Default-disabled, machine-only entry. No public signup, staff action or timer invokes it. */
@@ -8,6 +9,6 @@ export async function onRequest(context: Context): Promise<Response> {
   // synthetic fixtures are injected only by the isolated test harness.
   const mock: CouponProvider = { mode: "mock", async get() { throw new Error("mock_evidence_required"); },
     async eventAccount() { throw new Error("mock_evidence_required"); }, async event() { return { status: 202 }; } };
-  return handleCouponProcessRequest(context.request, config, { store: couponStore(config, fetch),
-    provider: config.mode === "live" ? liveCouponProvider(config, fetch) : mock });
+  const providers=config.mode==='live'?normalCouponProviders(config,fetch):{provider:mock};
+  return handleCouponProcessRequest(context.request, config, { store: couponStore(config, fetch),...providers });
 }

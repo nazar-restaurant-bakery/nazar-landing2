@@ -1,6 +1,6 @@
 /** K10 server preparation. No route, scheduler or flow is activated by this module. */
 import { resolveServerEnvironment } from "../../src/lib/deploymentEnvironment.ts";
-import {liveReceiptProvider,reconcileCouponDelivery} from './couponDelivery.ts';
+import {liveReceiptProvider,reconcileCouponDelivery,type ReceiptProvider} from './couponDelivery.ts';
 
 export const COUPON_KLAVIYO_REVISION = "2026-07-15";
 export const COUPON_WELCOME_METRIC = "Nazar Coupon Welcome Authorized";
@@ -289,7 +289,7 @@ export async function processCouponWelcome({ store, provider, businessId, accoun
 }
 
 /** Optional service entry point, deliberately not mounted in public form/staff routes. */
-export async function handleCouponProcessRequest(request: Request, config: CouponConfig, dependencies: { store: CouponStore; provider: CouponProvider }): Promise<Response> {
+export async function handleCouponProcessRequest(request: Request, config: CouponConfig, dependencies: { store: CouponStore; provider: CouponProvider; receiptProvider?: ReceiptProvider }): Promise<Response> {
   const reply = (status: number, body: Json) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
   if (request.method !== "POST") return reply(405, { code: "method_not_allowed" });
   if (config.mode === "disabled") return reply(503, { code: "coupon_processing_disabled" });
@@ -300,7 +300,7 @@ export async function handleCouponProcessRequest(request: Request, config: Coupo
     const b: unknown = JSON.parse(raw); if (!obj(b) || b.businessId !== config.businessId || dependencies.provider.mode !== config.mode) return reply(403, { code: "forbidden" });
     if(b.action==='reconcile'&&Object.keys(b).sort().join()==='action,businessId,couponId'&&uuid(b.couponId)){
       if(config.mode!=='live'||!config.receiptKey)return reply(503,{code:'receipt_reader_not_configured',activationReady:false});
-      const reconciled=await reconcileCouponDelivery({store:dependencies.store,provider:liveReceiptProvider(config.receiptKey),businessId:config.businessId,couponId:b.couponId,accountId:config.accountId});
+      const reconciled=await reconcileCouponDelivery({store:dependencies.store,provider:dependencies.receiptProvider||liveReceiptProvider(config.receiptKey),businessId:config.businessId,couponId:b.couponId,accountId:config.accountId});
       return reply(reconciled.status==='delivered'?200:202,reconciled);
     }
     let r: CouponResult;

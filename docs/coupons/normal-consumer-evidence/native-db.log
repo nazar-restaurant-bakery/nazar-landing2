@@ -1,0 +1,27 @@
+✔ forward candidate parses without changing existing K6/Welcome/bootstrap functions (101.0404ms)
+✔ missing/default-disabled settings create no run (680.354ms)
+✔ RLS and service-only grants deny browser and direct private reads (2282.3963ms)
+✔ run lease, replay and missing normal setup are fail closed (1118.1951ms)
+✔ one durable exact dispatch attempt survives unconfirmed queued HTTP and cannot be retried (1894.4741ms)
+✔ actual ordinary processor uses durable attempt and K6 before one synthetic provider event (2412.3183ms)
+✔ native receipt candidate backoff does not reopen dispatch or fabricate delivery (1087.3672ms)
+✔ exact native receipt records once while immutable K6 unknown stays byte-identical (1551.6705ms)
+✔ paused settings stop next claim without mutating outbox (1583.0715ms)
+✔ local unsubscribe after coupon creation never becomes a dispatch candidate (1390.2377ms)
+✔ native two-session run race admits exactly one business runner (424.5056ms)
+✔ native two-session same-token candidate race marks at most one exact coupon (1181.8277ms)
+✔ expired native run cannot claim; old request ID remains replay after lease turnover (500.3839ms)
+✔ terminal dispatch audit cannot be truncated or retargeted (248.8751ms)
+✔ all three synthetic markers and inactive campaign exclude queued dispatch (3210.5066ms)
+✔ status requires authenticated target membership and reveals counts only (500.13ms)
+✔ K6 167h is skipped without burning an attempt; 168h and 169h become eligible (1784.9862ms)
+✔ future and ended campaign do not consume an attempt; in-range campaign is eligible (2023.5739ms)
+✔ consumer -> actual Cloudflare route -> native PG -> paced synthetic provider -> receipt (16264.3052ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 54029.9984
