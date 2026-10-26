@@ -1,0 +1,28 @@
+{
+  "base_main": "2de355cb784f68728435b553481862749d9aa3a6",
+  "unit_and_installed_sdk": {
+    "pass": 17,
+    "fail": 0
+  },
+  "aal_browser_regression": {
+    "pass": 1,
+    "fail": 0
+  },
+  "previous_final_browser": {
+    "pass": 21,
+    "fail": 1,
+    "failure": "first page navigation timeout 6000ms",
+    "failed_case_recheck": "1/1 pass"
+  },
+  "hosted_changes": false,
+  "secrets_read": false,
+  "sha256": {
+    "src/lib/staffPasswordError.ts": "c03566651edd3e207003f028a5f73d75a71da8dae4c27ea28b20a0c09a8d8353",
+    "src/lib/staffCopy.ts": "bbc8d9aa9cdc113cbe0699b945abd300ec6ef0a0761eaecf8c567fc2c571eaff",
+    "src/pages/staff/StaffShell.tsx": "ea3b21001604865e5e8097cda865b7d72fc6576088f5d5b0c959fc3931f842d7",
+    "src/pages/staff/StaffSignIn.tsx": "a996f31475426da1e1cf85e4d7c4b747c7a3611c1640a4f4873b1f9fd5e1c3c6",
+    "tests/browser/mockSdk.js": "37bd59edfde332d50cb020413f1b87e60285a08f1f1e2779820922d492713493",
+    "tests/browser/staffPasswordScenarios.mjs": "e3722561f7cca05777b627065092e195445c11bb8a06043643ef0ff6688a9f4f",
+    "tests/staffPasswordError.test.mjs": "c3ce94633f97a1e0fcf2c8e1f2c8067a76538db4d281c05d574b2f0a94ebbc92"
+  }
+}
