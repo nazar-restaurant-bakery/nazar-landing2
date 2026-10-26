@@ -199,6 +199,12 @@ export function createClient(url, key) {
   return { rpc, functions: { invoke: (name, options) => name==='staff-manage-invite'?staffManagementMock.invoke(options.body):opsMock.invoke(options.body) },
     storage: { from: () => ({ createSignedUrl: async () => ({ data:null,error:{message:"Synthetic download is not connected"} }) }) },
     auth: {
+    async getUser() {
+      remember('auth.getUser'); await pause('auth.getUser');
+      if (state.mode === 'password-check-throw') throw Error('SYNTHETIC_PRIVATE_AUTH_DETAIL');
+      if (state.mode === 'password-check-session') return {data:{user:null},error:{status:403,code:'session_not_found',message:'SYNTHETIC_PRIVATE_AUTH_DETAIL'}};
+      return {data:{user: state.mode === 'password-check-other' ? {id:'other-identity'} : clone(session.user)},error:null};
+    },
     async getSession() { remember('auth.getSession'); return { data: { session: state.signedIn ? clone(session) : null }, error: null }; },
     onAuthStateChange(fn) { listeners.add(fn); return { data: { subscription: { unsubscribe() { listeners.delete(fn); } } } }; },
     async signOut() { remember('auth.signOut'); state.signedIn = false; emit('SIGNED_OUT', null); return { error: null }; },
@@ -213,6 +219,8 @@ export function createClient(url, key) {
       remember('auth.updateUser', { keys: Object.keys(params).sort(), passwordOnly: Object.keys(params).length === 1 && typeof params.password === 'string' });
       await pause('auth.updateUser');
       if (state.mode === 'password-throw') throw Error('SYNTHETIC_PRIVATE_AUTH_DETAIL');
+      if (state.mode === 'password-insufficient-aal') return {error:{status:401,code:'insufficient_aal',message:'SYNTHETIC_PRIVATE_AUTH_DETAIL'}};
+      if (state.mode === 'password-session-after-check') return {error:{status:403,code:'session_not_found',message:'SYNTHETIC_PRIVATE_AUTH_DETAIL'}};
       return { error: !state.signedIn || state.mode === 'password-401' ? {status:401,message:'SYNTHETIC_PRIVATE_AUTH_DETAIL'} : null };
     },
   } };

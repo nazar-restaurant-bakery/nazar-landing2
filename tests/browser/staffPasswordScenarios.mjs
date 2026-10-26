@@ -25,7 +25,7 @@ export async function runStaffPasswordScenarios({run,visible,exact,calls,snapsho
   await fill(p,'synthetic-long-password','synthetic-other-password');await p.getByRole('button',exact(c.save)).click();await visible(p,c.passwordMismatch);assert.equal((await calls(p,'auth.updateUser')).length,0);
  },'/staff/password');
  for(const mode of ['password-401','password-throw'])await run('Password 06 Auth rejection safe message, fields cleared, no retry '+mode,mode,async p=>{
-  await open(p);await fill(p);await p.getByRole('button',exact(c.save)).click();await visible(p,c.passwordUnknown);assert.equal((await calls(p,'auth.updateUser')).length,1);assert.equal(await p.getByText('SYNTHETIC_PRIVATE_AUTH_DETAIL',{exact:true}).count(),0);assert.equal(await p.getByLabel(c.password,{exact:true}).inputValue(),'');
+  await open(p);await fill(p);await p.getByRole('button',exact(c.save)).click();await visible(p,mode==='password-401'?c.passwordSession:c.passwordUnknown);assert.equal((await calls(p,'auth.updateUser')).length,1);assert.equal(await p.getByText('SYNTHETIC_PRIVATE_AUTH_DETAIL',{exact:true}).count(),0);assert.equal(await p.getByLabel(c.password,{exact:true}).inputValue(),'');
  },'/staff/password');
  await run('Password 07 busy double-submit sends one own-account update','password-staff',async p=>{
   await open(p);await fill(p);await p.evaluate(()=>window.__staffMock.hold('auth.updateUser'));await p.getByRole('button',exact(c.save)).click();await p.getByRole('button',exact(c.saving)).waitFor();assert.equal(await p.getByRole('button',exact(c.saving)).isDisabled(),true);assert.equal((await calls(p,'auth.updateUser')).length,1);await p.evaluate(()=>window.__staffMock.release());await visible(p,c.passwordSaved);
@@ -48,6 +48,21 @@ export async function runStaffPasswordScenarios({run,visible,exact,calls,snapsho
  },'/staff/password');
  await run('Password 12 unconfirmed presentation role hides password form','password-role-unavailable',async p=>{
   await visible(p,'Görünüm rolü doğrulanamadı. Sayfayı yenileyin.');assert.equal(await p.locator('summary').filter({hasText:c.passwordTitle}).count(),0);assert.equal((await calls(p,'auth.updateUser')).length,0);
+ },'/staff/password');
+
+ for (const [mode,expected,updates] of [
+  ['password-insufficient-aal',c.passwordReauthentication,1], ['password-check-session',c.passwordSession,0], ['password-check-throw',c.passwordCheckFailed,0],
+  ['password-check-other',c.passwordCheckFailed,0], ['password-session-after-check',c.passwordSession,1],
+ ]) await run('Password 13 server session validation and no retry '+mode,mode,async p=>{
+  await open(p);await fill(p);await p.getByRole('button',exact(c.save)).click();await visible(p,expected);
+  assert.equal((await calls(p,'auth.getUser')).length,1);assert.equal((await calls(p,'auth.updateUser')).length,updates);
+  assert.equal(await p.getByText('SYNTHETIC_PRIVATE_AUTH_DETAIL',{exact:true}).count(),0);
+  assert.equal(await p.getByLabel(c.password,{exact:true}).inputValue(),'');assert.equal(await p.getByLabel(c.passwordConfirm,{exact:true}).inputValue(),'');
+ },'/staff/password');
+ await run('Password 14 identity switch while Auth validation pending sends no password','password-staff',async p=>{
+  await open(p);await fill(p);await p.evaluate(()=>window.__staffMock.hold('auth.getUser'));await p.getByRole('button',exact(c.save)).click();
+  await p.getByRole('button',exact(c.saving)).waitFor();await p.evaluate(()=>window.__staffMock.switchIdentity());await visible(p,'other-staff@example.invalid');
+  await p.evaluate(()=>window.__staffMock.release());await p.waitForTimeout(100);assert.equal((await calls(p,'auth.updateUser')).length,0);
  },'/staff/password');
 
 }

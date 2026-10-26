@@ -1,0 +1,15 @@
+{
+  "scope": "Actual StaffPage with BrowserRouter; strict synthetic SDK/API and localhost-only browser. No live services or accounts.",
+  "startedAt": "2026-10-25T23:59:22.885Z",
+  "finishedAt": "2026-10-25T23:59:27.604Z",
+  "browserExecutable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "passed": 1,
+  "failed": 0,
+  "checks": [
+    {
+      "case": "Password 13 server session validation and no retry password-insufficient-aal",
+      "passed": true
+    }
+  ],
+  "screenshots": []
+}
