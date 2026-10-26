@@ -45,7 +45,7 @@ export default {async fetch(request){
 }};`;
 async function outbound(request){
  const url=new URL(request.url);
- calls.push({origin:url.origin,path:url.pathname,method:request.method,authorization:request.headers.get('authorization'),revision:request.headers.get('revision')});
+ calls.push({origin:url.origin,path:url.pathname,method:request.method,query:Object.fromEntries(url.searchParams),authorization:request.headers.get('authorization'),revision:request.headers.get('revision')});
  // No proxy/fetch fallback: even an unexpected host cannot reach the internet.
  if(url.origin!=='https://a.klaviyo.com'||request.method!=='GET')return new WorkerResponse('DENIED',{status:418});
  if(scenario.path===url.pathname){
@@ -54,7 +54,9 @@ async function outbound(request){
  }
  if(url.pathname==='/api/accounts/')return WorkerResponse.json({data:[{id:'ACCOUNT'}]});
  if(url.pathname==='/api/metrics/METRIC/')return WorkerResponse.json({data:{id:'METRIC',attributes:{name:'Received Email',integration:{name:'Klaviyo',category:'Internal'}}}});
- if(url.pathname==='/api/events/')return WorkerResponse.json({data:[{id:'EVENT',attributes:{datetime:'2026-10-21T16:01:00Z',event_properties:{$flow:'FLOW',$message:scenario.wrongMessage?'OTHER':'MESSAGE'}},relationships:{profile:{data:{id:'PROFILE'}},metric:{data:{id:'METRIC'}}}}],links:{next:null}});
+ if(url.pathname==='/api/events/' && (url.searchParams.has('include')||url.searchParams.has('fields[profile]')||url.searchParams.has('fields[metric]')))return new WorkerResponse('SYNTHETIC_SCOPE_MISSING_PROFILES_READ',{status:403});
+ if(url.pathname==='/api/events/' && url.searchParams.get('filter')!=='and(equals(metric_id,"METRIC"),equals(profile_id,"PROFILE"),greater-or-equal(datetime,2026-10-21T16:00:00.000Z))')return new WorkerResponse('SYNTHETIC_FILTER_REJECTED',{status:400});
+ if(url.pathname==='/api/events/')return WorkerResponse.json({data:[{id:'EVENT',attributes:{datetime:'2026-10-21T16:01:00Z',event_properties:{$flow:'FLOW',$message:scenario.wrongMessage?'OTHER':'MESSAGE'}},...(scenario.missingRelationships?{}:{relationships:{profile:{data:{id:'PROFILE'}},metric:{data:{id:'METRIC'}}}})}],links:{next:null}});
  return new WorkerResponse('DENIED',{status:418});
 }
 describe('coupon receipt native workerd regression',{skip:toolingReason},()=>{
@@ -76,6 +78,7 @@ describe('coupon receipt native workerd regression',{skip:toolingReason},()=>{
  test('200 receipt GET works and exact native match records only safe evidence',async()=>{
   const {body}=await run();assert.equal(body.result.status,'delivered');assert.equal(body.result.activationReady,true);assert.equal(records.length,1);
   assert.equal(calls.length,3);assert.ok(calls.every(c=>c.method==='GET'&&c.origin==='https://a.klaviyo.com'&&c.revision==='2026-07-15'&&c.authorization==='Klaviyo-API-Key pk_synthetic_read_12345'));
+  const eventCall=calls.find(c=>c.path==='/api/events/');assert.deepEqual(Object.keys(eventCall.query).sort(),['fields[event]','filter','page[size]']);
   assert.match(records[0].p_evidence_sha256,/^[a-f0-9]{64}$/);assert.doesNotMatch(JSON.stringify(body),/pk_synthetic|PRIVATE_SYNTHETIC_BODY|Subject/);
  });
  for(const [path,count] of [['/api/accounts/',1],['/api/metrics/METRIC/',2],['/api/events/',3]])for(const status of [301,302,303,307,308])test(`${path} ${status} cannot redirect credentials or confirm delivery`,async()=>{
@@ -90,6 +93,7 @@ describe('coupon receipt native workerd regression',{skip:toolingReason},()=>{
  test('malformed 200 cannot confirm or record a receipt',async()=>{
   scenario={path:'/api/events/',malformed:true};const {body}=await run();assert.equal(body.result.status,'pending');assert.equal(records.length,0);assert.equal(body.result.activationReady,false);assert.doesNotMatch(JSON.stringify(body),/PRIVATE_SYNTHETIC_BODY/);
  });
+ test('optional absent relationship linkage never records delivery',async()=>{scenario={missingRelationships:true};const {body}=await run();assert.equal(body.result.status,'pending');assert.equal(body.result.code,'delivery_receipt_waiting');assert.equal(records.length,0);assert.equal(calls.length,3);});
  test('wrong native message and closed local activation gate remain enforced',async()=>{
   scenario={wrongMessage:true};let {body}=await run();assert.equal(body.result.status,'pending');assert.equal(records.length,0);
   scenario={};({body}=await run('/reconcile?gate=closed'));assert.equal(body.result.status,'delivered');assert.equal(body.result.activationReady,false);
