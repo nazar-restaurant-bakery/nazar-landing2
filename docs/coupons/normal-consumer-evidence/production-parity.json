@@ -1,0 +1,14 @@
+{
+  "baseline": "b232a6cc8ac496eb7515e6232084ebcc8a098610",
+  "production_mode": true,
+  "app_env_absent": true,
+  "test_environment_absent": true,
+  "public_values": "synthetic keys plus existing production routing constants; no hosted secrets read",
+  "base_files": 213,
+  "candidate_files": 213,
+  "byte_identical_files": 213,
+  "changed_assets": [],
+  "protected_source_diff": [],
+  "hosted_reads": false,
+  "hosted_deployment": false
+}

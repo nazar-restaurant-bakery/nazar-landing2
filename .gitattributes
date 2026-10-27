@@ -129,3 +129,17 @@
 /tests/browser/staffPasswordScenarios.mjs text eol=lf
 /20_Yonetim/Teslim_Raporlari/Staff_OwnPassword_kanit/*.json text eol=lf
 /20_Yonetim/Teslim_Raporlari/Staff_OwnPassword_kanit/*.log text eol=lf
+
+# Default-off normal Welcome consumer; candidate SQL has no approved sequence.
+/tools/test-env/welcome-automation/** text eol=lf
+/functions/_lib/couponAutomation*.ts text eol=lf
+/functions/api/internal/coupon-welcome.ts text eol=lf
+/supabase/functions/coupon-welcome-run/** text eol=lf
+/tests/couponAutomation*.mjs text eol=lf
+/docs/coupons/normal-consumer*.md text eol=lf
+
+/tests/fixtures/couponAutomation*.mjs text eol=lf
+
+/docs/coupons/normal-consumer-evidence/** text eol=lf
+
+/supabase/config.toml text eol=lf

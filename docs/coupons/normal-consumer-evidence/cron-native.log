@@ -1,0 +1,33 @@
+✔ apply installs inactive exact normal cron, zero target rows, zero network and no consumer settings seed (457.7985ms)
+✔ default off returns before touching even missing Vault relation (274.4891ms)
+✔ no extra table/function execution grants for anon/authenticated/service role (1085.5783ms)
+✔ canonical JSON byteexact with JS over UUID/int fields; no jsonb whitespace (189.7724ms)
+✔ normal setting remains false by default, independent cron target false gate (659.491ms)
+✔ only explicit synthetic enable reaches Vault; missing key remains zero network (195.9004ms)
+✔ malformed singleton installation identity cannot enqueue (335.7907ms)
+✔ duplicate installation rows fail closed even when project refs agree (262.6511ms)
+✔ duplicate key names and invalid secret format do not enqueue (738.5807ms)
+✔ invalid target rejected without net https://zyxwvutsrqponmlkjihg.supabase.co/functions/v1/coupon-welcome-run (275.3686ms)
+✔ invalid target rejected without net https://trap.invalid/functions/v1/coupon-welcome-run (265.3057ms)
+✔ invalid target rejected without net http://abcdefghijklmnopqrst.supabase.co/functions/v1/coupon-welcome-run (274.929ms)
+✔ invalid target rejected without net https://abcdefghijklmnopqrst.supabase.co/functions/v1/coupon-bootstrap (280.9283ms)
+✔ invalid target rejected without net https://abcdefghijklmnopqrst.supabase.co/functions/v1/coupon-welcome-run?secret=not-real (388.2244ms)
+✔ invalid target rejected without net https://user@abcdefghijklmnopqrst.supabase.co/functions/v1/coupon-welcome-run (272.3123ms)
+✔ one mocked net enqueue contains exact current signed machine body; HMAC accepted and stale rejected (458.0897ms)
+✔ same-minute duplicate tick does not enqueue again (148.7119ms)
+✔ same-minute concurrent sessions cannot enqueue target twice (244.5263ms)
+✔ future-minute marker clock rollback fails closed (271.5673ms)
+✔ mocked pgnet error no partial target mark or queued HTTP and no raw error (560.7392ms)
+✔ mocked pgnet null no partial target mark or queued HTTP and no raw error (384.9386ms)
+✔ missing consumer business setting cannot acquire a cron target (145.0351ms)
+✔ pause target stops future tick; no flags reopened or job auto-enabled by runtime (441.0296ms)
+✔ candidate rerun cannot overwrite existing normal cron job (280.3366ms)
+✔ source carries root accepted pg_net redirect limitation and no enable/secret creation command (0.3697ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20364.388

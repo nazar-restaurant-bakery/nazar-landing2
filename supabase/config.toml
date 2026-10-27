@@ -35,3 +35,7 @@ verify_jwt = true
 
 [functions.staff-manage-invite]
 verify_jwt = true
+
+# Default-off consumer; purpose-bound HMAC is mandatory before all DB/network.
+[functions.coupon-welcome-run]
+verify_jwt = false
