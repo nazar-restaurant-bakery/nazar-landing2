@@ -1,4 +1,4 @@
-import { coreDb } from './supabase-client.js';
+import { goRpc } from './supabase-client.js';
 
 export interface BusinessSettings {
   business_id: string;
@@ -16,35 +16,18 @@ export interface BusinessSettings {
   enrichment_monthly_credit_limit: number;
 }
 
-export const BUSINESS_SETTINGS_COLUMNS =
-  'business_id, outreach_sender_name, outreach_sender_email, outreach_reply_to, outreach_physical_address, ' +
-  'outreach_link_base_url, outreach_timezone, outreach_send_days, outreach_send_start, outreach_send_end, ' +
-  'outreach_daily_send_limit, enrichment_daily_credit_limit, enrichment_monthly_credit_limit';
-
+// Platformda core.outreach_settings; fonksiyon alanları GO'nun bu adlarıyla döndürür
 export async function getBusinessSettings(businessId: string): Promise<BusinessSettings> {
-  const { data, error } = await coreDb()
-    .from('business_settings')
-    .select(BUSINESS_SETTINGS_COLUMNS)
-    .eq('business_id', businessId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
+  const data = await goRpc<BusinessSettings | null>('go_outreach_settings_get_v1', { p_business_id: businessId });
   if (!data) {
-    throw new Error(`business_settings kaydı yok: ${businessId}`);
+    throw new Error(`outreach_settings kaydı yok: ${businessId}`);
   }
-  return data as unknown as BusinessSettings;
+  return data;
 }
 
 export async function listBusinessSettings(): Promise<BusinessSettings[]> {
-  const { data, error } = await coreDb()
-    .from('business_settings')
-    .select(BUSINESS_SETTINGS_COLUMNS)
-    .order('business_id', { ascending: true });
-
-  if (error) {
-    throw error;
-  }
-  return (data || []) as unknown as BusinessSettings[];
+  const ids = await goRpc<string[]>('go_outreach_business_ids_v1');
+  const settings: BusinessSettings[] = [];
+  for (const id of ids) settings.push(await getBusinessSettings(id));
+  return settings;
 }

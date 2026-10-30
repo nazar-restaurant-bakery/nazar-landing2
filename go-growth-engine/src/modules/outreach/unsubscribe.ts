@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { coreDb } from '../../lib/supabase-client.js';
+import { goRpc } from '../../lib/supabase-client.js';
 import { isUuid } from '../../lib/validation.js';
 import { getConfig } from '../../config.js';
 
@@ -63,40 +63,16 @@ export interface SuppressionOptions {
 
 const UNSUBSCRIBE_LINK: SuppressionOptions = { reason: 'unsubscribe_link', source: 'email', leadStatus: 'unsubscribed' };
 
-// Suppression kaydı varsa dokunulmaz (ilk neden korunur); lead durumu güncellenir
+// Suppression kaydı varsa dokunulmaz (ilk neden korunur); lead durumu güncellenir.
+// Fonksiyon yalnız ekler; engel listesinden kayıt kaldıran bir yol yoktur.
 export async function suppressEmail(businessId: string, email: string, options: SuppressionOptions = UNSUBSCRIBE_LINK): Promise<void> {
-  const db = coreDb();
-
-  const { error: suppressionError } = await db
-    .from('email_suppressions')
-    .upsert(
-      [{ business_id: businessId, email, reason: options.reason, source: options.source }],
-      { onConflict: 'business_id,email', ignoreDuplicates: true }
-    );
-  if (suppressionError) {
-    throw suppressionError;
-  }
-
-  const { error: leadError } = await db
-    .from('b2b_leads')
-    .update({ status: options.leadStatus, updated_at: new Date().toISOString() })
-    .eq('business_id', businessId)
-    .eq('email', email)
-    .neq('status', options.leadStatus);
-  if (leadError) {
-    throw leadError;
-  }
+  await goRpc<boolean>('go_suppress_email_v1', {
+    p_business_id: businessId, p_email: email, p_reason: options.reason,
+    p_source: options.source, p_lead_status: options.leadStatus
+  });
 }
 
 export async function isEmailSuppressed(businessId: string, email: string): Promise<boolean> {
-  const { data, error } = await coreDb()
-    .from('email_suppressions')
-    .select('email')
-    .eq('business_id', businessId)
-    .eq('email', email)
-    .maybeSingle();
-  if (error) {
-    throw error;
-  }
-  return Boolean(data);
+  const found = await goRpc<string[]>('go_suppressed_emails_v1', { p_business_id: businessId, p_emails: [email] });
+  return found.length > 0;
 }

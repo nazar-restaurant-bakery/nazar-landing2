@@ -1,4 +1,4 @@
-import { coreDb } from '../../lib/supabase-client.js';
+import { goRpc } from '../../lib/supabase-client.js';
 import { normalizeEmail } from '../../lib/validation.js';
 
 export interface ImportLeadInput {
@@ -28,7 +28,6 @@ function cleanText(value: unknown): string | null {
  */
 export class LeadImporter {
   async importLeads(businessId: string, leads: ImportLeadInput[]) {
-    const db = coreDb();
     const skipped: { index: number; reason: string }[] = [];
     const cleanLeads = new Map<string, CleanLead>();
 
@@ -53,15 +52,10 @@ export class LeadImporter {
     const emails = [...cleanLeads.keys()];
     const existingByEmail = new Map<string, any>();
     for (let i = 0; i < emails.length; i += LOOKUP_CHUNK_SIZE) {
-      const { data, error } = await db
-        .from('b2b_leads')
-        .select('id, email, contact_name, title, company_name')
-        .eq('business_id', businessId)
-        .in('email', emails.slice(i, i + LOOKUP_CHUNK_SIZE));
-      if (error) {
-        throw error;
-      }
-      for (const row of data || []) {
+      const rows = await goRpc<any[]>('go_leads_by_email_v1', {
+        p_business_id: businessId, p_emails: emails.slice(i, i + LOOKUP_CHUNK_SIZE)
+      });
+      for (const row of rows) {
         existingByEmail.set(row.email, row);
       }
     }
@@ -69,17 +63,14 @@ export class LeadImporter {
     const newRows = emails
       .filter((email) => !existingByEmail.has(email))
       .map((email) => ({
-        business_id: businessId,
         ...cleanLeads.get(email)!,
         status: 'enrichment_pending',
         source: 'import'
       }));
 
+    let inserted = 0;
     if (newRows.length > 0) {
-      const { error } = await db.from('b2b_leads').insert(newRows);
-      if (error) {
-        throw error;
-      }
+      inserted = (await goRpc<string[]>('go_leads_insert_v1', { p_business_id: businessId, p_rows: newRows })).length;
     }
 
     let updated = 0;
@@ -99,20 +90,14 @@ export class LeadImporter {
         continue;
       }
 
-      const { error } = await db
-        .from('b2b_leads')
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq('business_id', businessId)
-        .eq('id', existing.id);
-      if (error) {
-        throw error;
-      }
+      // Fonksiyon yalnız boş alanları doldurur; durum değişmez
+      await goRpc<boolean>('go_lead_fill_v1', { p_business_id: businessId, p_lead_id: existing.id, p_patch: patch });
       updated++;
     }
 
     return {
       received: leads.length,
-      inserted: newRows.length,
+      inserted,
       updated,
       unchanged,
       skipped: skipped.length,

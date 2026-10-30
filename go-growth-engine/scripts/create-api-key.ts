@@ -2,7 +2,7 @@
 // Anahtar ekrana YALNIZ BİR KEZ yazılır; veritabanında yalnız SHA-256 özeti ve ilk 8 karakteri tutulur.
 import 'dotenv/config';
 import { parseArgs } from 'node:util';
-import { coreDb } from '../src/lib/supabase-client.js';
+import { goRpc } from '../src/lib/supabase-client.js';
 import { generateApiKey, hashApiKey } from '../src/lib/api-key.js';
 import { isUuid } from '../src/lib/validation.js';
 
@@ -23,27 +23,14 @@ async function main() {
   }
 
   const key = generateApiKey();
-  const db = coreDb();
+  const prefix = key.slice(0, 8);
 
-  const { data: created, error: keyError } = await db
-    .from('api_keys')
-    .insert([{ name, key_prefix: key.slice(0, 8), key_hash: hashApiKey(key) }])
-    .select('id, key_prefix')
-    .single();
-  if (keyError) {
-    throw keyError;
-  }
+  // Anahtar ve işletme bağları tek işlemde yazılır; yarım kalan anahtar oluşmaz
+  await goRpc<string>('go_api_key_create_v1', {
+    p_name: name, p_key_prefix: prefix, p_key_hash: hashApiKey(key), p_business_ids: businessIds
+  });
 
-  const { error: linkError } = await db
-    .from('api_key_businesses')
-    .insert(businessIds.map((business_id) => ({ api_key_id: created.id, business_id })));
-  if (linkError) {
-    // Yarım kalan anahtar bırakılmaz (bağlar CASCADE ile silinir)
-    await db.from('api_keys').delete().eq('id', created.id);
-    throw linkError;
-  }
-
-  console.log(`✅ API anahtarı oluşturuldu: "${name}" (prefix ${created.key_prefix}), işletmeler: ${businessIds.join(', ')}`);
+  console.log(`✅ API anahtarı oluşturuldu: "${name}" (prefix ${prefix}), işletmeler: ${businessIds.join(', ')}`);
   console.log('Anahtar (yalnız bu kez gösterilir, güvenli bir yere kaydedin):');
   console.log(key);
 }

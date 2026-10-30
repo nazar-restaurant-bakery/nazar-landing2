@@ -1,7 +1,7 @@
 // Kullanım: npx tsx scripts/revoke-api-key.ts --prefix <ilk 8 karakter>
 import 'dotenv/config';
 import { parseArgs } from 'node:util';
-import { coreDb } from '../src/lib/supabase-client.js';
+import { goRpc } from '../src/lib/supabase-client.js';
 
 async function main() {
   const { values } = parseArgs({ options: { prefix: { type: 'string' } } });
@@ -12,35 +12,19 @@ async function main() {
     return;
   }
 
-  const db = coreDb();
-  const { data: keys, error } = await db
-    .from('api_keys')
-    .select('id, name')
-    .eq('key_prefix', prefix)
-    .is('revoked_at', null);
-  if (error) {
-    throw error;
-  }
-  if (!keys || keys.length === 0) {
+  // Tek etkin anahtar eşleşirse iptal edilir; hiç ya da birden çok eşleşmede işlem yapılmaz
+  const result = await goRpc<{ status: string; name?: string; count?: number }>('go_api_key_revoke_v1', { p_key_prefix: prefix });
+  if (result.status === 'not_found') {
     console.error(`❌ Etkin anahtar bulunamadı: ${prefix}`);
     process.exitCode = 1;
     return;
   }
-  if (keys.length > 1) {
-    console.error(`❌ Bu prefix birden çok etkin anahtarla eşleşiyor (${keys.map((k) => k.name).join(', ')}); işlem yapılmadı.`);
+  if (result.status === 'ambiguous') {
+    console.error(`❌ Bu prefix birden çok etkin anahtarla eşleşiyor (${result.count}); işlem yapılmadı.`);
     process.exitCode = 1;
     return;
   }
-
-  const { error: revokeError } = await db
-    .from('api_keys')
-    .update({ revoked_at: new Date().toISOString() })
-    .eq('id', keys[0].id)
-    .is('revoked_at', null);
-  if (revokeError) {
-    throw revokeError;
-  }
-  console.log(`✅ İptal edildi: "${keys[0].name}" (prefix ${prefix})`);
+  console.log(`✅ İptal edildi: "${result.name}" (prefix ${prefix})`);
 }
 
 main().catch((error) => {

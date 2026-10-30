@@ -1,4 +1,4 @@
-import { coreDb } from '../../lib/supabase-client.js';
+import { goRpc } from '../../lib/supabase-client.js';
 import { getBusinessSettings, BusinessSettings } from '../../lib/business-settings.js';
 import { HttpError } from '../../lib/http-error.js';
 import { zonedParts, zonedMidnightUtc } from '../../lib/time.js';
@@ -6,7 +6,8 @@ import { getConfig } from '../../config.js';
 
 const APOLLO_MATCH_URL = 'https://api.apollo.io/api/v1/people/match';
 const CREDIT_TIME_ZONE = 'America/New_York';
-const PAGE_SIZE = 1000;
+// Veritabanı fonksiyonu tek çağrıda en fazla 1000 lead döndürür
+const MAX_BATCH = 1000;
 
 type EnrichResult = 'found' | 'not_found' | 'error';
 
@@ -33,28 +34,12 @@ export class ApolloEnricher {
     const dayStart = zonedMidnightUtc(p.year, p.month, p.day, CREDIT_TIME_ZONE);
     const monthStart = zonedMidnightUtc(p.year, p.month, 1, CREDIT_TIME_ZONE);
 
-    let usedToday = 0;
-    let usedMonth = 0;
-    for (let from = 0; ; from += PAGE_SIZE) {
-      const { data, error } = await coreDb()
-        .from('enrichment_log')
-        .select('credits_used, created_at')
-        .eq('business_id', businessId)
-        .gte('created_at', monthStart.toISOString())
-        .gt('credits_used', 0)
-        .order('created_at', { ascending: true })
-        .range(from, from + PAGE_SIZE - 1);
-      if (error) {
-        throw error;
-      }
-      for (const row of data || []) {
-        usedMonth += row.credits_used;
-        if (new Date(row.created_at) >= dayStart) {
-          usedToday += row.credits_used;
-        }
-      }
-      if (!data || data.length < PAGE_SIZE) break;
-    }
+    // Aynı toplam veritabanında hesaplanır (bu ay ve bugün, America/New_York)
+    const used = await goRpc<{ used_today: number; used_month: number }>('go_enrichment_credits_used_v1', {
+      p_business_id: businessId, p_day_start: dayStart.toISOString(), p_month_start: monthStart.toISOString()
+    });
+    const usedToday = Number(used.used_today);
+    const usedMonth = Number(used.used_month);
 
     const remaining = Math.min(
       settings.enrichment_daily_credit_limit - usedToday,
@@ -74,21 +59,10 @@ export class ApolloEnricher {
       throw new HttpError(429, 'Zenginleştirme kredi sınırına ulaşıldı', `Kredi sınırı doldu: ${JSON.stringify(credits)}`);
     }
 
-    const batchSize = Math.min(options.limit ?? credits.remaining, credits.remaining);
-    let query = coreDb()
-      .from('b2b_leads')
-      .select('id, email, apollo_person_id, metadata')
-      .eq('business_id', businessId)
-      .eq('status', 'enrichment_pending')
-      .order('created_at', { ascending: true })
-      .limit(batchSize);
-    if (options.leadIds) {
-      query = query.in('id', options.leadIds);
-    }
-    const { data: leads, error } = await query;
-    if (error) {
-      throw error;
-    }
+    const batchSize = Math.min(options.limit ?? credits.remaining, credits.remaining, MAX_BATCH);
+    const leads = await goRpc<any[]>('go_leads_enrichment_pending_v1', {
+      p_business_id: businessId, p_limit: batchSize, p_lead_ids: options.leadIds ?? null
+    });
 
     const details: EnrichLeadDetail[] = [];
     let creditsUsed = 0;
@@ -148,31 +122,20 @@ export class ApolloEnricher {
     }
 
     // Kredi muhasebesi lead güncellemesinden önce yazılır
-    const { error: logError } = await coreDb().from('enrichment_log').insert([{
-      business_id: businessId,
-      b2b_lead_id: lead.id,
-      apollo_person_id: lead.apollo_person_id ?? (person?.id ? String(person.id) : null),
-      credits_used: person ? 1 : 0,
-      result
-    }]);
-    if (logError) {
-      throw logError;
-    }
+    await goRpc<void>('go_enrichment_log_v1', {
+      p_business_id: businessId,
+      p_lead_id: lead.id,
+      p_apollo_person_id: lead.apollo_person_id ?? (person?.id ? String(person.id) : null),
+      p_credits_used: person ? 1 : 0,
+      p_result: result
+    });
 
     // API hatası geçici olabilir: lead bekletmede kalır, yalnız hata not edilir
     if (result === 'error') {
-      const { error: updateError } = await coreDb()
-        .from('b2b_leads')
-        .update({
-          metadata: { ...metadata, last_enrichment_error: { message: errorMessage, at: new Date().toISOString() } },
-          updated_at: new Date().toISOString()
-        })
-        .eq('business_id', businessId)
-        .eq('id', lead.id)
-        .eq('status', 'enrichment_pending');
-      if (updateError) {
-        throw updateError;
-      }
+      await goRpc<boolean>('go_lead_enrichment_note_v1', {
+        p_business_id: businessId, p_lead_id: lead.id,
+        p_metadata: { ...metadata, last_enrichment_error: { message: errorMessage, at: new Date().toISOString() } }
+      });
       return { b2b_lead_id: lead.id, result, status: 'enrichment_pending', reason: 'api_error' };
     }
 
@@ -186,44 +149,18 @@ export class ApolloEnricher {
       return { b2b_lead_id: lead.id, result, status: 'enrichment_failed', reason };
     }
 
-    const { data: duplicate, error: duplicateError } = await coreDb()
-      .from('b2b_leads')
-      .select('id')
-      .eq('business_id', businessId)
-      .eq('email', verifiedEmail)
-      .neq('id', lead.id)
-      .limit(1)
-      .maybeSingle();
-    if (duplicateError) {
-      throw duplicateError;
-    }
-    if (duplicate) {
-      await this.markFailed(businessId, lead.id, { ...metadata, duplicate_of: duplicate.id });
+    // Aynı işletmede bu e-posta başka lead'deyse: enrichment_failed + duplicate_of (tek işlemde)
+    const outcome = await goRpc<{ status: string; duplicate_of?: string }>('go_lead_enrichment_found_v1', {
+      p_business_id: businessId, p_lead_id: lead.id, p_email: verifiedEmail, p_metadata: metadata
+    });
+    if (outcome.status === 'enrichment_failed') {
       return { b2b_lead_id: lead.id, result, status: 'enrichment_failed', reason: 'duplicate' };
-    }
-
-    const { error: updateError } = await coreDb()
-      .from('b2b_leads')
-      .update({ email: verifiedEmail, status: 'new', updated_at: new Date().toISOString() })
-      .eq('business_id', businessId)
-      .eq('id', lead.id)
-      .eq('status', 'enrichment_pending');
-    if (updateError) {
-      throw updateError;
     }
     return { b2b_lead_id: lead.id, result, status: 'new' };
   }
 
   // E-posta silinmez; yalnız durum ve metadata güncellenir
   private async markFailed(businessId: string, leadId: string, metadata: Record<string, unknown>) {
-    const { error } = await coreDb()
-      .from('b2b_leads')
-      .update({ status: 'enrichment_failed', metadata, updated_at: new Date().toISOString() })
-      .eq('business_id', businessId)
-      .eq('id', leadId)
-      .eq('status', 'enrichment_pending');
-    if (error) {
-      throw error;
-    }
+    await goRpc<boolean>('go_lead_enrichment_fail_v1', { p_business_id: businessId, p_lead_id: leadId, p_metadata: metadata });
   }
 }

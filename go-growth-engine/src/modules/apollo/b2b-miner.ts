@@ -1,4 +1,4 @@
-import { coreDb } from '../../lib/supabase-client.js';
+import { goRpc } from '../../lib/supabase-client.js';
 import { getConfig } from '../../config.js';
 
 export interface ApolloSearchFilters {
@@ -154,18 +154,19 @@ export class ApolloB2BMiner {
     let saved_count = 0;
 
     if (leads.length > 0) {
-      // Var olan kayda dokunma: yalnız yeni kişiler eklenir
-      const { data: insertedData, error: dbError } = await coreDb()
-        .from('b2b_leads')
-        .upsert(leads, { onConflict: 'business_id,apollo_person_id', ignoreDuplicates: true })
-        .select('id');
-
-      if (dbError) {
-        console.error('❌ Supabase Veritabanı Kayıt Hatası:', dbError.message);
+      // Var olan kayda dokunma: yalnız yeni kişiler eklenir. İşletme fonksiyon parametresinden gelir.
+      let insertedIds: string[];
+      try {
+        insertedIds = await goRpc<string[]>('go_leads_insert_v1', {
+          p_business_id: businessId,
+          p_rows: leads.map(({ business_id: _business, ...row }) => row)
+        });
+      } catch (dbError: any) {
+        console.error('❌ Supabase Veritabanı Kayıt Hatası:', dbError?.message ?? dbError);
         throw dbError;
       }
 
-      saved_count = insertedData?.length || 0;
+      saved_count = insertedIds.length;
       console.log(`✅ ${saved_count} yeni lead b2b_leads tablosuna yazıldı (enrichment_pending).`);
     }
 

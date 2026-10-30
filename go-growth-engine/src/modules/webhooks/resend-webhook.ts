@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { coreDb } from '../../lib/supabase-client.js';
+import { HttpError } from '../../lib/http-error.js';
 import { suppressEmail } from '../outreach/unsubscribe.js';
 
 const SIGNATURE_TOLERANCE_SECONDS = 5 * 60;
@@ -61,38 +61,14 @@ export async function handleResendEvent(event: any): Promise<string> {
     return 'no_email_id';
   }
 
-  const db = coreDb();
-  const { data: message, error: messageError } = await db
-    .from('message_log')
-    .select('business_id, b2b_lead_id')
-    .eq('provider_message_id', emailId)
-    .maybeSingle();
-  if (messageError) {
-    throw messageError;
-  }
-  if (!message?.b2b_lead_id) {
-    return `no_match:${emailId}`;
-  }
+  // Gönderim kaydı (message_log ↔ provider_message_id) platforma Görev 6/7 ile taşınır.
+  // O zamana kadar olay eşlenemez: 503 ile Resend yeniden dener, olay sessizce düşmez.
+  throw new HttpError(503, 'İşlem başarısız', `dispatch_log_not_migrated:${emailId}`);
+}
 
-  const { data: lead, error: leadError } = await db
-    .from('b2b_leads')
-    .select('email')
-    .eq('business_id', message.business_id)
-    .eq('id', message.b2b_lead_id)
-    .maybeSingle();
-  if (leadError) {
-    throw leadError;
-  }
-  if (!lead?.email) {
-    return `lead_without_email:${message.b2b_lead_id}`;
-  }
-
-  const email = String(lead.email).trim().toLowerCase();
-  if (type === 'email.bounced') {
-    await suppressEmail(message.business_id, email, { reason: 'hard_bounce', source: 'resend_webhook', leadStatus: 'bounced' });
-    return `hard_bounce:${message.b2b_lead_id}`;
-  }
-
-  await suppressEmail(message.business_id, email, { reason: 'complaint', source: 'resend_webhook', leadStatus: 'unsubscribed' });
-  return `complaint:${message.b2b_lead_id}`;
+// Görev 7'de gönderim kaydı eşlemesi bu yardımcıyı kullanır (engel listesine yalnız ekler)
+export async function suppressBouncedOrComplained(businessId: string, email: string, type: 'email.bounced' | 'email.complained') {
+  await suppressEmail(businessId, email, type === 'email.bounced'
+    ? { reason: 'hard_bounce', source: 'resend_webhook', leadStatus: 'bounced' }
+    : { reason: 'complaint', source: 'resend_webhook', leadStatus: 'unsubscribed' });
 }

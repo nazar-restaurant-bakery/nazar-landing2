@@ -6,7 +6,7 @@ import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { parseArgs } from 'node:util';
-import { coreDb } from '../src/lib/supabase-client.js';
+import { goRpc } from '../src/lib/supabase-client.js';
 import { isUuid, normalizeEmail } from '../src/lib/validation.js';
 
 const USAGE = 'Kullanım: npx tsx scripts/import-apollo-csv.ts --business <uuid> --file <csv yolu> [--commit]';
@@ -173,14 +173,9 @@ async function main() {
   const importFile = basename(filePath);
   const importedAt = new Date().toISOString();
 
-  const db = coreDb();
-
-  const { data: business, error: businessError } = await db
-    .from('businesses')
-    .select('id')
-    .eq('id', businessId)
-    .maybeSingle();
-  if (businessError) fail('işletme kontrolü', businessError);
+  let business = false;
+  try { business = await goRpc<boolean>('go_business_check_v1', { p_business_id: businessId }); }
+  catch (businessError: any) { fail('işletme kontrolü', businessError); }
   if (!business) {
     console.error(`❌ İşletme bulunamadı: ${businessId}`);
     process.exitCode = 1;
@@ -287,21 +282,15 @@ async function main() {
   const suppressed = new Set<string>();
   const existing = new Map<string, ExistingLead>();
   for (const emails of chunk(candidates.map((c) => c.email), CHUNK_SIZE)) {
-    const { data: supRows, error: supError } = await db
-      .from('email_suppressions')
-      .select('email')
-      .eq('business_id', businessId)
-      .in('email', emails);
-    if (supError) fail('suppression okuma', supError);
-    for (const r of supRows ?? []) suppressed.add(r.email);
+    let supRows: string[] = [];
+    try { supRows = await goRpc<string[]>('go_suppressed_emails_v1', { p_business_id: businessId, p_emails: emails }); }
+    catch (supError: any) { fail('suppression okuma', supError); }
+    for (const email of supRows) suppressed.add(email);
 
-    const { data: leadRows, error: leadError } = await db
-      .from('b2b_leads')
-      .select(`id, email, metadata, ${FILLABLE_FIELDS.join(', ')}`)
-      .eq('business_id', businessId)
-      .in('email', emails);
-    if (leadError) fail('mevcut lead okuma', leadError);
-    for (const r of (leadRows ?? []) as unknown as ExistingLead[]) existing.set(r.email, r);
+    let leadRows: ExistingLead[] = [];
+    try { leadRows = await goRpc<ExistingLead[]>('go_leads_by_email_v1', { p_business_id: businessId, p_emails: emails }); }
+    catch (leadError: any) { fail('mevcut lead okuma', leadError); }
+    for (const r of leadRows) existing.set(r.email, r);
   }
 
   const inserts: Record<string, unknown>[] = [];
@@ -314,14 +303,12 @@ async function main() {
     const lead = existing.get(c.email);
     if (!lead) {
       record(c.status, `${maskEmail(c.email)} (${c.fields.company_name})`);
+      // İşletme fonksiyon parametresinden gelir; sequence_step 0 ve next_step_at NULL tablo varsayılanıdır
       inserts.push({
-        business_id: businessId,
         email: c.email,
         status: c.status,
         ...c.fields,
         source: 'apollo_csv',
-        sequence_step: 0,
-        next_step_at: null,
         metadata: c.metadata
       });
       continue;
@@ -347,17 +334,13 @@ async function main() {
   let written = 0;
   if (commit) {
     for (const [n, batch] of chunk(inserts, CHUNK_SIZE).entries()) {
-      const { error } = await db.from('b2b_leads').insert(batch);
-      if (error) fail(`insert parça ${n + 1} (önceden yazılan: ${written})`, error);
-      written += batch.length;
+      try { written += (await goRpc<string[]>('go_leads_insert_v1', { p_business_id: businessId, p_rows: batch })).length; }
+      catch (error: any) { fail(`insert parça ${n + 1} (önceden yazılan: ${written})`, error); }
     }
     for (const u of updates) {
-      const { error } = await db
-        .from('b2b_leads')
-        .update({ ...u.patch, updated_at: new Date().toISOString() })
-        .eq('id', u.id)
-        .eq('business_id', businessId);
-      if (error) fail(`update ${maskEmail(u.email)} (önceden yazılan: ${written})`, error);
+      // Fonksiyon yalnız boş alanları ve eksik metadata anahtarlarını doldurur; status değişmez
+      try { await goRpc<boolean>('go_lead_fill_v1', { p_business_id: businessId, p_lead_id: u.id, p_patch: u.patch }); }
+      catch (error: any) { fail(`update ${maskEmail(u.email)} (önceden yazılan: ${written})`, error); }
       written++;
     }
   }

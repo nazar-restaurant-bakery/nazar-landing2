@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { coreDb } from './supabase-client.js';
+import { goRpc } from './supabase-client.js';
 
 // Anahtar açık metin saklanmaz; yalnız SHA-256 hex özeti ve ilk 8 karakteri (key_prefix)
 export function hashApiKey(key: string): string {
@@ -10,28 +10,9 @@ export function generateApiKey(): string {
   return `go_${crypto.randomBytes(32).toString('base64url')}`;
 }
 
-export async function findActiveApiKeyId(key: string): Promise<string | null> {
-  const { data, error } = await coreDb()
-    .from('api_keys')
-    .select('id')
-    .eq('key_hash', hashApiKey(key))
-    .is('revoked_at', null)
-    .maybeSingle();
-  if (error) {
-    throw error;
-  }
-  return data?.id ?? null;
-}
+export type ApiKeyCheck = 'ok' | 'invalid_key' | 'business_missing' | 'business_not_found' | 'forbidden';
 
-export async function isApiKeyBoundToBusiness(apiKeyId: string, businessId: string): Promise<boolean> {
-  const { data, error } = await coreDb()
-    .from('api_key_businesses')
-    .select('api_key_id')
-    .eq('api_key_id', apiKeyId)
-    .eq('business_id', businessId)
-    .maybeSingle();
-  if (error) {
-    throw error;
-  }
-  return Boolean(data);
+// Önce anahtar, sonra işletme, sonra anahtar-işletme bağı (401 → 400/404 → 403 sırası korunur)
+export async function authorizeApiKey(key: string, businessId: string | null): Promise<ApiKeyCheck> {
+  return goRpc<ApiKeyCheck>('go_api_key_authorize_v1', { p_key_hash: hashApiKey(key), p_business_id: businessId });
 }

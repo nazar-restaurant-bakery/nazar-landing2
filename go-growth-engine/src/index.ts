@@ -7,9 +7,9 @@ import { OutreachSequencer } from './modules/outreach/email-sequencer.js';
 import { LeadImporter } from './modules/outreach/lead-importer.js';
 import { verifyUnsubscribeToken, suppressEmail } from './modules/outreach/unsubscribe.js';
 import { verifySvixSignature, handleResendEvent } from './modules/webhooks/resend-webhook.js';
-import { coreDb } from './lib/supabase-client.js';
+import { goRpc } from './lib/supabase-client.js';
 import { getBusinessSettings } from './lib/business-settings.js';
-import { findActiveApiKeyId, isApiKeyBoundToBusiness } from './lib/api-key.js';
+import { authorizeApiKey } from './lib/api-key.js';
 import { HttpError } from './lib/http-error.js';
 import { isUuid, normalizeEmail } from './lib/validation.js';
 import { getConfig } from './config.js';
@@ -147,55 +147,42 @@ app.post('/u/:token', unsubscribeForm, async (req: Request<{ token: string }>, r
   }
 });
 
-// 4. /api/growth/* koruması: API anahtarı (401) → business_id (400/404) → anahtar-işletme bağı (403)
-async function requireApiKey(req: Request, res: Response, next: NextFunction) {
+// 4. /api/growth/* koruması: API anahtarı (401) → business_id (400/404) → anahtar-işletme bağı (403).
+// Tek veritabanı fonksiyonu aynı sırayla karar verir; tablolara doğrudan erişilmez.
+async function requireApiKeyAndBusiness(req: Request, res: Response, next: NextFunction) {
   const match = /^Bearer\s+(\S+)$/i.exec(req.get('authorization') || '');
   if (!match) {
     return res.status(401).json({ success: false, error: 'Geçersiz API anahtarı' });
   }
 
-  try {
-    const apiKeyId = await findActiveApiKeyId(match[1]);
-    if (!apiKeyId) {
-      return res.status(401).json({ success: false, error: 'Geçersiz API anahtarı' });
-    }
-    res.locals.apiKeyId = apiKeyId;
-    return next();
-  } catch (error: any) {
-    return sendServerError(res, 'API anahtarı doğrulama', error);
-  }
-}
-
-async function requireBusinessId(req: Request, res: Response, next: NextFunction) {
   const { business_id } = req.body || {};
-
-  if (!isUuid(business_id)) {
-    return badRequest(res, 'business_id zorunlu');
-  }
-
   try {
-    const { data, error } = await coreDb()
-      .from('businesses')
-      .select('id')
-      .eq('id', business_id)
-      .maybeSingle();
-
-    if (error) {
-      throw error;
+    const check = await authorizeApiKey(match[1], isUuid(business_id) ? business_id : null);
+    switch (check) {
+      case 'ok': return next();
+      case 'invalid_key': return res.status(401).json({ success: false, error: 'Geçersiz API anahtarı' });
+      case 'business_missing': return badRequest(res, 'business_id zorunlu');
+      case 'business_not_found': return res.status(404).json({ success: false, error: 'business_id bulunamadı' });
+      case 'forbidden': return res.status(403).json({ success: false, error: 'Bu işletme için yetki yok' });
+      default: throw new Error(`Beklenmeyen yetki sonucu: ${String(check)}`);
     }
-    if (!data) {
-      return res.status(404).json({ success: false, error: 'business_id bulunamadı' });
-    }
-    if (!(await isApiKeyBoundToBusiness(res.locals.apiKeyId, business_id))) {
-      return res.status(403).json({ success: false, error: 'Bu işletme için yetki yok' });
-    }
-    return next();
   } catch (error: any) {
-    return sendServerError(res, 'business_id doğrulama', error);
+    return sendServerError(res, 'API anahtarı/business_id doğrulama', error);
   }
 }
 
-app.use('/api/growth', requireApiKey, requireBusinessId);
+app.use('/api/growth', requireApiKeyAndBusiness);
+
+// Salt okunur platform doğrulaması: aday sayıları (duruma göre), engel kaydı sayısı ve
+// outreach_settings satırı. Yazma, gönderim ya da harici çağrı yapmaz.
+app.post('/api/growth/platform/verify', async (req: Request, res: Response) => {
+  try {
+    const result = await goRpc<Record<string, unknown>>('go_platform_verify_v1', { p_business_id: req.body.business_id });
+    return res.status(200).json({ success: true, data: result });
+  } catch (error: any) {
+    return sendServerError(res, 'Platform doğrulama', error);
+  }
+});
 
 // 5. Apollo B2B Lead Mining (e-postasız, enrichment_pending)
 app.post('/api/growth/apollo/mine-leads', async (req: Request, res: Response) => {
