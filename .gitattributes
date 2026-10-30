@@ -143,3 +143,6 @@
 /docs/coupons/normal-consumer-evidence/** text eol=lf
 
 /supabase/config.toml text eol=lf
+# Clover void/refund -> site order release file and rollback are hash-pinned in the PR.
+/supabase/migrations/20261030000100_site_order_clover_reversal.sql text eol=lf
+/supabase/rollbacks/20261030000100_site_order_clover_reversal_down.sql text eol=lf
