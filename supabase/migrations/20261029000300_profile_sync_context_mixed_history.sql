@@ -11,10 +11,10 @@ SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('profile_syn
 DO $guard$ BEGIN
   IF pg_catalog.to_regprocedure('public.klaviyo_profile_sync_context_v1(uuid,uuid)') IS NULL
     OR pg_catalog.to_regprocedure('core.klaviyo_profile_sync_eligible_v1(uuid,uuid)') IS NULL
-    OR pg_catalog.position('EXISTS(SELECT 1 FROM core.signups s WHERE s.customer_id=c.id AND s.is_test)' IN
-      (SELECT prosrc FROM pg_catalog.pg_proc WHERE oid='public.klaviyo_profile_sync_context_v1(uuid,uuid)'::regprocedure))=0
-    OR pg_catalog.position('vip_confirmation_evidence' IN
-      (SELECT prosrc FROM pg_catalog.pg_proc WHERE oid='core.klaviyo_profile_sync_eligible_v1(uuid,uuid)'::regprocedure))=0 THEN
+    OR pg_catalog.strpos((SELECT prosrc FROM pg_catalog.pg_proc WHERE oid='public.klaviyo_profile_sync_context_v1(uuid,uuid)'::regprocedure),
+      'EXISTS(SELECT 1 FROM core.signups s WHERE s.customer_id=c.id AND s.is_test)')=0
+    OR pg_catalog.strpos((SELECT prosrc FROM pg_catalog.pg_proc WHERE oid='core.klaviyo_profile_sync_eligible_v1(uuid,uuid)'::regprocedure),
+      'vip_confirmation_evidence')=0 THEN
     RAISE EXCEPTION 'PROFILE_SYNC_CONTEXT_PREREQUISITES_REQUIRED';
   END IF;
 END $guard$;
