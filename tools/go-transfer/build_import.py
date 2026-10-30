@@ -21,7 +21,8 @@ outreach = [{
     "send_days": x["outreach_send_days"], "send_start": x["outreach_send_start"], "send_end": x["outreach_send_end"],
     "daily_send_limit": x["outreach_daily_send_limit"],
     "enrichment_daily_credit_limit": x["enrichment_daily_credit_limit"],
-    "enrichment_monthly_credit_limit": x["enrichment_monthly_credit_limit"]} for x in s]
+    "enrichment_monthly_credit_limit": x["enrichment_monthly_credit_limit"],
+    "updated_at": x.get("updated_at")} for x in s]
 def lit(obj):
     return "$j$" + json.dumps(obj, ensure_ascii=False) + "$j$::jsonb"
 n = {k: len(v) for k, v in rows.items()}
