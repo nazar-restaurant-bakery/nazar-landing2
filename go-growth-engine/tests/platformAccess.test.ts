@@ -10,8 +10,6 @@ import { suppressEmail, isEmailSuppressed } from '../src/modules/outreach/unsubs
 import { LeadImporter } from '../src/modules/outreach/lead-importer.js';
 import { ApolloEnricher } from '../src/modules/apollo/enricher.js';
 import { ApolloB2BMiner } from '../src/modules/apollo/b2b-miner.js';
-import { OutreachSequencer, getDailySendQuota } from '../src/modules/outreach/email-sequencer.js';
-import { handleResendEvent } from '../src/modules/webhooks/resend-webhook.js';
 import { runScheduledTick } from '../src/scheduler.js';
 import { HttpError } from '../src/lib/http-error.js';
 import { compareWithExpected, EXPECTED } from '../scripts/verify-platform.js';
@@ -144,27 +142,6 @@ test('Apollo miner inserts new people for the request business only', async () =
   assert.equal(calls[0].args.p_business_id, B);
   assert.equal('business_id' in rows[0], false);
   assert.deepEqual([rows[0].apollo_person_id, rows[0].status, rows[0].email], ['P9', 'enrichment_pending', null]);
-});
-
-test('dispatch stays closed until Task 6/7: no reservation, no quota read, no email', async () => {
-  const calls = fakeDb();
-  globalThis.fetch = (async () => { throw new Error('no network expected'); }) as typeof fetch;
-  const sequencer = new OutreachSequencer();
-  assert.deepEqual(await sequencer.sendNextStep(B, '11111111-1111-4111-8111-111111111111'),
-    { b2b_lead_id: '11111111-1111-4111-8111-111111111111', sent: false, step: null, reason: 'dispatch_not_migrated' });
-  assert.deepEqual((await sequencer.runDue(B, 20)).reasons, { dispatch_not_migrated: 1 });
-  await assert.rejects(getDailySendQuota(B, settings, new Date()), (e: unknown) => e instanceof HttpError && e.status === 503);
-  assert.equal(calls.length, 0);
-});
-
-test('Resend bounce/complaint is not dropped: 503 so Resend retries; other events ignored', async () => {
-  const calls = fakeDb();
-  await assert.rejects(handleResendEvent({ type: 'email.bounced', data: { email_id: 'em_1', bounce: { type: 'Permanent' } } }),
-    (e: unknown) => e instanceof HttpError && e.status === 503);
-  await assert.rejects(handleResendEvent({ type: 'email.complained', data: { email_id: 'em_2' } }),
-    (e: unknown) => e instanceof HttpError && e.status === 503);
-  assert.equal(await handleResendEvent({ type: 'email.delivered' }), 'ignored_type:email.delivered');
-  assert.equal(calls.length, 0);
 });
 
 test('scheduler stays off: no database call when GO_SCHEDULER_ENABLED is not "true"', async () => {

@@ -1,5 +1,6 @@
 import { goRpc } from '../../lib/supabase-client.js';
 import { getConfig } from '../../config.js';
+import { HttpError } from '../../lib/http-error.js';
 
 export interface ApolloSearchFilters {
   business_id: string;
@@ -94,28 +95,9 @@ export class ApolloB2BMiner {
 
     let leads: B2BLeadRecord[] = [];
 
-    // Demo modu: sahte lead veritabanına yazılmaz
+    // Apollo anahtarı yoksa çalışmaz; sahte veri üretilmez
     if (!this.apiKey) {
-      console.warn('⚠️ APOLLO_API_KEY .env dosyasında bulunamadı! Demo veri dönüyor (veritabanına yazılmaz).');
-      leads = [
-        {
-          business_id: businessId,
-          apollo_person_id: 'mock-person-1',
-          company_name: 'Yale New Haven Health (Mock)',
-          contact_name: 'Jennifer Adams',
-          title: 'Office Manager',
-          email: null,
-          phone: '+12035550144',
-          industry: 'Healthcare / Logistics',
-          employee_count: 150,
-          city: 'New Haven',
-          state: 'CT',
-          source: 'apollo',
-          status: 'enrichment_pending',
-          metadata: { is_mock: true, region: 'New Haven County (12m Radius)' }
-        }
-      ];
-      return { leads, is_mock: true, saved_to_db: false, saved_count: 0, skipped: 0 };
+      throw new HttpError(503, 'Apollo şu an kullanılamıyor', 'APOLLO_API_KEY boş');
     }
 
     let skipped = 0;

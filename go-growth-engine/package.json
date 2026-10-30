@@ -11,7 +11,8 @@
     "api-key:revoke": "tsx scripts/revoke-api-key.ts",
     "leads:import": "tsx scripts/import-apollo-csv.ts",
     "platform:verify": "tsx scripts/verify-platform.ts",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "smartlead:setup": "tsx scripts/smartlead-setup.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

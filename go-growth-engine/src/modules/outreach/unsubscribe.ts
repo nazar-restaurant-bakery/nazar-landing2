@@ -56,9 +56,9 @@ export function verifyUnsubscribeToken(token: string): { businessId: string; ema
 }
 
 export interface SuppressionOptions {
-  reason: 'unsubscribe_link' | 'hard_bounce' | 'complaint';
-  source: 'email' | 'resend_webhook';
-  leadStatus: 'unsubscribed' | 'bounced';
+  reason: 'unsubscribe_link';
+  source: 'email';
+  leadStatus: 'unsubscribed';
 }
 
 const UNSUBSCRIBE_LINK: SuppressionOptions = { reason: 'unsubscribe_link', source: 'email', leadStatus: 'unsubscribed' };

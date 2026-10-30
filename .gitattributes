@@ -152,3 +152,5 @@
 /supabase/rollbacks/20261030000300_daily_clover_activation_down.sql text eol=lf
 /supabase/migrations/20261030000400_go_platform_access.sql text eol=lf
 /supabase/rollbacks/20261030000400_go_platform_access_down.sql text eol=lf
+/supabase/migrations/20261030000500_go_dispatch_smartlead.sql text eol=lf
+/supabase/rollbacks/20261030000500_go_dispatch_smartlead_down.sql text eol=lf

@@ -6,12 +6,12 @@ import { ApifyAdScraper } from './modules/apify/ad-scraper.js';
 import { OutreachSequencer } from './modules/outreach/email-sequencer.js';
 import { LeadImporter } from './modules/outreach/lead-importer.js';
 import { verifyUnsubscribeToken, suppressEmail } from './modules/outreach/unsubscribe.js';
-import { verifySvixSignature, handleResendEvent } from './modules/webhooks/resend-webhook.js';
+import { verifyWebhookToken, handleSmartleadEvent } from './modules/webhooks/smartlead-webhook.js';
 import { goRpc } from './lib/supabase-client.js';
 import { getBusinessSettings } from './lib/business-settings.js';
 import { authorizeApiKey } from './lib/api-key.js';
 import { HttpError } from './lib/http-error.js';
-import { isUuid, normalizeEmail } from './lib/validation.js';
+import { isUuid } from './lib/validation.js';
 import { getConfig } from './config.js';
 import { runScheduledTick } from './scheduler.js';
 
@@ -43,40 +43,25 @@ function parsePositiveInt(value: unknown, fallback?: number): number | null | un
   return Number.isInteger(value) && (value as number) >= 1 ? (value as number) : null;
 }
 
-// 1. Resend webhook — ham gövde gerekir, bu yüzden express.json'dan önce tanımlanır
-app.post('/webhooks/resend', express.raw({ type: '*/*', limit: '1mb' }), async (req: Request, res: Response) => {
-  const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
-  const secret = getConfig('RESEND_WEBHOOK_SECRET');
-
-  if (!secret) {
-    console.error('❌ [Resend webhook]: RESEND_WEBHOOK_SECRET boş');
+// 1. Smartlead webhook (EMAIL_SENT, EMAIL_REPLY, EMAIL_BOUNCE, LEAD_UNSUBSCRIBED).
+// Smartlead imza göndermez; adres içindeki gizli belirteç doğrulanır. Ham gövde olay anahtarıdır.
+app.post('/webhooks/smartlead/:token', express.raw({ type: '*/*', limit: '256kb' }), async (req: Request<{ token: string }>, res: Response) => {
+  const secret = getConfig('SMARTLEAD_WEBHOOK_SECRET');
+  if (secret.length < 32) {
+    console.error('❌ [Smartlead webhook]: SMARTLEAD_WEBHOOK_SECRET boş ya da kısa');
     return res.status(503).json({ success: false, error: 'İşlem başarısız' });
   }
-
-  const verified = verifySvixSignature(rawBody, {
-    id: req.get('svix-id'),
-    timestamp: req.get('svix-timestamp'),
-    signature: req.get('svix-signature')
-  }, secret);
-  if (!verified) {
-    console.warn('🛑 [Resend webhook] Geçersiz imza ya da zaman damgası');
-    return badRequest(res, 'Geçersiz imza');
+  if (!verifyWebhookToken(req.params.token, secret)) {
+    return res.status(404).json({ success: false, error: 'Bulunamadı' });
   }
-
-  let event: any;
+  const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
   try {
-    event = JSON.parse(rawBody);
-  } catch {
-    return badRequest(res, 'Geçersiz gövde');
-  }
-
-  try {
-    const outcome = await handleResendEvent(event);
-    console.log(`📨 [Resend webhook] ${event?.type} → ${outcome}`);
-    return res.status(200).json({ success: true });
+    const result = await handleSmartleadEvent(rawBody);
+    console.log(`📨 [Smartlead webhook] → ${result.outcome}`);
+    return res.status(result.status).json({ success: result.status === 200 });
   } catch (error: any) {
-    // 500 → Resend yeniden dener; işlem tekrar güvenli
-    return sendServerError(res, 'Resend webhook', error);
+    // 500 → Smartlead yeniden dener; olay anahtarı aynı olduğu için işlem tekrar güvenli
+    return sendServerError(res, 'Smartlead webhook', error);
   }
 });
 
@@ -278,23 +263,6 @@ app.post('/api/growth/outreach/bulk-trigger', async (req: Request, res: Response
     return res.status(200).json({ success: true, ...result });
   } catch (error: any) {
     return sendServerError(res, 'Outreach bulk-trigger', error);
-  }
-});
-
-// 11. E-posta Gönderim Testi (gönderen bilgileri işletme ayarlarından)
-app.post('/api/growth/email/test', async (req: Request, res: Response) => {
-  const { business_id, to } = req.body || {};
-  const email = normalizeEmail(to);
-  if (!email) {
-    return badRequest(res, 'to geçerli bir e-posta olmalı');
-  }
-
-  try {
-    const sequencer = new OutreachSequencer();
-    const result = await sequencer.sendTestEmail(business_id, email);
-    return res.status(200).json({ success: true, ...result });
-  } catch (error: any) {
-    return sendServerError(res, 'E-posta testi', error);
   }
 });
 

@@ -51,14 +51,14 @@ async function runForBusiness(settings: BusinessSettings, at: Date) {
   }
 
   try {
-    const quota = await getDailySendQuota(settings.business_id, settings, at);
+    const quota = await getDailySendQuota(settings.business_id);
     const local = zonedParts(at, settings.outreach_timezone);
     const { tick_share } = computeTickShare(quota.remaining, local.hour, timeToMinutes(settings.outreach_send_end));
     Object.assign(entry, { daily_limit: quota.daily_limit, sent_today: quota.sent_today, tick_share });
 
     // Pay 0 ise (sınır dolu) runDue sınırı kendisi görür ve daily_limit_reached döner
     const result = await new OutreachSequencer().runDue(settings.business_id, Math.max(1, Math.min(RUN_DUE_LIMIT, tick_share)));
-    entry.outreach = { selected: result.selected, sent_count: result.sent_count, reasons: result.reasons };
+    entry.outreach = { selected: result.selected, queued_count: result.queued_count, reasons: result.reasons };
   } catch (error: any) {
     console.error(`❌ [Scheduler] outreach ${settings.business_id}:`, error?.message ?? error);
     entry.outreach = { error: String(error?.message ?? error) };

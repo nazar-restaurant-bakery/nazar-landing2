@@ -8,7 +8,10 @@ export type GoFunction =
   | 'go_enrichment_credits_used_v1' | 'go_leads_enrichment_pending_v1' | 'go_enrichment_log_v1'
   | 'go_lead_enrichment_note_v1' | 'go_lead_enrichment_fail_v1' | 'go_lead_enrichment_found_v1'
   | 'go_leads_by_email_v1' | 'go_suppressed_emails_v1' | 'go_leads_insert_v1' | 'go_lead_fill_v1'
-  | 'go_suppress_email_v1' | 'go_platform_verify_v1';
+  | 'go_suppress_email_v1' | 'go_platform_verify_v1'
+  // Sıra 32 (20261030000500): tek 168 saat kapısı + Smartlead
+  | 'go_dispatch_quota_v1' | 'go_dispatch_due_v1' | 'go_dispatch_reserve_v1' | 'go_dispatch_result_v1'
+  | 'go_smartlead_business_v1' | 'go_smartlead_campaigns_set_v1' | 'go_smartlead_event_v1';
 
 type Rpc = (name: GoFunction, args: Record<string, unknown>) => Promise<unknown>;
 
