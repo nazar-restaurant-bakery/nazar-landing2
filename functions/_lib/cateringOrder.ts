@@ -19,7 +19,18 @@ export const CATERING_PRICES_CENTS: Record<string, readonly [number, number, num
   "chicken-gyro": [14000, 26500, 36500, 58000],
 };
 
-export type TraySelection = { id: string; size: 10 | 20 | 30 | 50; quantity: number };
+// Display names for receipts. Keep aligned with TRAY_LABELS in functions/api/signup.ts.
+export const CATERING_TRAY_LABELS: Record<string, string> = {
+  "lentil-soup": "Lentil Soup", "caesar-salad": "Caesar Salad",
+  "season-salad": "Season Salad", "shepherd-salad": "Shepherd Salad",
+  "cold-appetizers-platter": "Cold Appetizers Platter", jajik: "Jajik (Cacık)",
+  "cheese-rolls": "Cheese Rolls", falafel: "Falafel", "grilled-meatballs": "Grilled Meatballs",
+  "chicken-wings": "Grilled Chicken Wings", "chicken-chops": "Chicken Chops",
+  "adana-shish": "Adana Shish", "chicken-shish": "Chicken Shish",
+  "meat-gyro": "Meat Gyro", "chicken-gyro": "Chicken Gyro",
+};
+
+export type TraySelection ={ id: string; size: 10 | 20 | 30 | 50; quantity: number };
 export type PricedTray = TraySelection & { unitPriceCents: number; lineTotalCents: number };
 
 export function priceStandardTrays(input: unknown): { lines: PricedTray[]; subtotalCents: number } {

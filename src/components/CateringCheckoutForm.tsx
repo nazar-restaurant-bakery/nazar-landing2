@@ -2,6 +2,7 @@ import React from "react";
 import TurnstileWidget from "./TurnstileWidget";
 import { useLang } from "./Language";
 import { turnstileSiteKey } from "../lib/formConfig";
+import { t } from "./i18n";
 
 import CateringPickupDate from "./CateringPickupDate";
 import { CATERING_LEAD_TIME_MS, firstPickup, newYorkDate, newYorkPickup, PICKUP_TIMES, pickupError } from "../lib/cateringPickup";
@@ -12,17 +13,17 @@ const COPY = {
     name: "Name", email: "Email for receipt", phone: "Phone (optional)", date: "Pickup date", time: "Pickup time (New York)", note: "Preparation note (optional)",
     pay: "Continue to secure payment", waiting: "Preparing secure payment…", error: "Payment could not be opened. Please contact Nazar before trying again; no confirmed payment is shown here.",
     pickupErrors: { date: "Choose a valid pickup date and time.", closed: "Pickup is unavailable on Wednesdays. Choose another date.", hours: "Choose a pickup time from 11:00 to 19:00 New York time, in 30-minute steps.", lead: "Pickup requires 72 hours after payment. Choose a later slot; 20 minutes are reserved for checkout." },
-    selection: "Select a priced tray above to continue.", verify: "Complete the security check first.", tax: "Tax and final total are shown on Clover's secure payment page." },
+    selection: "Select a priced tray above to continue.", verify: "Complete the security check first.", tax: "Tax and final total are shown on Clover's secure payment page.", consentNote: "Optional. Payment does not require it." },
   tr: { title: "Standart catering için ödeme", intro: "Yalnız restorandan teslim. En az 3 gün önceden sipariş verin. Özel yemekler için teklif gerekir.",
     name: "Ad", email: "Makbuz için e-posta", phone: "Telefon (isteğe bağlı)", date: "Teslim tarihi", time: "Teslim saati (New York)", note: "Hazırlık notu (isteğe bağlı)",
     pay: "Güvenli ödemeye geç", waiting: "Güvenli ödeme hazırlanıyor…", error: "Ödeme açılamadı. Yeniden denemeden önce Nazar ile görüşün; burada onaylı ödeme görünmüyor.",
     pickupErrors: { date: "Geçerli bir teslim tarihi ve saati seçin.", closed: "Çarşamba günleri teslim yapılamaz. Başka bir tarih seçin.", hours: "New York saatiyle 11:00–19:00 arasında tam veya buçuk saat seçin.", lead: "Teslim için ödemeden sonra 72 saat gerekir. Daha ileri bir saat seçin; ödeme için 20 dakika ayrılır." },
-    selection: "Devam etmek için yukarıdan fiyatlı bir tepsi seçin.", verify: "Önce güvenlik doğrulamasını tamamlayın.", tax: "Vergi ve son toplam Clover'ın güvenli ödeme sayfasında gösterilir." },
+    selection: "Devam etmek için yukarıdan fiyatlı bir tepsi seçin.", verify: "Önce güvenlik doğrulamasını tamamlayın.", tax: "Vergi ve son toplam Clover'ın güvenli ödeme sayfasında gösterilir.", consentNote: "İsteğe bağlı. Ödeme için gerekmez." },
   ar: { title: "ادفع لطلب الطعام القياسي", intro: "الاستلام من المطعم فقط. اطلب قبل 3 أيام على الأقل. الأطباق الخاصة تحتاج إلى عرض سعر.",
     name: "الاسم", email: "البريد الإلكتروني للإيصال", phone: "الهاتف (اختياري)", date: "تاريخ الاستلام", time: "وقت الاستلام (نيويورك)", note: "ملاحظات التحضير (اختياري)",
     pay: "متابعة الدفع الآمن", waiting: "جارٍ إعداد الدفع…", error: "تعذر فتح الدفع. يرجى الاتصال بنزار قبل المحاولة مجددًا؛ لا يظهر هنا دفع مؤكد.",
     pickupErrors: { date: "اختر تاريخًا ووقتًا صالحين للاستلام.", closed: "الاستلام غير متاح أيام الأربعاء. اختر تاريخًا آخر.", hours: "اختر وقتًا بين 11:00 و19:00 بتوقيت نيويورك بفواصل 30 دقيقة.", lead: "يلزم مرور 72 ساعة بعد الدفع. اختر موعدًا لاحقًا؛ تُحجز 20 دقيقة لإتمام الدفع." },
-    selection: "اختر صينية بسعر محدد أعلاه للمتابعة.", verify: "أكمل التحقق الأمني أولاً.", tax: "تظهر الضريبة والمبلغ النهائي في صفحة الدفع الآمنة من Clover." },
+    selection: "اختر صينية بسعر محدد أعلاه للمتابعة.", verify: "أكمل التحقق الأمني أولاً.", tax: "تظهر الضريبة والمبلغ النهائي في صفحة الدفع الآمنة من Clover.", consentNote: "اختياري. لا يلزم للدفع." },
 } as const;
 
 export default function CateringCheckoutForm({ selections }: { selections: Selection[] }) {
@@ -48,6 +49,7 @@ export default function CateringCheckoutForm({ selections }: { selections: Selec
     setTime(PICKUP_TIMES.find(slot => !pickupError(value, slot, current)) ?? "");
   }
   const [note, setNote] = React.useState("");
+  const [consentEmail, setConsentEmail] = React.useState(false);
   const [token, setToken] = React.useState("");
   const [resetSignal, setResetSignal] = React.useState(0);
   const [busy, setBusy] = React.useState(false);
@@ -77,7 +79,7 @@ export default function CateringCheckoutForm({ selections }: { selections: Selec
       const response = await fetch("/api/catering/checkout", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId, requestKind: "standard", fulfillmentMethod: "pickup",
-          name, email, phone, preparationNote: note, pickupAt, turnstileToken: token,
+          name, email, phone, preparationNote: note, pickupAt, turnstileToken: token, consentEmail,
           selections: selections.map(({ id, size }) => ({ id, size, quantity: 1 })) }),
       });
       const result = await response.json() as { code?: string; orderId?: string;
@@ -114,6 +116,7 @@ export default function CateringCheckoutForm({ selections }: { selections: Selec
         <label className="text-sm font-semibold">{copy.time}<select id="catering-pickup-time" required value={time} aria-invalid={Boolean(slotError)} aria-describedby={slotError ? "catering-pickup-error" : undefined} onChange={(e) => setTime(e.target.value)} className="mt-1 w-full rounded-lg border p-2"><option value="">—</option>{PICKUP_TIMES.map(slot => <option key={slot} value={slot} disabled={Boolean(pickupError(date, slot, now))}>{slot}</option>)}</select></label>
         {slotError && <p id="catering-pickup-error" role="alert" className="text-sm text-red-800 sm:col-span-2">{copy.pickupErrors[slotError]}</p>}
         <label className="text-sm font-semibold sm:col-span-2">{copy.note}<textarea maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
+        <label className="flex items-start gap-2.5 text-sm font-semibold text-zinc-700 sm:col-span-2"><input type="checkbox" checked={consentEmail} onChange={(e) => setConsentEmail(e.target.checked)} aria-describedby="catering-consent-note" className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300" /><span>{t("vip.consentEmail", lang)} <span id="catering-consent-note" className="font-normal text-zinc-500">{copy.consentNote}</span></span></label>
         <div className="sm:col-span-2"><TurnstileWidget onToken={onToken} resetSignal={resetSignal} /></div>
         <p className="text-xs text-zinc-600 sm:col-span-2">{copy.tax}</p>
         {message && <p role="alert" className="text-sm text-red-800 sm:col-span-2">{message}</p>}
