@@ -146,7 +146,8 @@ async function cloverJson(url: URL, token: string, fetcher: Fetcher, step: PullS
 }
 
 export async function collectOrders(config: ReturnType<typeof orderPullConfig>, windowOrDays: PullWindow | number, fetcher: Fetcher,
-  gateOrWindow: CloverRequestGate | PullWindow = new CloverRequestGate()): Promise<{ orders: ObjectValue[]; warnings: PullWarning[]; requestCount: number }> {
+  gateOrWindow: CloverRequestGate | PullWindow = new CloverRequestGate(),
+  options: { includeModified?: boolean } = {}): Promise<{ orders: ObjectValue[]; warnings: PullWarning[]; requestCount: number }> {
   // K12's pending scheduler passes its own exact NY window as the fourth argument;
   // its budgeted fetcher reserves every attempt, including 429 retries.
   const gate = gateOrWindow instanceof CloverRequestGate ? gateOrWindow : new CloverRequestGate();
@@ -160,24 +161,36 @@ export async function collectOrders(config: ReturnType<typeof orderPullConfig>, 
     || window.end <= window.start || window.end - window.start > 31 * 25 * 3600_000) throw new Error("invalid_pull");
   const since = window.start;
   const end = window.end - 1;
-  const listed = new Map<string, ObjectValue>();
-  const pageOffsets: number[] = [];
-  for (let offset = 0; offset <= 1000; offset += 100) {
+  // Orders created in the window. With includeModified, also older orders
+  // modified in the window, so a later void/refund on an earlier order is
+  // re-ingested (Clover limits createdTime-filtered searches to 90 days).
+  const groups = [[`createdTime>=${since}`, `createdTime<=${end}`],
+    ...(options.includeModified ? [[`modifiedTime>=${since}`, `modifiedTime<=${end}`, `createdTime<${since}`]] : [])];
+  const listUrl = (filters: string[], expand: string, offset: number) => {
     const url = new URL(`${config.cloverBase}/v3/merchants/${config.merchant}/orders`);
-    url.searchParams.append("filter", `createdTime>=${since}`);
-    url.searchParams.append("filter", `createdTime<=${end}`);
-    url.searchParams.set("expand", "orderType,lineItems,payments");
+    for (const filter of filters) url.searchParams.append("filter", filter);
+    url.searchParams.set("expand", expand);
     url.searchParams.set("orderBy", "createdTime DESC");
     url.searchParams.set("limit", "100");
     url.searchParams.set("offset", String(offset));
-    const rows = elements(await cloverJson(url, config.token, fetcher, "list", gate), "list");
-    pageOffsets.push(offset);
-    for (const row of rows) {
-      if (!id(row.id) || !Number.isSafeInteger(row.createdTime)) throw new PullError("clover_order_invalid", "list");
-      listed.set(row.id, row);
+    return url;
+  };
+  const listed = new Map<string, ObjectValue>();
+  const pages: { filters: string[]; offsets: number[]; ids: string[] }[] = [];
+  for (const filters of groups) {
+    const page = { filters, offsets: [] as number[], ids: [] as string[] };
+    for (let offset = 0; offset <= 1000; offset += 100) {
+      const rows = elements(await cloverJson(listUrl(filters, "orderType,lineItems,payments", offset), config.token, fetcher, "list", gate), "list");
+      page.offsets.push(offset);
+      for (const row of rows) {
+        if (!id(row.id) || !Number.isSafeInteger(row.createdTime)) throw new PullError("clover_order_invalid", "list");
+        if (!listed.has(row.id)) page.ids.push(row.id);
+        listed.set(row.id, row);
+      }
+      if (rows.length < 100) break;
+      if (offset === 1000) throw new PullError("clover_pull_limit", "list");
     }
-    if (rows.length < 100) break;
-    if (offset === 1000) throw new PullError("clover_pull_limit", "list");
+    if (page.ids.length) pages.push(page);
   }
   const output: ObjectValue[] = [];
   const warnings: PullWarning[] = [];
@@ -185,15 +198,8 @@ export async function collectOrders(config: ReturnType<typeof orderPullConfig>, 
   async function optionalCollection(expand: "refunds" | "customers", step: "order_refunds" | "order_customers") {
     const result = new Map<string, ObjectValue>();
     try {
-      for (const offset of pageOffsets) {
-        const url = new URL(`${config.cloverBase}/v3/merchants/${config.merchant}/orders`);
-        url.searchParams.append("filter", `createdTime>=${since}`);
-        url.searchParams.append("filter", `createdTime<=${end}`);
-        url.searchParams.set("expand", expand);
-        url.searchParams.set("orderBy", "createdTime DESC");
-        url.searchParams.set("limit", "100");
-        url.searchParams.set("offset", String(offset));
-        for (const row of elements(await cloverJson(url, config.token, fetcher, step, gate), step)) {
+      for (const page of pages) for (const offset of page.offsets) {
+        for (const row of elements(await cloverJson(listUrl(page.filters, expand, offset), config.token, fetcher, step, gate), step)) {
           if (!id(row.id)) throw new PullError("clover_order_invalid", step);
           result.set(row.id, row);
         }
@@ -202,8 +208,9 @@ export async function collectOrders(config: ReturnType<typeof orderPullConfig>, 
       return { rows: result, denied: false };
     } catch (error) {
       if (!(error instanceof PullError) || error.code !== "clover_access_denied") throw error;
-      warnings.push({ code: expand === "refunds" ? "clover_refunds_access_denied" : "clover_customers_access_denied",
-        step, httpStatus: error.providerStatus || 403 });
+      if (!warnings.some(warning => warning.step === step))
+        warnings.push({ code: expand === "refunds" ? "clover_refunds_access_denied" : "clover_customers_access_denied",
+          step, httpStatus: error.providerStatus || 403 });
       return { rows: result, denied: true };
     }
   }

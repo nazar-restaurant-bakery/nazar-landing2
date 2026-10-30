@@ -20,7 +20,8 @@ export function dailyCloverHandler(fetcher:typeof fetch=fetch){return async({req
    if(await rpc('daily_reserve_external_request')!==true)throw new PullError('daily_budget_exhausted','list');
    return fetcher(input,init);
   };
-  const result=await collectOrders(config,1,budgeted,{start:body.start_ms!,end:body.end_ms!});
+  // includeModified: a void/refund made days later re-ingests its older order.
+  const result=await collectOrders(config,1,budgeted,{start:body.start_ms!,end:body.end_ms!},{includeModified:true});
   for(const snapshot of result.orders){
    if(await rpc('daily_run_check')!==true)throw new PullError('scheduler_paused','ingest');
    const r=await fetcher(config.url+'/rest/v1/rpc/clover_order_ingest_v1',{method:'POST',headers:{apikey:config.secret,'Content-Type':'application/json'},body:JSON.stringify({p_business_id:config.businessId,p_merchant_id:config.merchant,p_snapshot:snapshot}),redirect:'error',signal:AbortSignal.timeout(10000)});
