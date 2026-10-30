@@ -42,7 +42,8 @@ export function profileSyncConfig(env: ProfileSyncEnv, hostname: string): Profil
 
 export class RpcUnavailable extends Error {
   status: number;
-  constructor(status = 503) { super("database_unavailable"); this.status = status; }
+  reason: string;
+  constructor(status = 503, reason = "database_unavailable") { super("database_unavailable"); this.status = status; this.reason = reason; }
 }
 export type Fetcher = typeof fetch;
 export async function profileSyncRpc(config: ProfileSyncConfig, name: string,
@@ -58,8 +59,8 @@ export async function profileSyncRpc(config: ProfileSyncConfig, name: string,
       ...(bearer ? { Authorization: bearer } : {}), "Content-Type": "application/json" },
     body: JSON.stringify(args),
   });
-  if (!result.ok) throw new RpcUnavailable(result.status);
-  try { return await result.json(); } catch { throw new RpcUnavailable(); }
+  if (!result.ok) throw new RpcUnavailable(result.status, "rpc_http_" + result.status + ":" + name);
+  try { return await result.json(); } catch { throw new RpcUnavailable(503, "rpc_json:" + name); }
 }
 
 /** No arbitrary host, redirect, account, method, header or credential forwarding. */

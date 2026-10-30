@@ -90,25 +90,27 @@ export function profileSyncHandler(fetcher: Fetcher = fetch) {
       const store: SyncStore = {
         async readContext(current): Promise<SyncContext | null> {
           const context = await rpc("klaviyo_profile_sync_context_v1", { p_job_id: current.jobId, p_lease_id: current.leaseId });
-          if (!isRecord(context) || typeof context.eligible !== "boolean") throw new RpcUnavailable();
+          if (!isRecord(context) || typeof context.eligible !== "boolean") throw new RpcUnavailable(503, "context_shape");
           if (!context.eligible) {
             invalidatedStatus = ["customer_ineligible", "payload_changed"].includes(String(context.reason))
               ? String(context.status) : "unconfirmed";
             return null;
           }
-          if (context.jobId !== current.jobId || context.businessId !== config.businessId || context.account !== config.accountId
-            || !isUuid(context.customerId) || (config.onlyCustomerId !== null && context.customerId !== config.onlyCustomerId)
-            || !isRecord(context.profile) || !isRecord(context.eligibility)) throw new RpcUnavailable();
+          if (context.jobId !== current.jobId) throw new RpcUnavailable(503, "context_job");
+          if (context.businessId !== config.businessId) throw new RpcUnavailable(503, "context_business");
+          if (context.account !== config.accountId) throw new RpcUnavailable(503, "context_account");
+          if (!isUuid(context.customerId) || (config.onlyCustomerId !== null && context.customerId !== config.onlyCustomerId)) throw new RpcUnavailable(503, "context_customer");
+          if (!isRecord(context.profile) || !isRecord(context.eligibility)) throw new RpcUnavailable(503, "context_records");
           const p = context.profile;
           const e = context.eligibility;
-          if (e.emailStatus !== "subscribed" || e.isTest !== false || e.suppressedAt !== null
-            || typeof p.email !== "string" || !date(p.createdAt)
-            || (p.name !== null && typeof p.name !== "string") || (p.source !== null && typeof p.source !== "string")) throw new RpcUnavailable();
+          if (e.emailStatus !== "subscribed" || e.isTest !== false || e.suppressedAt !== null) throw new RpcUnavailable(503, "context_eligibility");
+          if (typeof p.email !== "string" || !date(p.createdAt)
+            || (p.name !== null && typeof p.name !== "string") || (p.source !== null && typeof p.source !== "string")) throw new RpcUnavailable(503, "context_profile");
           const utm: Record<string, string> | null = p.utm === null ? null : {};
           if (isRecord(p.utm)) for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"])
             if (utm && typeof p.utm[key] === "string") utm[key] = p.utm[key] as string;
           const tags = p.tags;
-          if (tags !== null && (!Array.isArray(tags) || tags.some(tag => typeof tag !== "string"))) throw new RpcUnavailable();
+          if (tags !== null && (!Array.isArray(tags) || tags.some(tag => typeof tag !== "string"))) throw new RpcUnavailable(503, "context_tags");
           return { businessId: config.businessId, customerId: context.customerId, accountId: config.accountId,
             email: p.email, name: p.name as string | null, source: p.source as string | null, registeredAt: String(p.createdAt),
             utm, tags: tags as string[] | null, emailStatus: e.emailStatus, isTest: e.isTest, suppressedAt: null };

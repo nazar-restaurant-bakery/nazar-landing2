@@ -151,6 +151,15 @@ function retrySeconds(value: string | undefined, attempt: number, now: number) {
   return Math.min(86400, Math.max(floor, Number.isFinite(parsed) ? parsed : 0));
 }
 
+
+/** Diagnostic only: error class and a redacted, bounded message; never payloads, keys or contact data. */
+function logFault(where: string, error: unknown) {
+  const name = error instanceof Error ? error.name : typeof error;
+  const message = (error instanceof Error ? error.message : String(error)).replace(/[^\s@]+@[^\s@]+/g, "[redacted]").slice(0, 200);
+  const reason = error instanceof Error && typeof (error as { reason?: unknown }).reason === "string" ? (error as { reason: string }).reason : undefined;
+  console.error(JSON.stringify({ event: "profile_sync_fault", where, name, message, ...(reason ? { reason } : {}) }));
+}
+
 export async function runProfileSync({ lease, store, provider, now = Date.now, timeoutMs = 8000 }: {
   lease: SyncLease; store: SyncStore; provider: SyncProvider; now?: () => number; timeoutMs?: number;
 }): Promise<SyncOutcome> {
@@ -185,7 +194,7 @@ export async function runProfileSync({ lease, store, provider, now = Date.now, t
         if (response.status >= 500 || response.status === 408) throw new SyncFault("provider_unavailable", true, undefined, method === "POST");
         if (response.status >= 300 && response.status < 400) throw new SyncFault("provider_redirect_rejected");
         return response;
-      } catch (error) { if (error instanceof SyncFault) throw error; throw new SyncFault("provider_network_unavailable", true, undefined, method === "POST"); }
+      } catch (error) { if (error instanceof SyncFault) throw error; logFault("provider_" + method, error); throw new SyncFault("provider_network_unavailable", true, undefined, method === "POST"); }
       finally { if (timer) clearTimeout(timer); controller.abort(); }
     };
     const url = new URL(ORIGIN + "/api/profiles");
@@ -224,6 +233,7 @@ export async function runProfileSync({ lease, store, provider, now = Date.now, t
     }
     return finish({ status: "succeeded", fingerprint: snapshot.fingerprint, providerProfileId: saved.id });
   } catch (error) {
+    if (!(error instanceof SyncFault)) logFault("local", error);
     const fault = error instanceof SyncFault ? error : new SyncFault("local_store_unavailable", true);
     return finish(fault.retryable && lease.attempt < MAX_ATTEMPTS
       ? { status: "retry", errorCode: fault.code, retryAfterSeconds: retrySeconds(fault.retryAfter, lease.attempt, now()), uncertainWrite: fault.uncertainWrite || writeStarted }
