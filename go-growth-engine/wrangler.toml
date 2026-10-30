@@ -1,0 +1,14 @@
+name = "go-growth-engine"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["7 * * * *"]
+
+# Gizli değerler burada değil: Cloudflare secrets (yerelde .dev.vars)
+[vars]
+GO_SCHEDULER_ENABLED = "false"
+
+[observability]
+enabled = true

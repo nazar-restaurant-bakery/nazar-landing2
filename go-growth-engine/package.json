@@ -1,0 +1,27 @@
+{
+  "name": "go-growth-engine",
+  "version": "1.0.0",
+  "description": "Project NazarGO - Independent AI Growth Engine Microservice",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "api-key:create": "tsx scripts/create-api-key.ts",
+    "api-key:revoke": "tsx scripts/revoke-api-key.ts",
+    "leads:import": "tsx scripts/import-apollo-csv.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261027.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.11.0",
+    "dotenv": "^16.6.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.3.3",
+    "wrangler": "^4.154.0"
+  }
+}
