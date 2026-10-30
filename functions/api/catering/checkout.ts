@@ -33,6 +33,33 @@ function clean(value: unknown, maximum: number): string | null {
   return trimmed.length <= maximum ? trimmed : null;
 }
 
+function usPhone(value: string): string | null {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
+// Optional email marketing consent uses the same intake RPC as the VIP form.
+// Suppression and test-name classification stay with the database triggers.
+// Consent never blocks payment; the response says whether it was recorded.
+async function recordEmailConsent(databaseUrl: string, headers: Record<string, string>,
+  values: { requestId: string; businessId: string; name: string; email: string; phone: string }):
+  Promise<"recorded" | "unrecorded"> {
+  try {
+    const saved = await fetch(`${databaseUrl}/rest/v1/rpc/submit_signup_once`, {
+      method: "POST", headers, signal: AbortSignal.timeout(7000),
+      body: JSON.stringify({ p_request_id: values.requestId, p_business_id: values.businessId,
+        p_name: values.name, p_email: values.email, p_phone: usPhone(values.phone),
+        p_source: "catering_checkout", p_consent_email: true, p_consent_sms: false,
+        p_utm: null, p_meta: null }),
+    });
+    if (saved.ok) return "recorded";
+  } catch { /* reported below without customer data */ }
+  console.error(JSON.stringify({ event: "catering_checkout_consent_unrecorded", request_id: values.requestId }));
+  return "unrecorded";
+}
+
 async function requestHash(value: unknown): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value)));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -87,6 +114,10 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
   const note = clean(input.preparationNote, 300);
   const token = clean(input.turnstileToken, 2048);
   const requestId = clean(input.requestId, 36);
+  if (input.consentEmail !== undefined && typeof input.consentEmail !== "boolean") {
+    return reply(400, "invalid_input");
+  }
+  const consentEmail = input.consentEmail === true;
   if (!name || !email || !EMAIL_RE.test(email) || phone === null || note === null || !token ||
       !requestId || !UUID_RE.test(requestId) ||
       input.fulfillmentMethod !== "pickup" || input.requestKind !== "standard") {
@@ -125,6 +156,8 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     stage = "order_create";
     const dbHeaders = { apikey: supabaseKey!,
       "Content-Type": "application/json" };
+    const consent = consentEmail ? await recordEmailConsent(databaseUrl!, dbHeaders, {
+      requestId, businessId: env.SITE_BUSINESS_ID!, name, email, phone }) : "not_requested";
     const orderHash = await requestHash({ name, email, phone, note, pickupAt: pickupAt.toISOString(),
       lines: priced.lines, subtotalCents: priced.subtotalCents, taxCents });
     const created = await fetch(`${databaseUrl}/rest/v1/rpc/site_order_create_v1`, {
@@ -158,7 +191,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       return reply(503, "order_storage_unavailable");
     }
     return reply(200, "checkout_ready", { orderId, requestId, checkoutUrl: session.url,
-      totalCents });
+      totalCents, consent });
   } catch (error) {
     const errorType = error instanceof TypeError ? "TypeError" :
       error instanceof SyntaxError ? "SyntaxError" :

@@ -42,20 +42,27 @@ test("status exposes only non-personal order confirmation fields", async () => {
 
 test("customer email is sent only after database claim and never retried on a null claim", async () => {
   const calls = [];
+  let claims = 0;
   globalThis.fetch = async (address, options) => {
     calls.push({ address: String(address), body: options.body });
-    if (calls.length === 1) return Response.json({ orderId, email: "customer@example.com",
-      requestedAt: "2026-11-02T17:00:00Z", totalCents: 1610, status: "paid" });
-    if (calls.length === 2) return Response.json({ success: true,
+    if (String(address).endsWith("/rpc/site_order_customer_email_claim_v1")) {
+      return Response.json(claims++ === 0 ? { orderId, email: "customer@example.com",
+        requestedAt: "2026-11-02T17:00:00Z", totalCents: 1610, status: "paid" } : null);
+    }
+    if (String(address).endsWith("/rpc/site_order_customer_email_detail_v1")) return Response.json(null);
+    if (String(address).includes("/email/sending/send")) return Response.json({ success: true,
       result: { queued: ["customer@example.com"] } });
-    if (calls.length === 3) return Response.json(true);
-    return Response.json(null);
+    if (String(address).endsWith("/rpc/site_order_customer_email_finish_v1")) return Response.json(true);
+    throw new Error("unexpected fetch");
   };
   await sendVerifiedSiteOrderEmail(env, env.SITE_PRODUCTION_SUPABASE_URL, "session-1");
   await sendVerifiedSiteOrderEmail(env, env.SITE_PRODUCTION_SUPABASE_URL, "session-1");
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 5);
   assert.ok(calls[0].address.endsWith("/rpc/site_order_customer_email_claim_v1"));
-  assert.ok(calls[1].address.includes("/email/sending/send"));
-  assert.ok(calls[2].address.endsWith("/rpc/site_order_customer_email_finish_v1"));
-  assert.equal(JSON.parse(calls[2].body).p_sent, true);
+  assert.ok(calls[1].address.endsWith("/rpc/site_order_customer_email_detail_v1"));
+  assert.equal(JSON.parse(calls[1].body).p_site_order_id, orderId);
+  assert.ok(calls[2].address.includes("/email/sending/send"));
+  assert.ok(calls[3].address.endsWith("/rpc/site_order_customer_email_finish_v1"));
+  assert.equal(JSON.parse(calls[3].body).p_sent, true);
+  assert.ok(calls[4].address.endsWith("/rpc/site_order_customer_email_claim_v1"));
 });
