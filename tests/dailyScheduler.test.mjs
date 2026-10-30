@@ -29,6 +29,8 @@ test('scheduled K7 path uses exact closed-day window, shared quota, same ingest 
    throw Error('unexpected DB method');
   }
   assert.equal(u.hostname,'apisandbox.dev.clover.com');providers++;
+  if(u.pathname.endsWith('/orders')&&u.searchParams.getAll('filter')[0].startsWith('modifiedTime')){
+   assert.deepEqual(u.searchParams.getAll('filter'),['modifiedTime>='+start,'modifiedTime<='+(end-1),'createdTime<'+start]);return Response.json({elements:[]});}
   if(u.pathname.endsWith('/orders')){assert.deepEqual(u.searchParams.getAll('filter'),['createdTime>='+start,'createdTime<='+(end-1)]);return Response.json({elements:[{id:'ORDER123456',createdTime:start+1000}]});}
   const expand=u.searchParams.get('expand');
   if(expand==='refunds')return Response.json({id:'ORDER123456',refunds:{elements:[]}});
@@ -38,10 +40,11 @@ test('scheduled K7 path uses exact closed-day window, shared quota, same ingest 
  const handler=dailyCloverHandler(fetch);
  const request=async body=>new Request('https://preview.pages.dev/api/internal/daily-clover-pull',{method:'POST',headers:{'X-Scheduler-Signature':await machineSignature('daily.clover.v1',body,secret)},body:JSON.stringify(body)});
  assert.equal((await handler({request:await request(b),env})).status,200);
- assert.equal(ingests,1);assert.equal(providers,4);assert.equal(reserves,4);
- assert.equal((await handler({request:await request(b),env})).status,409);assert.equal(providers,4);
+ // 4 created-window requests + 1 empty modified-window listing.
+ assert.equal(ingests,1);assert.equal(providers,5);assert.equal(reserves,5);
+ assert.equal((await handler({request:await request(b),env})).status,409);assert.equal(providers,5);
  claimed=false;denyBudget=true;
- const denied=await handler({request:await request(b),env});assert.equal((await denied.json()).code,'budget_exhausted');assert.equal(providers,4);
+ const denied=await handler({request:await request(b),env});assert.equal((await denied.json()).code,'budget_exhausted');assert.equal(providers,5);
  assert.equal((await handler({request:await request({...b,business_id:token}),env})).status,403);
 });
 function runner(mode='ok'){

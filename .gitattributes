@@ -148,3 +148,5 @@
 /supabase/rollbacks/20261030000100_site_order_clover_reversal_down.sql text eol=lf
 /supabase/migrations/20261030000200_catering_checkout_consent_email_lines.sql text eol=lf
 /supabase/rollbacks/20261030000200_catering_checkout_consent_email_lines_down.sql text eol=lf
+/supabase/migrations/20261030000300_daily_clover_activation.sql text eol=lf
+/supabase/rollbacks/20261030000300_daily_clover_activation_down.sql text eol=lf
