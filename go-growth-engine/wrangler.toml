@@ -2,6 +2,9 @@ name = "go-growth-engine"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
+routes = [ { pattern = "links.nazarrestaurantandbakery.com", custom_domain = true } ]
+workers_dev = true
+preview_urls = true
 
 [triggers]
 crons = ["7 * * * *"]
