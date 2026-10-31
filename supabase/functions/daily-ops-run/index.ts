@@ -28,8 +28,18 @@ export function dailyHandler(fetcher:typeof fetch=fetch,now=()=>Date.now(),backg
   if(run.business_id!==body.business_id||run.id!==body.run_id||!/^https:\/\/[A-Za-z0-9.-]+\/api\/internal\/daily-clover-pull$/.test(run.clover_url))throw Error('scope_unavailable');
   const args={p_business_id:run.business_id,p_run_id:run.id,p_token:run.claim_token};
   const clover:MachineBody={...body,issued_at:Math.floor(now()/1000),claim_token:run.claim_token,start_ms:run.start_ms,end_ms:run.end_ms};
-  const pull=await fetcher(run.clover_url,{method:'POST',headers:{'Content-Type':'application/json','X-Scheduler-Signature':await machineSignature('daily.clover.v1',clover,env.SCHEDULER_SIGNING_SECRET!)},body:JSON.stringify(clover),redirect:'error',signal:AbortSignal.timeout(120000)});
-  const pulled=await pull.json().catch(()=>({}));
+  const signature=await machineSignature('daily.clover.v1',clover,env.SCHEDULER_SIGNING_SECRET!);
+  // One diagnostic line per pull: host, status and edge headers only. Never the
+  // signature, claim token, body text or customer data.
+  const diag=(fields:Record<string,unknown>)=>console.info('daily_clover_pull_diag '+JSON.stringify({host:new URL(run.clover_url).host,...fields}));
+  let pull:Response;
+  try{pull=await fetcher(run.clover_url,{method:'POST',headers:{'Content-Type':'application/json','X-Scheduler-Signature':signature},body:JSON.stringify(clover),redirect:'error',signal:AbortSignal.timeout(120000)});}
+  catch(error){diag({fetch_error:error instanceof Error?error.name:'unknown'});throw error;}
+  let json=true;
+  const pulled=await pull.json().catch(()=>{json=false;return {};});
+  const header=(name:string)=>pull.headers.get(name)?.slice(0,100)??null;
+  diag({status:pull.status,redirected:pull.redirected,content_type:header('content-type'),server:header('server'),cf_ray_present:!!pull.headers.get('cf-ray'),
+   cf_mitigated:header('cf-mitigated'),body_code:typeof pulled?.code==='string'&&/^[a-z_]{1,64}$/.test(pulled.code)?pulled.code:null,json});
   if(!pull.ok){code=pulled.code==='budget_exhausted'?'budget_exhausted':pulled.code==='paused'?'paused':'clover_failed';throw Error(code);}
   // The existing provider adapters/snapshot are explicitly bound to their legacy
   // business. Never apply those fixed account totals to another tenant.
