@@ -63,6 +63,9 @@ function runner(mode='ok'){
   }
   if(u.hostname==='tenant.example'){
    const body=JSON.parse(init.body);assert.equal(await verifyMachine('daily.clover.v1',body,init.headers['X-Scheduler-Signature'],secret),true);
+   if(mode==='fetch-error')throw new TypeError('PRIVATE network detail');
+   if(mode==='timeout')throw new DOMException('PRIVATE','TimeoutError');
+   if(mode==='edge-html')return new Response('<html>PRIVATE challenge page '+token+'</html>',{status:403,headers:{'Content-Type':'text/html; charset=UTF-8',Server:'cloudflare','CF-RAY':'8f00000000000000-EWR','cf-mitigated':'challenge'}});
    return mode==='clover-error'?Response.json({code:'clover_failed'},{status:503}):Response.json({code:'succeeded',reconciled:false});
   }
   assert.equal(u.href,'https://www.nazarrestaurantandbakery.com/');return new Response('synthetic site');
@@ -89,4 +92,29 @@ test('gateway ack registers background work; missing signature causes no Auth/RP
  const h=runner(),pending=[];const r=await dailyHandler(h.fetch,()=>Date.now(),p=>pending.push(p))(await h.request(),h.env);
  assert.equal(r.status,202);assert.equal(pending.length,1);await Promise.all(pending);assert.equal(h.finished.p_code,'collected');
  const denied=runner();assert.equal((await dailyHandler(denied.fetch)(new Request('https://example.invalid',{method:'POST',body:'{}'}),denied.env)).status,401);assert.equal(denied.calls.length,0);
+});
+function captureInfo(){const lines=[],original=console.info;console.info=(...a)=>lines.push(a.join(' '));return {lines,restore:()=>{console.info=original;}};}
+const diagLines=lines=>lines.filter(l=>l.startsWith('daily_clover_pull_diag ')).map(l=>JSON.parse(l.slice('daily_clover_pull_diag '.length)));
+test('one diagnostic line per pull: edge-answered HTML is visible without body text or secrets',async()=>{
+ const cases={
+  ok:[{host:'tenant.example',status:200,redirected:false,content_type:'application/json',server:null,cf_ray_present:false,cf_mitigated:null,body_code:'succeeded',json:true},'collected'],
+  'clover-error':[{host:'tenant.example',status:503,redirected:false,content_type:'application/json',server:null,cf_ray_present:false,cf_mitigated:null,body_code:'clover_failed',json:true},'clover_failed'],
+  'edge-html':[{host:'tenant.example',status:403,redirected:false,content_type:'text/html; charset=UTF-8',server:'cloudflare',cf_ray_present:true,cf_mitigated:'challenge',body_code:null,json:false},'clover_failed']};
+ for(const [mode,[expected,code]] of Object.entries(cases)){
+  const h=runner(mode),log=captureInfo();
+  try{await dailyHandler(h.fetch)(await h.request(),h.env);}finally{log.restore();}
+  assert.deepEqual(diagLines(log.lines),[expected],mode);assert.equal(h.finished.p_code,code,mode);
+  for(const secretText of [token,secret,'PRIVATE','synthetic-service','<html'])assert.ok(!log.lines.join('').includes(secretText),mode+' '+secretText);
+ }
+});
+test('a thrown pull fetch logs only host and error name; the run still finishes as execution_failed',async()=>{
+ // daily_scheduler_finish does not accept clover_unreachable, so the run code is unchanged.
+ for(const [mode,name] of [['fetch-error','TypeError'],['timeout','TimeoutError']]){
+  const h=runner(mode),log=captureInfo();
+  try{assert.equal((await dailyHandler(h.fetch)(await h.request(),h.env)).status,503);}finally{log.restore();}
+  assert.deepEqual(diagLines(log.lines),[{host:'tenant.example',fetch_error:name}]);
+  assert.equal(h.finished.p_code,'execution_failed');assert.equal(h.finished.p_ops_status,'failed');
+  assert.equal(h.calls.some(x=>x.endsWith('/daily_ops_snapshot')),false);
+  assert.ok(!log.lines.join('').includes('PRIVATE'));
+ }
 });
