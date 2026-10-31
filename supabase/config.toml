@@ -44,3 +44,8 @@ verify_jwt = false
 # X-Scheduler-Signature HMAC inside the function is the authentication.
 [functions.market-places]
 verify_jwt = false
+
+# Called by market.ads_run_v1 / market.ads_cron_tick_v1 via pg_net without a JWT; the
+# purpose-bound X-Scheduler-Signature HMAC inside the function is the authentication.
+[functions.market-ads]
+verify_jwt = false
