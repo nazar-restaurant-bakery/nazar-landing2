@@ -39,3 +39,8 @@ verify_jwt = true
 # Default-off consumer; purpose-bound HMAC is mandatory before all DB/network.
 [functions.coupon-welcome-run]
 verify_jwt = false
+
+# Called by market.places_run_v1 via pg_net without a JWT; the purpose-bound
+# X-Scheduler-Signature HMAC inside the function is the authentication.
+[functions.market-places]
+verify_jwt = false

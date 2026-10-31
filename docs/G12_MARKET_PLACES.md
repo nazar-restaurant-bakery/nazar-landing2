@@ -75,11 +75,16 @@ SELECT market.area_settings_set_v1('a358eba4-b197-4309-805b-46f43a718454','resta
 - Edge tarafında gereken gizli değerler mevcut olanlar: `GOOGLE_PLACES_API_KEY`, `SCHEDULER_SIGNING_SECRET`.
 
 ## Yayın (Talip)
-1. Önce sıra 33'ü (G8), sonra sıra 34'ü SQL Editor'da uygula.
-2. Edge fonksiyonunu yayınla:
+1. **Migration:** SQL Editor'da yalnız `supabase/migrations/20261031000200_market_places.sql` uygulanır. `20261031000100` (G8) zaten canlıda.
+2. **PR birleşir.**
+3. **Fonksiyon yayını:** Edge fonksiyonu ana daldan yayınlanır:
    ```
    cd C:\Users\Talip\nazar-go-growth\nazar-growth; git checkout main; git pull --ff-only; npx supabase functions deploy market-places --project-ref khgczybubufouraqyrcj --use-api
    ```
+   `supabase/config.toml` içinde `[functions.market-places] verify_jwt = false` ayarı bulunur. Bu ayar gereklidir, çünkü `market.places_run_v1` fonksiyonu pg_net ile JWT olmadan, yalnız `X-Scheduler-Signature` ile çağırır. Ayar olmazsa gateway `401` döner. Kimlik denetimi fonksiyonun içindeki imza kontrolüyle yapılır; `daily-ops-run` ile aynı.
+4. **Kuru çalıştırma:** Her iki konu için aşağıdaki kuru çalıştırma yapılır. Sonuç `succeeded` / `dry_run` olmalı, `calls_used` değeri `0` olmalı.
+
+**Gerçek çekim kurulumda yapılmaz;** Test 26'da yapılır.
 
 ## Çekim nasıl başlatılır
 SQL Editor'da çalıştırılır; yalnız `postgres` çağırabilir. Dönen değer yalnız kimlik ve sayıdır: `run_id`, `topic`, `dry_run`, `max_calls`, `request_id`.
@@ -88,7 +93,7 @@ SQL Editor'da çalıştırılır; yalnız `postgres` çağırabilir. Dönen değ
 -- Kuru çalıştırma: Places'e HİÇ çağrı yapılmaz, yalnız planlanan çağrı sayısı kaydedilir.
 SELECT market.places_run_v1('a358eba4-b197-4309-805b-46f43a718454','catering',true);
 SELECT market.places_run_v1('a358eba4-b197-4309-805b-46f43a718454','restaurant',true);
--- Gerçek çekim (varsayılan tavan 150):
+-- Gerçek çekim (varsayılan tavan 150) — kurulumda değil, Test 26'da:
 SELECT market.places_run_v1('a358eba4-b197-4309-805b-46f43a718454','catering',false);
 SELECT market.places_run_v1('a358eba4-b197-4309-805b-46f43a718454','restaurant',false);
 -- Üç ilçe için tavanı yükselt:
