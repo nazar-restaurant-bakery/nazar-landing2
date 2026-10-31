@@ -39,10 +39,10 @@ export function dailyHandler(fetcher:typeof fetch=fetch,now=()=>Date.now(),backg
   const pulled=await pull.json().catch(()=>{json=false;return {};});
   const header=(name:string)=>pull.headers.get(name)?.slice(0,100)??null;
   const token=(value:unknown,pattern:RegExp)=>typeof value==='string'&&pattern.test(value)?value:null;
-  // body_detail may end in Clover's HTTP status (e.g. clover_http_error_500).
+  // body_detail may end in Clover's HTTP status or an error name (clover_http_error_500, unexpected_TypeError).
   diag({status:pull.status,redirected:pull.redirected,content_type:header('content-type'),server:header('server'),cf_ray_present:!!pull.headers.get('cf-ray'),
-   cf_mitigated:header('cf-mitigated'),body_code:token(pulled?.code,/^[a-z_]{1,64}$/),body_detail:token(pulled?.detail,/^[a-z0-9_]{1,64}$/),
-   body_step:token(pulled?.step,/^[a-z_]{1,64}$/),json});
+   cf_mitigated:header('cf-mitigated'),body_code:token(pulled?.code,/^[a-z_]{1,64}$/),body_detail:token(pulled?.detail,/^[A-Za-z0-9_]{1,64}$/),
+   body_step:token(pulled?.step,/^[a-z_]{1,64}$/),body_stage:token(pulled?.stage,/^[a-z_]{1,32}$/),json});
   if(!pull.ok){code=pulled.code==='budget_exhausted'?'budget_exhausted':pulled.code==='paused'?'paused':'clover_failed';throw Error(code);}
   // The existing provider adapters/snapshot are explicitly bound to their legacy
   // business. Never apply those fixed account totals to another tenant.

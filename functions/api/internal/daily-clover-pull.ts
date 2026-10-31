@@ -11,8 +11,11 @@ export function dailyCloverHandler(fetcher:typeof fetch=fetch){return async({req
  const args={p_business_id:body.business_id,p_run_id:body.run_id,p_token:body.claim_token};
  async function rpc(name:string,more:Record<string,unknown>={}){
   const r=await fetcher(config.url+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:config.secret,'Content-Type':'application/json'},body:JSON.stringify({...args,...more}),redirect:'error',signal:AbortSignal.timeout(10000)});
-  if(!r.ok)throw new Error('database_unavailable');return r.json();
+  if(!r.ok)throw new Error('database_unavailable');
+  try{return await r.json();}catch{throw new Error('database_response_invalid');}
  }
+ // Last stage entered before a failure; reported with the safe detail.
+ let stage:'claim'|'collect'|'ingest'|'finish'='claim';
  try{
   if(await rpc('daily_clover_claim')!==true)return reply(409,'already_claimed_or_paused');
   const budgeted:typeof fetch=async(input,init)=>{
@@ -21,23 +24,27 @@ export function dailyCloverHandler(fetcher:typeof fetch=fetch){return async({req
    return fetcher(input,init);
   };
   // includeModified: a void/refund made days later re-ingests its older order.
+  stage='collect';
   const result=await collectOrders(config,1,budgeted,{start:body.start_ms!,end:body.end_ms!},{includeModified:true});
+  stage='ingest';
   for(const snapshot of result.orders){
    if(await rpc('daily_run_check')!==true)throw new PullError('scheduler_paused','ingest');
    const r=await fetcher(config.url+'/rest/v1/rpc/clover_order_ingest_v1',{method:'POST',headers:{apikey:config.secret,'Content-Type':'application/json'},body:JSON.stringify({p_business_id:config.businessId,p_merchant_id:config.merchant,p_snapshot:snapshot}),redirect:'error',signal:AbortSignal.timeout(10000)});
    if(!r.ok)throw new PullError('ingest_failed','ingest');
   }
   const state=result.warnings.length?'partial':'succeeded';
+  stage='finish';
   if(await rpc('daily_clover_finish',{p_status:state})!==true)return reply(409,'paused');
   return reply(200,state,{upserted:result.orders.length,reconciled:false});
  }catch(error){
   await rpc('daily_clover_finish',{p_status:'failed'}).catch(()=>null);
   // Only fixed codes, the pull step and Clover's HTTP status: never a message, token or body.
   const detail=error instanceof PullError?error.code+(Number.isInteger(error.providerStatus)?'_'+error.providerStatus:'')
-   :error instanceof Error&&/^[a-z_]{2,60}$/.test(error.message)?error.message:'unexpected';
+   :error instanceof Error&&/^[a-z_]{2,60}$/.test(error.message)?error.message
+   :error instanceof Error&&/^[A-Za-z]{1,40}$/.test(error.name)?'unexpected_'+error.name:'unexpected';
   const step=error instanceof PullError?error.step:null;
-  console.warn('daily_clover_pull_error',{detail,step});
-  return reply(503,error instanceof PullError&&error.code==='daily_budget_exhausted'?'budget_exhausted':error instanceof PullError&&error.code==='scheduler_paused'?'paused':'clover_failed',{detail,step});
+  console.warn('daily_clover_pull_error',{detail,step,stage});
+  return reply(503,error instanceof PullError&&error.code==='daily_budget_exhausted'?'budget_exhausted':error instanceof PullError&&error.code==='scheduler_paused'?'paused':'clover_failed',{detail,step,stage});
  }
 };}
 export const onRequestPost=dailyCloverHandler();
