@@ -82,6 +82,15 @@ Sonra kampanya kimlikleri platforma yazılır:
 `npm run smartlead:setup -- --business <uuid> --campaigns <adım1>,<adım2>,<adım3> --commit`
 Komut kampanyaları yalnız okur; Smartlead'e yazmaz.
 
+**Taslak kampanyanın başlatılması:** Smartlead, adayı olmayan bir kampanyayı yayına almaya izin
+vermez. Bu yüzden adım kampanyası taslak (`DRAFTED`) durumdaysa, GO ilk adayı ekleyip sonucu
+platforma yazdıktan sonra kampanyayı otomatik başlatır (`POST /campaigns/{id}/status`, `START`).
+Bir çalışmada her kampanya en fazla bir kez kontrol edilir. `ACTIVE` kampanyaya dokunulmaz.
+Duraklatılmış ya da durdurulmuş (`PAUSED`, `STOPPED`) ve diğer durumdaki kampanyalar **otomatik
+başlatılmaz**; Smartlead'in geri dönme koruması durdurmuş olabilir. Bunlar için yalnız uyarı
+loglanır ve kampanya panelden elle incelenir. Başlatma denemesinin sonucu adayın gönderim
+sonucunu değiştirmez.
+
 ## Doğrulama (salt okunur)
 
 ```bash

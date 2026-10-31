@@ -50,6 +50,8 @@ afterEach(() => {
 });
 process.env.SMARTLEAD_API_KEY = 'synthetic-smartlead-key';
 const reserved = { allowed: true, code: 'reserved', message_id: 'M1', lease_id: 'L1', campaign_id: 9101 };
+// Kabul edilen adaydan sonra kampanya durumu okunur; ACTIVE ise başka çağrı yok.
+const active = () => Response.json({ id: 9101, status: 'ACTIVE' });
 
 test('sequence is day 1, 8 and 15; content is built in GO with address and unsubscribe link, HTML-escaped', () => {
   assert.deepEqual(OUTREACH_STEPS.map((s) => s.day), [1, 8, 15]);
@@ -69,7 +71,7 @@ test('sequence is day 1, 8 and 15; content is built in GO with address and unsub
 
 test('allowed lead: gate first, then Smartlead step campaign, then result recorded as accepted', async () => {
   const calls = fakeDb({ ...base, go_dispatch_reserve_v1: () => reserved, go_dispatch_result_v1: () => ({ status: 'sending' }) });
-  const seen = fakeSmartlead(Response.json({ success: true, added_count: 1, lead_ids: [777] }));
+  const seen = fakeSmartlead(Response.json({ success: true, added_count: 1, lead_ids: [777] }), active());
   const result = await new OutreachSequencer().dispatch(B, settings, lead());
   assert.deepEqual(result, { b2b_lead_id: lead().id, queued: true, step: 1, reason: 'queued' });
   assert.deepEqual(calls.map((c) => c.name), ['go_dispatch_reserve_v1', 'go_dispatch_result_v1']);
@@ -104,7 +106,7 @@ test('Smartlead outcomes map to accepted / rejected / unknown; configuration err
   ];
   for (const [response, outcome, stop] of cases) {
     const calls = fakeDb({ ...base, go_dispatch_reserve_v1: () => reserved, go_dispatch_result_v1: () => ({}) });
-    fakeSmartlead(response);
+    fakeSmartlead(response, active());
     const result = await new OutreachSequencer().dispatch(B, settings, lead());
     assert.equal(calls[1].args.p_outcome, outcome);
     assert.equal(Boolean(result.stopRun), stop, outcome);
@@ -113,9 +115,92 @@ test('Smartlead outcomes map to accepted / rejected / unknown; configuration err
 
 test('429 is retried after a pause', async () => {
   fakeDb({ ...base, go_dispatch_reserve_v1: () => reserved, go_dispatch_result_v1: () => ({}) });
-  const seen = fakeSmartlead(new Response('', { status: 429 }), Response.json({ added_count: 1 }));
+  const seen = fakeSmartlead(new Response('', { status: 429 }), Response.json({ added_count: 1 }), active());
   assert.equal((await new OutreachSequencer().dispatch(B, settings, lead())).queued, true);
+  assert.deepEqual(seen.map((s) => s.url.pathname), ['/api/v1/campaigns/9101/leads', '/api/v1/campaigns/9101/leads', '/api/v1/campaigns/9101']);
+});
+
+// Taslak kampanyanın ilk adayla başlatılması
+function captureWarnings() {
+  const warnings: string[] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) => { warnings.push(args.join(' ')); };
+  return { warnings, restore: () => { console.warn = original; } };
+}
+const accepted = () => Response.json({ added_count: 1, lead_ids: [777] });
+const dispatchOne = () => {
+  fakeDb({ ...base, go_dispatch_reserve_v1: () => reserved, go_dispatch_result_v1: () => ({}) });
+  return new OutreachSequencer().dispatch(B, settings, lead());
+};
+
+test('DRAFTED step campaign is started after the first accepted lead and the recorded result', async () => {
+  const calls = fakeDb({ ...base, go_dispatch_reserve_v1: () => reserved, go_dispatch_result_v1: () => ({}) });
+  let resultRecordedBeforeGet = false;
+  const seen = fakeSmartlead(accepted(), () => {
+    resultRecordedBeforeGet = calls.some((c) => c.name === 'go_dispatch_result_v1');
+    return Response.json({ id: 9101, status: 'DRAFTED' });
+  }, Response.json({ ok: true }));
+  const result = await new OutreachSequencer().dispatch(B, settings, lead());
+  assert.deepEqual(result, { b2b_lead_id: lead().id, queued: true, step: 1, reason: 'queued' });
+  assert.ok(resultRecordedBeforeGet);
+  assert.deepEqual(seen.map((s) => s.url.pathname), ['/api/v1/campaigns/9101/leads', '/api/v1/campaigns/9101', '/api/v1/campaigns/9101/status']);
+  assert.equal(seen[1].body, null);
+  assert.deepEqual(seen[2].body, { status: 'START' });
+});
+
+test('ACTIVE campaign is not started again', async () => {
+  const seen = fakeSmartlead(accepted(), active());
+  assert.equal((await dispatchOne()).queued, true);
   assert.equal(seen.length, 2);
+});
+
+test('PAUSED and STOPPED campaigns are never started; a warning names campaign and status only', async () => {
+  for (const status of ['PAUSED', 'STOPPED', 'COMPLETED']) {
+    const seen = fakeSmartlead(accepted(), Response.json({ status }));
+    const log = captureWarnings();
+    try {
+      assert.deepEqual(await dispatchOne(), { b2b_lead_id: lead().id, queued: true, step: 1, reason: 'queued' });
+    } finally { log.restore(); }
+    assert.equal(seen.length, 2, status);
+    assert.ok(log.warnings.some((w) => w.includes('9101') && w.includes(status)), status);
+    assert.ok(!log.warnings.join('').includes('synthetic-smartlead-key'));
+  }
+});
+
+test('GET or POST failure while starting never changes the queued result', async () => {
+  for (const responses of [
+    [new Response('boom', { status: 500 })],
+    [Response.json({ status: 'DRAFTED' }), new Response('no', { status: 400 })],
+    [() => { throw new Error('network'); }]
+  ] as (Response | (() => Response))[][]) {
+    const seen = fakeSmartlead(accepted(), ...responses);
+    const log = captureWarnings();
+    try {
+      assert.deepEqual(await dispatchOne(), { b2b_lead_id: lead().id, queued: true, step: 1, reason: 'queued' });
+    } finally { log.restore(); }
+    assert.equal(seen.length, 1 + responses.length);
+    assert.ok(log.warnings.some((w) => w.includes('9101')));
+    assert.ok(!log.warnings.join('').includes('synthetic-smartlead-key'));
+  }
+});
+
+test('a rejected or unknown lead never triggers the start check', async () => {
+  for (const response of [Response.json({ added_count: 0 }), Response.json({ success: true })]) {
+    const seen = fakeSmartlead(response);
+    assert.equal((await dispatchOne()).queued, false);
+    assert.equal(seen.length, 1);
+  }
+});
+
+test('runDue: two leads for the same campaign read its status once', async () => {
+  fakeDb({ ...base, go_dispatch_quota_v1: () => ({ remaining: 5 }),
+    go_dispatch_due_v1: () => [lead(1), lead(1, { id: '22222222-2222-4222-8222-222222222222', email: 'bo@lead.synthetic.test' })],
+    go_dispatch_reserve_v1: () => reserved, go_dispatch_result_v1: () => ({}) });
+  const seen = fakeSmartlead(accepted(), Response.json({ status: 'DRAFTED' }), Response.json({ ok: true }), accepted());
+  const run = await new OutreachSequencer().runDue(B, 20);
+  assert.equal(run.queued_count, 2);
+  assert.deepEqual(seen.map((s) => s.url.pathname), ['/api/v1/campaigns/9101/leads', '/api/v1/campaigns/9101',
+    '/api/v1/campaigns/9101/status', '/api/v1/campaigns/9101/leads']);
 });
 
 test('runDue: daily limit first, at most the remaining quota, stops on configuration error', async () => {
