@@ -51,7 +51,7 @@ test('misconfigured preview rejects signup before any outbound request', async (
 test('preview accepts the observed example.com dummy hostname only with explicit expected-host setting, then writes only test project', async () => {
   const calls=[],pending=[];
   globalThis.fetch=async(url,options)=>{calls.push({url:String(url),body:JSON.parse(options.body),headers:options.headers});return calls.length===1?Response.json({success:true,hostname:expectedHostname}):new Response(null,{status:204});};
-  const env={...server,SUPABASE_SECRET_KEY:'sb_secret_synthetic_production',CLOUDFLARE_EMAIL_SEND_TOKEN:'synthetic-should-never-be-used',FORM_ERROR_ALERTS_ENABLED:'true'};
+  const env={...server,SUPABASE_SECRET_KEY:'sb_secret_synthetic_production',RESEND_API_KEY:'synthetic-should-never-be-used',FORM_ERROR_ALERTS_ENABLED:'true'};
   assert.equal((await onRequestPost({request:request({kind:'catering',consentEmail:false,eventDate:'2027-02-01',guests:'10',message:'Synthetic only',p_business_id:PRODUCTION_BUSINESS_ID}),env,waitUntil:p=>pending.push(p)})).status,200);
   assert.equal(calls.length,2);assert.equal(calls[0].body.secret,TEST_TURNSTILE_SECRET_KEY);
   assert.equal(calls[1].url,target+'/rest/v1/rpc/submit_signup_once');assert.equal(calls[1].body.p_business_id,business);

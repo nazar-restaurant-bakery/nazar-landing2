@@ -9,7 +9,7 @@ const requestId = "87654321-1234-4123-8123-123456789012";
 const env = { CATERING_CHECKOUT_ENABLED: "true", CLOVER_ENVIRONMENT: "production",
   SITE_PRODUCTION_SUPABASE_URL: "https://khgczybubufouraqyrcj.supabase.co",
   SITE_BUSINESS_ID: "a358eba4-b197-4309-805b-46f43a718454",
-  SUPABASE_SECRET_KEY: "sb_secret_test", CLOUDFLARE_EMAIL_SEND_TOKEN: "token-test" };
+  SUPABASE_SECRET_KEY: "sb_secret_test", RESEND_API_KEY: "token-test" };
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
 
@@ -50,8 +50,7 @@ test("customer email is sent only after database claim and never retried on a nu
         requestedAt: "2026-11-02T17:00:00Z", totalCents: 1610, status: "paid" } : null);
     }
     if (String(address).endsWith("/rpc/site_order_customer_email_detail_v1")) return Response.json(null);
-    if (String(address).includes("/email/sending/send")) return Response.json({ success: true,
-      result: { queued: ["customer@example.com"] } });
+    if (String(address) === "https://api.resend.com/emails") return Response.json({ id: "re_test_1" });
     if (String(address).endsWith("/rpc/site_order_customer_email_finish_v1")) return Response.json(true);
     throw new Error("unexpected fetch");
   };
@@ -61,7 +60,7 @@ test("customer email is sent only after database claim and never retried on a nu
   assert.ok(calls[0].address.endsWith("/rpc/site_order_customer_email_claim_v1"));
   assert.ok(calls[1].address.endsWith("/rpc/site_order_customer_email_detail_v1"));
   assert.equal(JSON.parse(calls[1].body).p_site_order_id, orderId);
-  assert.ok(calls[2].address.includes("/email/sending/send"));
+  assert.ok(calls[2].address.includes("api.resend.com/emails"));
   assert.ok(calls[3].address.endsWith("/rpc/site_order_customer_email_finish_v1"));
   assert.equal(JSON.parse(calls[3].body).p_sent, true);
   assert.ok(calls[4].address.endsWith("/rpc/site_order_customer_email_claim_v1"));

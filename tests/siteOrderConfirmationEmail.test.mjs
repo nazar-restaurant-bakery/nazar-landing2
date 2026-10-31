@@ -42,23 +42,60 @@ test("missing or inconsistent detail falls back to a totals-only receipt", () =>
   assert.match(reschedule, /contact you to confirm a new pickup time/);
 });
 
-test("sender reads detail only after the claim and sends both bodies", async () => {
+const env = { SUPABASE_SECRET_KEY: "sb_secret_test", SITE_BUSINESS_ID: "a358eba4-b197-4309-805b-46f43a718454",
+  RESEND_API_KEY: "token-test" };
+// provider: (Resend call) => Response; may throw for a transport failure.
+async function send(provider, overrides = {}) {
   const calls = [];
   const fetcher = async (address, options) => {
     const path = String(address);
-    calls.push({ path, body: JSON.parse(options.body) });
+    calls.push({ path, body: JSON.parse(options.body), headers: options.headers });
     if (path.endsWith("_claim_v1")) return Response.json(claim);
     if (path.endsWith("_detail_v1")) return Response.json(detail);
-    if (path.includes("/email/sending/send")) return Response.json({ success: true, result: { delivered: [claim.email] } });
+    if (path.startsWith("https://api.resend.com/")) return provider();
     return Response.json(true);
   };
-  await sendVerifiedSiteOrderEmail({ SUPABASE_SECRET_KEY: "sb_secret_test", SITE_BUSINESS_ID: "a358eba4-b197-4309-805b-46f43a718454",
-    CLOUDFLARE_EMAIL_SEND_TOKEN: "token-test" }, "https://khgczybubufouraqyrcj.supabase.co", "session-1", fetcher);
+  await sendVerifiedSiteOrderEmail({ ...env, ...overrides }, "https://khgczybubufouraqyrcj.supabase.co", "session-1", fetcher);
+  return calls;
+}
+
+test("sender reads detail only after the claim and sends both bodies through Resend", async () => {
+  const calls = await send(() => Response.json({ id: "re_test_1" }));
   assert.deepEqual(calls.map((c) => c.path.split("/").at(-1)), ["site_order_customer_email_claim_v1",
-    "site_order_customer_email_detail_v1", "send", "site_order_customer_email_finish_v1"]);
+    "site_order_customer_email_detail_v1", "emails", "site_order_customer_email_finish_v1"]);
+  assert.equal(calls[2].path, "https://api.resend.com/emails");
+  assert.deepEqual(calls[2].headers, { Authorization: "Bearer token-test", "Content-Type": "application/json",
+    "Idempotency-Key": claim.orderId });
   const sent = calls[2].body;
-  assert.equal(sent.to, claim.email);
+  assert.deepEqual(Object.keys(sent), ["from", "to", "subject", "text", "html"]);
+  assert.equal(sent.from, "Nazar Restaurant & Bakery <notifications@mail.nazarrestaurantandbakery.com>");
+  assert.deepEqual(sent.to, [claim.email]);
+  assert.equal(sent.subject, "Nazar catering order 12345678");
   assert.match(sent.text, /Jajik/);
   assert.match(sent.html, /<table/);
-  assert.equal(calls[3].body.p_sent, true);
+  assert.deepEqual(calls[3].body, { p_business_id: env.SITE_BUSINESS_ID, p_site_order_id: claim.orderId,
+    p_sent: true, p_provider_status: "accepted" });
+});
+
+for (const [name, provider] of [
+  ["HTTP error", () => Response.json({ name: "validation_error" }, { status: 422 })],
+  ["OK without id", () => Response.json({})],
+  ["non-string id", () => Response.json({ id: 42 })],
+]) {
+  test(`Resend ${name} is finished as not_accepted, sent once`, async () => {
+    const calls = await send(provider);
+    assert.equal(calls.filter((c) => c.path.startsWith("https://api.resend.com/")).length, 1);
+    assert.deepEqual([calls.at(-1).body.p_sent, calls.at(-1).body.p_provider_status], [false, "not_accepted"]);
+  });
+}
+
+test("a Resend transport exception is finished as provider_error and not retried", async () => {
+  const calls = await send(() => { throw new Error("uncertain transport"); });
+  assert.equal(calls.filter((c) => c.path.startsWith("https://api.resend.com/")).length, 1);
+  assert.deepEqual([calls.at(-1).body.p_sent, calls.at(-1).body.p_provider_status], [false, "provider_error"]);
+});
+
+test("without RESEND_API_KEY nothing is claimed or sent", async () => {
+  const calls = await send(() => Response.json({ id: "re_test_1" }), { RESEND_API_KEY: undefined });
+  assert.equal(calls.length, 0);
 });
