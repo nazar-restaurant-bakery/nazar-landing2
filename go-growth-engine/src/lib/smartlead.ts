@@ -50,6 +50,31 @@ export async function smartleadRequest<T>(method: 'GET' | 'POST', path: string, 
   }
 }
 
+export type CampaignStartResult = 'already_active' | 'started' | `not_started_${string}` | 'error';
+
+// Smartlead adayı olmayan kampanyayı yayına almaz; GO ilk adayı ekledikten sonra taslak
+// (DRAFTED) kampanyayı başlatır. PAUSED, STOPPED ve diğer durumlar asla otomatik
+// başlatılmaz (Smartlead'in geri dönme koruması durdurmuş olabilir). Asla throw etmez.
+export async function ensureCampaignStarted(campaignId: number): Promise<CampaignStartResult> {
+  try {
+    const campaign = await smartleadRequest<{ status?: unknown } | null>('GET', `/campaigns/${campaignId}`);
+    const raw = campaign?.status;
+    const status = typeof raw === 'string' && /^[A-Za-z_]{1,32}$/.test(raw) ? raw : 'UNKNOWN';
+    if (status === 'ACTIVE') return 'already_active';
+    if (status !== 'DRAFTED') {
+      console.warn(`⚠️ [Smartlead] Kampanya ${campaignId} otomatik başlatılmadı: durum ${status}`);
+      return `not_started_${status}`;
+    }
+    await smartleadRequest('POST', `/campaigns/${campaignId}/status`, { status: 'START' });
+    console.log(`▶️ [Smartlead] Taslak kampanya ${campaignId} başlatıldı`);
+    return 'started';
+  } catch (error) {
+    const detail = error instanceof SmartleadError ? `HTTP ${error.status}` : 'beklenmeyen hata';
+    console.warn(`⚠️ [Smartlead] Kampanya ${campaignId} durumu okunamadı ya da başlatılamadı (${detail})`);
+    return 'error';
+  }
+}
+
 export interface SmartleadLead {
   email: string;
   first_name?: string;

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { goRpc } from '../../lib/supabase-client.js';
 import { getBusinessSettings, BusinessSettings } from '../../lib/business-settings.js';
-import { addLeadToCampaign } from '../../lib/smartlead.js';
+import { addLeadToCampaign, ensureCampaignStarted } from '../../lib/smartlead.js';
 import { assertUnsubscribeConfig, buildUnsubscribeUrl } from './unsubscribe.js';
 
 // Gönderim (Görev 6/7): her e-posta platformdaki tek 168 saat kapısından geçer
@@ -136,8 +136,10 @@ export class OutreachSequencer {
   /**
    * Tek aday: sıradaki adım kapıdan geçer ve Smartlead kampanyasına eklenir.
    * stopRun: Smartlead yapılandırma hatası (401/403/404); aynı turda başka aday denenmez.
+   * startChecked: bu çalışmada başlatma kontrolü yapılmış kampanyalar (kampanya başına bir kez).
    */
-  async dispatch(businessId: string, settings: BusinessSettings, lead: DueLead): Promise<SendStepResult & { stopRun?: boolean }> {
+  async dispatch(businessId: string, settings: BusinessSettings, lead: DueLead,
+    startChecked: Set<number> = new Set()): Promise<SendStepResult & { stopRun?: boolean }> {
     const message = buildStepMessage(settings, businessId, lead);
     const gate = await goRpc<Reservation>('go_dispatch_reserve_v1', {
       p_business_id: businessId, p_lead_id: lead.id, p_step: lead.step, p_payload_sha256: message.payloadSha256
@@ -160,6 +162,12 @@ export class OutreachSequencer {
     });
     if (added.outcome === 'accepted') {
       console.log(`✅ [Outreach] Adım ${lead.step} Smartlead'e verildi: lead ${lead.id}`);
+      // Taslak kampanya ilk adayla başlar; sonuç yalnız loglanır, gönderim sonucunu değiştirmez.
+      if (!startChecked.has(gate.campaign_id)) {
+        startChecked.add(gate.campaign_id);
+        const start = await ensureCampaignStarted(gate.campaign_id);
+        console.log(`[Outreach] Kampanya ${gate.campaign_id} başlatma kontrolü: ${start}`);
+      }
       return { b2b_lead_id: lead.id, queued: true, step: lead.step, reason: 'queued' };
     }
     console.warn(`🛑 [Outreach] Smartlead kabul etmedi: lead ${lead.id}, ${added.outcome} (${added.reason})`);
@@ -195,9 +203,10 @@ export class OutreachSequencer {
     const due = await goRpc<DueLead[]>('go_dispatch_due_v1', { p_business_id: businessId, p_limit: Math.min(limit, remaining, 100) });
 
     const details: SendStepResult[] = [];
+    const startChecked = new Set<number>();
     for (const lead of due) {
       try {
-        const { stopRun, ...result } = await this.dispatch(businessId, settings, lead);
+        const { stopRun, ...result } = await this.dispatch(businessId, settings, lead, startChecked);
         details.push(result);
         if (stopRun) break;
       } catch (stepError: any) {
