@@ -1,10 +1,8 @@
 import { CATERING_TRAY_LABELS } from "./cateringOrder.ts";
-
-const CLOUDFLARE_ACCOUNT_ID = "50a358ead900374fd545df744bd28bef";
-const FROM = "notifications@alerts.nazarrestaurantandbakery.com";
+import { sendResendEmail } from "./resendEmail.ts";
 
 type Env = { SUPABASE_SECRET_KEY?: string; SITE_BUSINESS_ID?: string;
-  CLOUDFLARE_EMAIL_SEND_TOKEN?: string };
+  RESEND_API_KEY?: string };
 export type Claim = { orderId: string; email: string; requestedAt: string;
   totalCents: number; status: "paid" | "needs_reschedule" };
 // Stored order values; nothing here is recomputed from a catalog.
@@ -86,7 +84,7 @@ export function buildSiteOrderConfirmationEmail(claim: Claim, detail: Detail | n
 export async function sendVerifiedSiteOrderEmail(
   env: Env, databaseUrl: string, sessionId: string, fetcher: typeof fetch = fetch,
 ): Promise<void> {
-  if (!env.CLOUDFLARE_EMAIL_SEND_TOKEN || !env.SUPABASE_SECRET_KEY ||
+  if (!env.RESEND_API_KEY || !env.SUPABASE_SECRET_KEY ||
       !env.SITE_BUSINESS_ID) return;
   const headers = { apikey: env.SUPABASE_SECRET_KEY, "Content-Type": "application/json" };
   const claimed = await fetcher(`${databaseUrl}/rest/v1/rpc/site_order_customer_email_claim_v1`, {
@@ -96,7 +94,6 @@ export async function sendVerifiedSiteOrderEmail(
   if (!claimed.ok) return;
   const claim = await claimed.json() as Claim | null;
   if (!claim) return;
-  let sent = false;
   let providerStatus = "not_accepted";
   try {
     let detail: Detail | null = null;
@@ -108,21 +105,10 @@ export async function sendVerifiedSiteOrderEmail(
       if (read.ok) detail = await read.json() as Detail | null;
     } catch { detail = null; }
     const message = buildSiteOrderConfirmationEmail(claim, detail);
-    const response = await fetcher(
-      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
-        method: "POST", headers: { Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`,
-          "Content-Type": "application/json" },
-        body: JSON.stringify({ to: claim.email, from: FROM, ...message }),
-      });
-    if (response.ok) {
-      const result = await response.json() as { success?: boolean;
-        result?: { delivered?: string[]; queued?: string[] } };
-      sent = result.success === true &&
-        (result.result?.delivered?.includes(claim.email) === true ||
-         result.result?.queued?.includes(claim.email) === true);
-      providerStatus = sent ? "accepted" : "not_accepted";
-    }
+    providerStatus = await sendResendEmail(env.RESEND_API_KEY, { to: claim.email, ...message },
+      claim.orderId, { fetcher });
   } catch { providerStatus = "provider_error"; }
+  const sent = providerStatus === "accepted";
   await fetcher(`${databaseUrl}/rest/v1/rpc/site_order_customer_email_finish_v1`, {
     method: "POST", headers,
     body: JSON.stringify({ p_business_id: env.SITE_BUSINESS_ID,

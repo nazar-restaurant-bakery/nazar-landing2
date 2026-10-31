@@ -13,7 +13,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: E
   const bearer = request.headers.get("Authorization") || "";
   if (!/^Bearer [A-Za-z0-9_.-]{20,4096}$/.test(bearer)) return reply(401, "unauthorized");
   const target = resolveServerEnvironment(env, url.hostname);
-  if (!target.configured || target.isolated || env.FORM_ERROR_ALERTS_ENABLED !== "true" || !env.CLOUDFLARE_EMAIL_SEND_TOKEN || !env.SUPABASE_SECRET_KEY || !env.VITE_SUPABASE_ANON_KEY) return reply(503, "alerts_not_ready");
+  if (!target.configured || target.isolated || env.FORM_ERROR_ALERTS_ENABLED !== "true" || !env.RESEND_API_KEY || !env.SUPABASE_SECRET_KEY || !env.VITE_SUPABASE_ANON_KEY) return reply(503, "alerts_not_ready");
   try {
     if (Number(request.headers.get("Content-Length") || 0) > 128 || (await request.text()).trim() !== "{}") return reply(400, "invalid_request");
     const headers = { apikey: env.VITE_SUPABASE_ANON_KEY, Authorization: bearer, "Content-Type": "application/json" };

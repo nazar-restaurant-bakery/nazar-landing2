@@ -1,9 +1,10 @@
 // Cloudflare Pages Function. Only this route may submit leads to Supabase.
 import { PRODUCTION_SUPABASE_URL, resolveServerEnvironment } from "../../src/lib/deploymentEnvironment.ts";
+import { sendResendEmail } from "../_lib/resendEmail.ts";
 type Env = {
   SUPABASE_SECRET_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
-  CLOUDFLARE_EMAIL_SEND_TOKEN?: string;
+  RESEND_API_KEY?: string;
   FORM_ERROR_ALERTS_ENABLED?: string;
   APP_ENV?: string;
   TEST_SUPABASE_URL?: string;
@@ -16,9 +17,7 @@ type Env = {
 type Context = { request: Request; env: Env; waitUntil(promise: Promise<unknown>): void };
 
 const SUPABASE_URL = PRODUCTION_SUPABASE_URL;
-const CLOUDFLARE_ACCOUNT_ID = "50a358ead900374fd545df744bd28bef";
 const STAFF_EMAIL = "ctnazarbakery@gmail.com";
-const STAFF_EMAIL_FROM = "notifications@alerts.nazarrestaurantandbakery.com";
 const STAFF_CRM_URL = "https://www.nazarrestaurantandbakery.com/staff";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -104,18 +103,14 @@ export async function recordFormFailure(env: Env, failure: FormFailure): Promise
     const saved = await errorRpc(env, "record_form_error_v1", {
       p_id: failure.id, p_request_id: failure.request_id, p_kind: failure.form_kind,
       p_stage: failure.stage, p_code: failure.error_code, p_status: failure.http_status,
-      p_claim_alert: env.FORM_ERROR_ALERTS_ENABLED === "true" && !!env.CLOUDFLARE_EMAIL_SEND_TOKEN,
+      p_claim_alert: env.FORM_ERROR_ALERTS_ENABLED === "true" && !!env.RESEND_API_KEY,
     });
     if (!saved.ok) throw new Error("form error log unavailable");
     const claimed = await saved.json();
     if (claimed !== true && claimed !== false) throw new Error("invalid form error log result");
     if (!claimed) return "not_sent";
-    let accepted = false;
-    try {
-      const delivery = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
-        method: "POST", signal: AbortSignal.timeout(5000),
-        headers: { Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ to: STAFF_EMAIL, from: STAFF_EMAIL_FROM,
+    // Alert delivery must never change the form response; the sender never throws.
+    const accepted = await sendResendEmail(env.RESEND_API_KEY!, { to: STAFF_EMAIL,
           subject: failure.error_code === "controlled_delivery_test" ? "[TEST] Nazar form needs attention" : "Nazar form needs attention",
           text: [failure.error_code === "controlled_delivery_test" ? "CONTROLLED SETUP TEST — no customer submission or real form failure." : "Nazar server-reported form failure.",
             `Time (UTC): ${failure.occurred_at}`, `Reference: ${failure.id}`,
@@ -123,13 +118,7 @@ export async function recordFormFailure(env: Env, failure: FormFailure): Promise
             "Check Form errors in the staff CRM. This is not a new customer request.",
             "Alerts are limited to one attempt per 15 minutes; check the CRM for other errors.",
             "https://www.nazarrestaurantandbakery.com/staff/crm"].join("\n"),
-        }),
-      });
-      if (delivery.ok) {
-        const result = await delivery.json() as { success?: boolean; result?: { delivered?: string[]; queued?: string[] } };
-        accepted = result.success === true && (result.result?.delivered?.includes(STAFF_EMAIL) === true || result.result?.queued?.includes(STAFF_EMAIL) === true);
-      }
-    } catch { /* Alert delivery must never change the form response. */ }
+        }, failure.id, { timeoutMs: 5000 }) === "accepted";
     const finished = await errorRpc(env, "finish_form_error_alert_v1", { p_id: failure.id, p_accepted: accepted });
     if (!finished.ok) throw new Error("form error alert result unavailable");
     return accepted ? "accepted" : "failed";
@@ -202,7 +191,7 @@ type NotificationClaim = {
 };
 
 async function notifyCateringStaff(env: Env, requestId: string): Promise<void> {
-  if (!env.CLOUDFLARE_EMAIL_SEND_TOKEN || !env.SUPABASE_SECRET_KEY) return;
+  if (!env.RESEND_API_KEY || !env.SUPABASE_SECRET_KEY) return;
 
   const rpcHeaders = { apikey: env.SUPABASE_SECRET_KEY, "Content-Type": "application/json" };
   const claimResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/claim_catering_staff_notification_v1`, {
@@ -212,39 +201,21 @@ async function notifyCateringStaff(env: Env, requestId: string): Promise<void> {
   const claim = await claimResponse.json() as NotificationClaim | null;
   if (!claim) return; // A retry or a deduplicated signup must not send twice.
 
+  // Delivery failures never change the customer's successful form response.
   let sent = false;
   try {
     const requestDate = new Date(claim.requestDate).toLocaleString("en-US", { timeZone: "America/New_York" });
-    const delivery = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/email/sending/send`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_SEND_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        to: STAFF_EMAIL,
-        from: STAFF_EMAIL_FROM,
-        subject: "New Nazar catering request",
-        text: [
-          `Request date: ${requestDate}`,
-          `Event date: ${claim.eventDate}`,
-          `Guest count: ${claim.guests}`,
-          `CRM: ${STAFF_CRM_URL}`,
-        ].join("\n"),
-      }),
-    });
-    if (delivery.ok) {
-      const result = await delivery.json() as {
-        success?: boolean;
-        result?: { delivered?: string[]; queued?: string[] };
-      };
-      sent = result.success === true &&
-        (result.result?.delivered?.includes(STAFF_EMAIL) === true ||
-         result.result?.queued?.includes(STAFF_EMAIL) === true);
-    }
-  } catch {
-    // Delivery failures never change the customer's successful form response.
-  }
+    sent = await sendResendEmail(env.RESEND_API_KEY, {
+      to: STAFF_EMAIL,
+      subject: "New Nazar catering request",
+      text: [
+        `Request date: ${requestDate}`,
+        `Event date: ${claim.eventDate}`,
+        `Guest count: ${claim.guests}`,
+        `CRM: ${STAFF_CRM_URL}`,
+      ].join("\n"),
+    }, requestId) === "accepted";
+  } catch { sent = false; }
   await fetch(`${SUPABASE_URL}/rest/v1/rpc/finish_catering_staff_notification_v1`, {
     method: "POST", headers: rpcHeaders,
     body: JSON.stringify({ p_request_id: requestId, p_sent: sent }),
