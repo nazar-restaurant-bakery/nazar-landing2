@@ -9,8 +9,10 @@ export function dailyCloverHandler(fetcher:typeof fetch=fetch){return async({req
  const config=orderPullConfig(env,new URL(request.url).hostname);
  if(!config.ready||config.businessId!==body.business_id)return reply(403,'wrong_business');
  const args={p_business_id:body.business_id,p_run_id:body.run_id,p_token:body.claim_token};
+ // workerd rejects redirect:"error" before sending the request. Manual
+ // never follows Location; the !ok checks below also reject every 3xx.
  async function rpc(name:string,more:Record<string,unknown>={}){
-  const r=await fetcher(config.url+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:config.secret,'Content-Type':'application/json'},body:JSON.stringify({...args,...more}),redirect:'error',signal:AbortSignal.timeout(10000)});
+  const r=await fetcher(config.url+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:config.secret,'Content-Type':'application/json'},body:JSON.stringify({...args,...more}),redirect:'manual',signal:AbortSignal.timeout(10000)});
   if(!r.ok)throw new Error('database_unavailable');
   try{return await r.json();}catch{throw new Error('database_response_invalid');}
  }
@@ -29,7 +31,7 @@ export function dailyCloverHandler(fetcher:typeof fetch=fetch){return async({req
   stage='ingest';
   for(const snapshot of result.orders){
    if(await rpc('daily_run_check')!==true)throw new PullError('scheduler_paused','ingest');
-   const r=await fetcher(config.url+'/rest/v1/rpc/clover_order_ingest_v1',{method:'POST',headers:{apikey:config.secret,'Content-Type':'application/json'},body:JSON.stringify({p_business_id:config.businessId,p_merchant_id:config.merchant,p_snapshot:snapshot}),redirect:'error',signal:AbortSignal.timeout(10000)});
+   const r=await fetcher(config.url+'/rest/v1/rpc/clover_order_ingest_v1',{method:'POST',headers:{apikey:config.secret,'Content-Type':'application/json'},body:JSON.stringify({p_business_id:config.businessId,p_merchant_id:config.merchant,p_snapshot:snapshot}),redirect:'manual',signal:AbortSignal.timeout(10000)});
    if(!r.ok)throw new PullError('ingest_failed','ingest');
   }
   const state=result.warnings.length?'partial':'succeeded';

@@ -120,7 +120,7 @@ test('a thrown pull fetch logs only host and error name; the run still finishes 
   assert.ok(!log.lines.join('').includes('PRIVATE'));
  }
 });
-function pagesPull({cloverStatus=200,ingestOk=true,claim='ok',ingestThrows=false,ingestError=null,finishThrows=false}={}){
+function pagesPull({workerd=false,cloverStatus=200,ingestOk=true,claim='ok',ingestThrows=false,ingestError=null,finishThrows=false}={}){
  const business='11111111-1111-4111-8111-111111111111';
  const env={APP_ENV:'isolated-test',TEST_SUPABASE_URL:'https://'+'s'.repeat(20)+'.supabase.co',TEST_BUSINESS_ID:business,TEST_SUPABASE_SECRET_KEY:'sb_secret_synthetic_only',TEST_TURNSTILE_SECRET_KEY:'1x0000000000000000000000000000000AA',TEST_TURNSTILE_EXPECTED_HOSTNAME:'preview.pages.dev',VITE_TEST_SUPABASE_ANON_KEY:'sb_publishable_synthetic_only',TEST_CLOVER_MERCHANT_ID:'MERCHANT123',TEST_CLOVER_ORDERS_ACCESS_TOKEN:'synthetic-clover-token',TEST_CLOVER_ONLINE_ORDER_TYPE_IDS:'ONLINE12345',SCHEDULER_SIGNING_SECRET:secret};
  const start=Date.parse('2026-03-08T05:00:00Z'),end=Date.parse('2026-03-09T04:00:00Z');
@@ -129,7 +129,7 @@ function pagesPull({cloverStatus=200,ingestOk=true,claim='ok',ingestThrows=false
   const u=new URL(input);
   if(u.hostname===('s'.repeat(20)+'.supabase.co')){
    const name=u.pathname.split('/').at(-1),args=JSON.parse(init.body);
-   if(name==='daily_clover_claim')return claim==='db-down'?new Response('PRIVATE db text',{status:500}):claim==='empty'?new Response('',{status:200}):claim==='not-json'?new Response('PRIVATE <html>',{status:200}):Response.json(true);
+   if(name==='daily_clover_claim')return claim==='redirect'?new Response(null,{status:302,headers:{Location:'https://elsewhere.invalid/'}}):claim==='db-down'?new Response('PRIVATE db text',{status:500}):claim==='empty'?new Response('',{status:200}):claim==='not-json'?new Response('PRIVATE <html>',{status:200}):Response.json(true);
    if(name==='daily_run_check'||name==='daily_reserve_external_request')return Response.json(true);
    if(name==='daily_clover_finish'){finishes.push(args.p_status);if(finishThrows&&args.p_status!=='failed')throw new TypeError('PRIVATE '+token);return Response.json(true);}
    if(name==='clover_order_ingest_v1'){if(ingestThrows)throw new TypeError('PRIVATE network '+token);if(ingestError)throw ingestError();return ingestOk?Response.json({ok:true}):new Response('PRIVATE',{status:500});}
@@ -145,7 +145,9 @@ function pagesPull({cloverStatus=200,ingestOk=true,claim='ok',ingestThrows=false
  };
  const run=async()=>{
   const warns=[],original=console.warn;console.warn=(...a)=>warns.push(a);
-  try{const r=await dailyCloverHandler(fetch)({request:new Request('https://preview.pages.dev/api/internal/daily-clover-pull',{method:'POST',headers:{'X-Scheduler-Signature':await machineSignature('daily.clover.v1',b,secret)},body:JSON.stringify(b)}),env});
+  // Like workerd: redirect:'error' throws a TypeError before any request is sent.
+  const fetcher=workerd?async(input,init)=>{if(init?.redirect==='error')throw new TypeError('redirect error unsupported');return fetch(input,init);}:fetch;
+  try{const r=await dailyCloverHandler(fetcher)({request:new Request('https://preview.pages.dev/api/internal/daily-clover-pull',{method:'POST',headers:{'X-Scheduler-Signature':await machineSignature('daily.clover.v1',b,secret)},body:JSON.stringify(b)}),env});
    return {status:r.status,body:await r.json(),warns,finishes};}finally{console.warn=original;}
  };
  return run;
@@ -174,4 +176,13 @@ test('failed Clover pull reports a safe detail and step in the 503 and one warni
 test('successful pull response and warnings are unchanged',async()=>{
  const r=await pagesPull()();
  assert.equal(r.status,200);assert.deepEqual(r.body,{code:'succeeded',upserted:1,reconciled:false});assert.equal(r.warns.length,0);
+});
+test('workerd-like fetch: the pull passes the claim stage and completes (no redirect:error)',async()=>{
+ const r=await pagesPull({workerd:true})();
+ assert.equal(r.status,200);assert.deepEqual(r.body,{code:'succeeded',upserted:1,reconciled:false});
+ assert.deepEqual(r.finishes,['succeeded']);assert.equal(r.warns.length,0);
+});
+test('a database 3xx is never followed and still fails as database_unavailable at claim',async()=>{
+ const r=await pagesPull({workerd:true,claim:'redirect'})();
+ assert.equal(r.status,503);assert.deepEqual(r.body,{code:'clover_failed',detail:'database_unavailable',step:null,stage:'claim'});
 });
