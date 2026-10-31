@@ -32,7 +32,12 @@ export function dailyCloverHandler(fetcher:typeof fetch=fetch){return async({req
   return reply(200,state,{upserted:result.orders.length,reconciled:false});
  }catch(error){
   await rpc('daily_clover_finish',{p_status:'failed'}).catch(()=>null);
-  return reply(503,error instanceof PullError&&error.code==='daily_budget_exhausted'?'budget_exhausted':error instanceof PullError&&error.code==='scheduler_paused'?'paused':'clover_failed');
+  // Only fixed codes, the pull step and Clover's HTTP status: never a message, token or body.
+  const detail=error instanceof PullError?error.code+(Number.isInteger(error.providerStatus)?'_'+error.providerStatus:'')
+   :error instanceof Error&&/^[a-z_]{2,60}$/.test(error.message)?error.message:'unexpected';
+  const step=error instanceof PullError?error.step:null;
+  console.warn('daily_clover_pull_error',{detail,step});
+  return reply(503,error instanceof PullError&&error.code==='daily_budget_exhausted'?'budget_exhausted':error instanceof PullError&&error.code==='scheduler_paused'?'paused':'clover_failed',{detail,step});
  }
 };}
 export const onRequestPost=dailyCloverHandler();
