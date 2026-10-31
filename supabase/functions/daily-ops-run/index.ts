@@ -38,8 +38,11 @@ export function dailyHandler(fetcher:typeof fetch=fetch,now=()=>Date.now(),backg
   let json=true;
   const pulled=await pull.json().catch(()=>{json=false;return {};});
   const header=(name:string)=>pull.headers.get(name)?.slice(0,100)??null;
+  const token=(value:unknown,pattern:RegExp)=>typeof value==='string'&&pattern.test(value)?value:null;
+  // body_detail may end in Clover's HTTP status (e.g. clover_http_error_500).
   diag({status:pull.status,redirected:pull.redirected,content_type:header('content-type'),server:header('server'),cf_ray_present:!!pull.headers.get('cf-ray'),
-   cf_mitigated:header('cf-mitigated'),body_code:typeof pulled?.code==='string'&&/^[a-z_]{1,64}$/.test(pulled.code)?pulled.code:null,json});
+   cf_mitigated:header('cf-mitigated'),body_code:token(pulled?.code,/^[a-z_]{1,64}$/),body_detail:token(pulled?.detail,/^[a-z0-9_]{1,64}$/),
+   body_step:token(pulled?.step,/^[a-z_]{1,64}$/),json});
   if(!pull.ok){code=pulled.code==='budget_exhausted'?'budget_exhausted':pulled.code==='paused'?'paused':'clover_failed';throw Error(code);}
   // The existing provider adapters/snapshot are explicitly bound to their legacy
   // business. Never apply those fixed account totals to another tenant.
