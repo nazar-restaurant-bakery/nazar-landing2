@@ -154,3 +154,5 @@
 /supabase/rollbacks/20261030000400_go_platform_access_down.sql text eol=lf
 /supabase/migrations/20261030000500_go_dispatch_smartlead.sql text eol=lf
 /supabase/rollbacks/20261030000500_go_dispatch_smartlead_down.sql text eol=lf
+/supabase/migrations/20261031000100_market_data_area.sql text eol=lf
+/supabase/rollbacks/20261031000100_market_data_area_down.sql text eol=lf
