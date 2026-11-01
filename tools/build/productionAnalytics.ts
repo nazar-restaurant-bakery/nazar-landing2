@@ -23,10 +23,10 @@ export function productionAnalyticsHtml(context: BuildContext): Plugin {
     transformIndexHtml: {
       order: "pre",
       handler(html) {
-        // Keep the parser-time static async tag and inline initializer exactly
-        // as before in Production; no replacement runtime loader is emitted.
+        // Production keeps the consent default and the GTM loader exactly as written in
+        // index.html; isolated builds drop the whole block (no dataLayer, no GTM request).
         if (!suppress) return html;
-        const block = /[ \t]*<!-- Google tag \(gtag\.js\)[^\r\n]*-->\r?\n[ \t]*<script async src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=G-LK46HFY46G"><\/script>\r?\n[ \t]*<script>[\s\S]*?<\/script>\r?\n/;
+        const block = /[ \t]*<!-- Google Tag Manager GTM-TJ67R6VZ[^\r\n]*-->\r?\n[ \t]*<script>[\s\S]*?<\/script>\r?\n[ \t]*<script>\(function\(w,d,s,l,i\)[^\r\n]*'GTM-TJ67R6VZ'\);<\/script>\r?\n[ \t]*<!-- End Google Tag Manager -->\r?\n/;
         if (!block.test(html)) throw new Error("Expected Production analytics block is missing; refusing an isolated build");
         return html.replace(block, "");
       },

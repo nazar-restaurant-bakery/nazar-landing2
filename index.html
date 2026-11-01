@@ -4,14 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Google tag (gtag.js) — GA4 property nazarrestaurantandbakery.com -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-LK46HFY46G"></script>
+    <!-- Google Tag Manager GTM-TJ67R6VZ (GA4 G-LK46HFY46G and Google Ads run inside the container) -->
     <script>
+      // Consent Mode v2 default before GTM loads: right to opt out, no banner. Global Privacy
+      // Control or the footer "Do not sell or share" choice (src/lib/consent.ts) denies ad signals.
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-LK46HFY46G');
+      (function () {
+        function consent() { window.dataLayer.push(arguments); }
+        var optOut = false;
+        try { optOut = navigator.globalPrivacyControl === true; } catch (e) {}
+        try { optOut = optOut || window.localStorage.getItem('nazar-ad-opt-out-v1') === '1'; } catch (e) {}
+        var ads = optOut ? 'denied' : 'granted';
+        consent('consent', 'default', { analytics_storage: 'granted', ad_storage: ads, ad_user_data: ads, ad_personalization: ads });
+      })();
     </script>
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-TJ67R6VZ');</script>
+    <!-- End Google Tag Manager -->
 
 
     <title>Nazar Restaurant &amp; Bakery — Turkish Kitchen &amp; Bakery in West Haven, CT</title>

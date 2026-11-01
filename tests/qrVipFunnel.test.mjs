@@ -7,7 +7,7 @@ import {collectWithQr} from '../supabase/functions/ops-collect/ga4.ts';
 import {validQrFunnel} from '../src/lib/qrVipFunnel.ts';
 afterEach(()=>{delete globalThis.window;delete globalThis.document;});
 test('P-card context survives internal navigation and both GA4 VIP stages get only fixed non-PII QR labels',()=>{
- const storage=new Map(),calls=[];globalThis.window={location:{hostname:'www.nazarrestaurantandbakery.com',pathname:'/vip',search:'?utm_source=qr&utm_medium=offline&utm_campaign=qr_paket&email=private@example.invalid'},sessionStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},gtag:(...args)=>calls.push(args)};globalThis.document={referrer:''};
+ const storage=new Map(),calls=[];globalThis.window={location:{hostname:'www.nazarrestaurantandbakery.com',pathname:'/vip',search:'?utm_source=qr&utm_medium=offline&utm_campaign=qr_paket&email=private@example.invalid'},sessionStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},dataLayer:Object.assign([],{push:(o)=>{const {event,...p}=o;calls.push(['event',event,p]);}})};globalThis.document={referrer:''};
  captureUtm();window.location.search='';window.location.pathname='/menu';assert.equal(getUtmOrNull().utm_campaign,'qr_paket');
  trackVipSignupSubmitted('private-request-id');trackVipSignupSubmitted('private-request-id');trackVipConfirmationStarted('private-request-id');
  assert.equal(calls.length,2);for(const c of calls)assert.deepEqual(c[2],{form_name:'vip',qr_source:'qr',qr_medium:'offline',qr_campaign:'qr_paket'});
