@@ -4,6 +4,7 @@ import { useLang } from "./Language";
 import { turnstileSiteKey } from "../lib/formConfig";
 import { t } from "./i18n";
 import { trackBeginCheckout } from "../lib/analytics";
+import { orderUtm } from "../lib/utm";
 
 import CateringPickupDate from "./CateringPickupDate";
 import { CATERING_LEAD_TIME_MS, firstPickup, newYorkDate, newYorkPickup, PICKUP_TIMES, pickupError } from "../lib/cateringPickup";
@@ -80,7 +81,7 @@ export default function CateringCheckoutForm({ selections }: { selections: Selec
       const response = await fetch("/api/catering/checkout", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId, requestKind: "standard", fulfillmentMethod: "pickup",
-          name, email, phone, preparationNote: note, pickupAt, turnstileToken: token, consentEmail,
+          name, email, phone, preparationNote: note, pickupAt, turnstileToken: token, consentEmail, utm: orderUtm(),
           selections: selections.map(({ id, size }) => ({ id, size, quantity: 1 })) }),
       });
       const result = await response.json() as { code?: string; orderId?: string;

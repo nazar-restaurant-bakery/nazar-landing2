@@ -2,6 +2,7 @@ import type { CateringRequest, Customer, EmailState, TaskState } from "../../lib
 import { staffCopy as c } from "../../lib/staffCopy";
 import { customerName, staffDisplayDate } from "../../lib/staffUi";
 import StatusBadge from "./StatusBadge";
+import CustomerAttribution from "./CustomerAttribution";
 
 type Props = { customer: Customer; requests: CateringRequest[]; tasks: TaskState | undefined; tasksLoading: boolean; emailState: EmailState | undefined; onRefreshEmail: (id: string) => void; onOpenRequest: (id: string) => void; onCompleteTask: (id: string) => Promise<boolean>; busy: boolean; writeBlocked: boolean };
 
@@ -12,6 +13,7 @@ export default function RecordCard({ customer, requests, tasks, tasksLoading, em
   return <aside className="staff-panel min-w-0" aria-label={c.profile}>
     <header className="border-b border-brand-border p-4"><div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-primarySoft text-lg font-semibold text-brand-dark" aria-hidden="true">{customerName(customer).slice(0, 1).toLocaleUpperCase("tr-TR")}</div><h2 className="break-words font-semibold">{customerName(customer)}</h2><p className="mt-1 text-xs text-stone-500">{c.profile}</p></header>
     <section className="border-b border-brand-border p-4"><h3 className="mb-3 text-sm font-semibold">{c.about}</h3><dl className="space-y-3 text-sm">{[[c.name, customer.name], [c.email, customer.email], [c.phone, customer.phone], [c.created, staffDisplayDate(customer.created_at)]].map(([label, value]) => <div key={label}><dt className="text-xs text-stone-500">{label}</dt><dd className="mt-0.5 break-words">{value || "—"}</dd></div>)}<div><dt className="text-xs text-stone-500">{c.identity}</dt><dd className="text-xs text-stone-500">—</dd></div></dl></section>
+    <CustomerAttribution customerId={customer.id} />
     <section className="border-b border-brand-border p-4"><h3 className="mb-3 text-sm font-semibold">{c.permissions}</h3><p className="mb-1 text-xs text-stone-500">{c.localStatus}</p><StatusBadge value={customer.email_status} /><p className="mt-2 text-xs text-stone-500">{c.consentCaution}</p>{blocked && <p role="status" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800">{c.blocked}</p>}<p className="mt-3 text-xs text-stone-500">{c.suppressionDate}: —</p></section>
     <section className="border-b border-brand-border p-4"><h3 className="mb-3 text-sm font-semibold">{c.klaviyo}</h3>{!customer.email ? <p className="text-sm text-stone-500">{c.noEmail}</p> : <>
       {emailState?.loading && <div className="staff-skeleton" role="status" aria-label={c.loading} />}

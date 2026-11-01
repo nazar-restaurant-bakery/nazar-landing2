@@ -3,6 +3,7 @@
 import { priceStandardTrays } from "../../_lib/cateringOrder.ts";
 import { validatePickupSlot } from "../../_lib/cateringPickup.ts";
 import { createPaymentSession, paymentProviderConfigured } from "../../_lib/paymentProvider.ts";
+import { siteOrderUtm } from "../../_lib/siteOrderUtm.ts";
 
 type Env = {
   CATERING_CHECKOUT_ENABLED?: string;
@@ -118,6 +119,7 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     return reply(400, "invalid_input");
   }
   const consentEmail = input.consentEmail === true;
+  const utm = siteOrderUtm(input.utm);
   if (!name || !email || !EMAIL_RE.test(email) || phone === null || note === null || !token ||
       !requestId || !UUID_RE.test(requestId) ||
       input.fulfillmentMethod !== "pickup" || input.requestKind !== "standard") {
@@ -160,17 +162,21 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
       requestId, businessId: env.SITE_BUSINESS_ID!, name, email, phone }) : "not_requested";
     const orderHash = await requestHash({ name, email, phone, note, pickupAt: pickupAt.toISOString(),
       lines: priced.lines, subtotalCents: priced.subtotalCents, taxCents });
-    const created = await fetch(`${databaseUrl}/rest/v1/rpc/site_order_create_v1`, {
-      method: "POST", headers: dbHeaders,
-      body: JSON.stringify({
-        p_business_id: env.SITE_BUSINESS_ID, p_request_id: requestId, p_request_hash: orderHash,
-        p_kind: "catering", p_fulfillment: "pickup", p_customer_name: name,
-        p_customer_email: email, p_customer_phone: phone || null,
-        p_requested_at: pickupAt.toISOString(), p_lines: priced.lines,
-        p_note: note, p_subtotal_cents: priced.subtotalCents,
-        p_tax_cents: taxCents, p_department: "catering",
-      }),
-    });
+    const orderBody = {
+      p_business_id: env.SITE_BUSINESS_ID, p_request_id: requestId, p_request_hash: orderHash,
+      p_kind: "catering", p_fulfillment: "pickup", p_customer_name: name,
+      p_customer_email: email, p_customer_phone: phone || null,
+      p_requested_at: pickupAt.toISOString(), p_lines: priced.lines,
+      p_note: note, p_subtotal_cents: priced.subtotalCents,
+      p_tax_cents: taxCents, p_department: "catering",
+    };
+    const createOrder = (body: Record<string, unknown>) => fetch(`${databaseUrl}/rest/v1/rpc/site_order_create_v1`, {
+      method: "POST", headers: dbHeaders, body: JSON.stringify(body) });
+    // Campaign source (G21) is sent only when present and valid; it is not part of the
+    // request hash. If the database does not have p_utm yet (404), the order is created
+    // exactly as before without it; the request ID keeps the retry idempotent.
+    let created = await createOrder(utm ? { ...orderBody, p_utm: utm } : orderBody);
+    if (utm && created.status === 404) created = await createOrder(orderBody);
     if (!created.ok) return reply(503, "order_storage_unavailable");
     const orderId = await created.json() as string;
     if (!UUID_RE.test(orderId)) return reply(503, "order_storage_unavailable");

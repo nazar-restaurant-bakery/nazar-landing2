@@ -84,3 +84,15 @@ export function getUtmOrNull(): Utm | null {
   const utm = getUtm();
   return Object.keys(utm).length > 0 ? utm : null;
 }
+
+// Keys the catering order accepts (functions/_lib/siteOrderUtm.ts). The referrer is never
+// sent with an order; the server refuses unknown keys.
+const ORDER_KEYS = [...UTM_KEYS, "landing_page"] as const;
+
+/** Saved campaign context for a catering order, limited to the accepted keys; null if none. */
+export function orderUtm(): Utm | null {
+  const utm = getUtm();
+  const out: Utm = {};
+  for (const key of ORDER_KEYS) if (utm[key]) out[key] = utm[key];
+  return Object.keys(out).length > 0 ? out : null;
+}
