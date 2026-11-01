@@ -32,7 +32,7 @@ function request(extra = {}) {
   return new Request(url, { method: "POST", body: JSON.stringify(data),
     headers: { Origin: "https://www.nazarrestaurantandbakery.com", "Content-Type": "application/json" } });
 }
-function provider({ missingUtmParameter = false } = {}) {
+function provider({ missingUtmParameter = false, utmStatus = 0 } = {}) {
   const creates = [];
   globalThis.fetch = async (address, options) => {
     const path = String(address);
@@ -40,6 +40,7 @@ function provider({ missingUtmParameter = false } = {}) {
     if (path.endsWith("/rpc/site_order_create_v1")) {
       const body = JSON.parse(options.body); creates.push(body);
       if (missingUtmParameter && "p_utm" in body) return Response.json({ code: "PGRST202" }, { status: 404 });
+      if (utmStatus && "p_utm" in body) return Response.json({ code: "22023", message: "Invalid site order" }, { status: utmStatus });
       return Response.json("12345678-1234-4123-8123-123456789012");
     }
     if (path.endsWith("/rpc/site_order_session_set_v1")) return Response.json(true);
@@ -88,6 +89,26 @@ test("if the database does not have p_utm yet (404), the order is created once m
   assert.equal(creates.length, 2);
   assert.ok("p_utm" in creates[0]); assert.deepEqual(Object.keys(creates[1]), ORDER_KEYS);
   assert.equal(creates[0].p_request_id, creates[1].p_request_id);
+});
+
+test("any 4xx on the request with p_utm (e.g. 400 Invalid site order) retries once without it and the order is created", async () => {
+  for (const status of [400, 409, 422]) {
+    const creates = provider({ utmStatus: status });
+    const response = await onRequestPost({ request: request({ utm: UTM }), env });
+    assert.equal(response.status, 200, String(status));
+    assert.equal((await response.json()).orderId, "12345678-1234-4123-8123-123456789012");
+    assert.equal(creates.length, 2);
+    assert.deepEqual(creates[0].p_utm, UTM); assert.deepEqual(Object.keys(creates[1]), ORDER_KEYS);
+    assert.equal(creates[0].p_request_id, creates[1].p_request_id); assert.equal(creates[0].p_request_hash, creates[1].p_request_hash);
+  }
+});
+
+test("a 5xx keeps the previous behavior: no retry, order_storage_unavailable", async () => {
+  const creates = provider({ utmStatus: 503 });
+  const response = await onRequestPost({ request: request({ utm: UTM }), env });
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "order_storage_unavailable");
+  assert.equal(creates.length, 1);
 });
 
 test("browser sends only the accepted keys (never the referrer)", () => {

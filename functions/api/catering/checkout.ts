@@ -173,10 +173,12 @@ export async function onRequestPost({ request, env }: Context): Promise<Response
     const createOrder = (body: Record<string, unknown>) => fetch(`${databaseUrl}/rest/v1/rpc/site_order_create_v1`, {
       method: "POST", headers: dbHeaders, body: JSON.stringify(body) });
     // Campaign source (G21) is sent only when present and valid; it is not part of the
-    // request hash. If the database does not have p_utm yet (404), the order is created
-    // exactly as before without it; the request ID keeps the retry idempotent.
+    // request hash. If the request with p_utm is refused with any 4xx (p_utm not deployed
+    // yet: 404; source refused by the database: 400 "Invalid site order"), the order is
+    // created once more exactly as before without it; the request ID keeps the retry
+    // idempotent. A 5xx keeps the previous behavior. The source never blocks a payment.
     let created = await createOrder(utm ? { ...orderBody, p_utm: utm } : orderBody);
-    if (utm && created.status === 404) created = await createOrder(orderBody);
+    if (utm && created.status >= 400 && created.status < 500) created = await createOrder(orderBody);
     if (!created.ok) return reply(503, "order_storage_unavailable");
     const orderId = await created.json() as string;
     if (!UUID_RE.test(orderId)) return reply(503, "order_storage_unavailable");
