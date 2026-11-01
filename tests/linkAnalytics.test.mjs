@@ -7,7 +7,7 @@ function fixture(path='/contact'){
  class A extends E {constructor(href,marker=null){super();this.href=href;this.marker=marker}getAttribute(name){return name==='data-analytics'?this.marker:null}}
  globalThis.Element=E;globalThis.HTMLAnchorElement=A;
  const listeners=[],calls=[];globalThis.document={addEventListener:(type,fn)=>{assert.equal(type,'click');listeners.push(fn)}};
- globalThis.window={location:{pathname:path,search:'?email=private@example.invalid',hash:'#private'},gtag:(...args)=>calls.push(args)};
+ globalThis.window={location:{pathname:path,search:'?email=private@example.invalid',hash:'#private'},dataLayer:Object.assign([],{push:(o)=>{const {event,...p}=o;calls.push(['event',event,p]);}})};
  const click=(href,marker=null,nested=false)=>{const a=new A(href,marker);for(const fn of listeners)fn({target:nested?new E(a):a})};
  return {calls,listeners,click};
 }
@@ -45,8 +45,8 @@ test('private and unknown page paths produce no public click event',()=>{
  }
 });
 test('unavailable or throwing analytics never breaks link behavior',()=>{
- const f=fixture();trackCloverOrderHandoffs();delete window.gtag;assert.doesNotThrow(()=>f.click('tel:12034082697'));
- window.gtag=()=>{throw Error('blocked')};assert.doesNotThrow(()=>f.click('https://www.google.com/maps?q=Nazar','directions'));
+ const f=fixture();trackCloverOrderHandoffs();delete window.dataLayer;assert.doesNotThrow(()=>f.click('tel:12034082697'));
+ window.dataLayer=Object.assign([],{push:()=>{throw Error('blocked')}});assert.doesNotThrow(()=>f.click('https://www.google.com/maps?q=Nazar','directions'));
 });
 test('trailing slashes use the canonical public path',()=>{
  const f=fixture('/contact/');trackCloverOrderHandoffs();f.click('tel:12034082697');assert.deepEqual(f.calls[0][2],{page_path:'/contact'});

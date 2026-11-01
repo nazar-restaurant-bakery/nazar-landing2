@@ -41,6 +41,7 @@ export const crmData = {
   authorized: () => rpc("crm_staff_authorized_v1"),
   overview: (segment: "all" | "test") => rpc("crm_overview_v2", { p_search: "", p_segment: segment }),
   tasks: (customerId: string) => rpc("crm_customer_tasks_v1", { p_customer_id: customerId }),
+  attribution: (customerId: string) => rpc("crm_customer_attribution_v1", { p_customer_id: customerId }),
   queue: (queue: CrmQueueName, offset: number) => rpc("crm_follow_up_queue_v1", { p_queue: queue, p_offset: offset }),
   decisions: () => rpc("crm_catering_decisions_v1"),
   notifications: () => rpc("crm_catering_notification_status_v1"),
