@@ -160,3 +160,5 @@
 /supabase/rollbacks/20261031000200_market_places_down.sql text eol=lf
 /supabase/migrations/20261031000300_market_ads.sql text eol=lf
 /supabase/rollbacks/20261031000300_market_ads_down.sql text eol=lf
+/supabase/migrations/20261031000400_market_business_profile_import.sql text eol=lf
+/supabase/rollbacks/20261031000400_market_business_profile_import_down.sql text eol=lf
