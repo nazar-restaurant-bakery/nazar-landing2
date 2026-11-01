@@ -75,19 +75,19 @@ test('all existing staff provider routes fail closed in preview while production
   assert.equal((await middleware({request:new Request('https://www.nazarrestaurantandbakery.com/api/staff/clover-orders'),env:{},next:async()=>{next++;return new Response();}})).status,200);assert.equal(next,1);
 });
 test('preview browser never invokes public Klaviyo writer or emits analytics events',async()=>{
-  globalThis.window={location:{hostname:host},gtag:()=>{throw Error('Analytics forbidden');}};
+  globalThis.window={location:{hostname:host},dataLayer:Object.assign([],{push:()=>{throw Error('Analytics forbidden');}})};
   globalThis.document={addEventListener:()=>{throw Error('No tracking listener in preview');}};
   globalThis.fetch=async()=>{throw Error('Provider forbidden');};
   assert.equal(await subscribeVipEmail({email:'synthetic@customer.example',name:'Synthetic',campaign:null}),false);
   assert.doesNotThrow(()=>{trackCloverOrderHandoffs();trackCateringRequestSubmitted('synthetic-id');});
 });
-test('build-time isolation removes production GA4 while Production keeps its original static loader',()=>{
+test('build-time isolation removes GTM and consent while Production keeps the GTM loader',()=>{
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const transform=(env)=>productionAnalyticsHtml({command:'build',mode:'production',env}).transformIndexHtml.handler(html);
   assert.equal(transform({}),html);
-  assert.match(html,/<script async src="https:\/\/www\.googletagmanager/);
-  assert.doesNotMatch(transform({VITE_APP_ENV:'isolated-test'}),/googletagmanager|G-LK46HFY46G/);
-  assert.doesNotMatch(transform({CF_PAGES_BRANCH:'feat/isolated-test-env'}),/googletagmanager|G-LK46HFY46G/);
+  assert.match(html,/googletagmanager\.com\/gtm\.js\?id=/);
+  assert.doesNotMatch(transform({VITE_APP_ENV:'isolated-test'}),/googletagmanager|GTM-TJ67R6VZ|dataLayer/);
+  assert.doesNotMatch(transform({CF_PAGES_BRANCH:'feat/isolated-test-env'}),/googletagmanager|GTM-TJ67R6VZ|dataLayer/);
 });
 
 test('printed QR VIP payload retains allowlisted tags on signup RPC without outbound subscription',async()=>{

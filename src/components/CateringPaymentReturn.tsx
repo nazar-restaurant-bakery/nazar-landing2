@@ -1,5 +1,6 @@
 import React from "react";
 import { useLang } from "./Language";
+import { trackPurchase } from "../lib/analytics";
 
 type State = { status: string; orderId: string; requestedAt: string;
   totalCents: number; emailStatus: string };
@@ -47,6 +48,8 @@ export default function CateringPaymentReturn({ payment }: { payment: string }) 
       const result = await response.json() as State;
       if (result.orderId !== stored.orderId) { setError(true); return; }
       setState(result);
+      // Only a paid answer from the server is measured; one purchase per order. Never throws.
+      trackPurchase(result);
     } catch { setError(true); }
     finally { setLoading(false); }
   }, []);

@@ -6,7 +6,7 @@ export default function PrivacyPage() {
     <article className="mx-auto max-w-3xl space-y-7 px-4 py-10 text-sm leading-7 text-zinc-700">
       <header>
         <h1 className="text-3xl font-bold text-zinc-900">Privacy Policy</h1>
-        <p>Last updated: October 22, 2026</p>
+        <p>Last updated: October 31, 2026</p>
       </header>
       <section aria-labelledby="privacy-who">
         <h2 id="privacy-who" className="text-xl font-semibold text-zinc-900">Who this covers</h2>
@@ -28,6 +28,10 @@ export default function PrivacyPage() {
       <section aria-labelledby="privacy-sharing">
         <h2 id="privacy-sharing" className="text-xl font-semibold text-zinc-900">Sharing and protection</h2>
         <p>Authorized restaurant staff use information for the purposes above. Hosting, database, email, security, analytics and ordering providers process information needed to deliver their services. We may disclose information when required by law or to protect people and systems. We restrict access and keep connection credentials on the server, separate from public pages.</p>
+      </section>
+      <section aria-labelledby="privacy-opt-out">
+        <h2 id="privacy-opt-out" className="text-xl font-semibold text-zinc-900">Your right to opt out of sale or sharing</h2>
+        <p>Our website uses Google Analytics and Google Ads measurement through Google Tag Manager. You can opt out of the sale or sharing of your personal information for advertising at any time: use the “Do not sell or share my personal information” link at the bottom of every page. Your choice is saved on this device, and you can undo it from the same place. We also honor Global Privacy Control: if your browser sends this signal, advertising storage and advertising data sharing are turned off automatically. Opting out does not affect ordering, catering requests or VIP sign-up.</p>
       </section>
       <section aria-labelledby="privacy-retention">
         <h2 id="privacy-retention" className="text-xl font-semibold text-zinc-900">Keeping information and your choices</h2>

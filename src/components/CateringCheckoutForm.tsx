@@ -3,6 +3,7 @@ import TurnstileWidget from "./TurnstileWidget";
 import { useLang } from "./Language";
 import { turnstileSiteKey } from "../lib/formConfig";
 import { t } from "./i18n";
+import { trackBeginCheckout } from "../lib/analytics";
 
 import CateringPickupDate from "./CateringPickupDate";
 import { CATERING_LEAD_TIME_MS, firstPickup, newYorkDate, newYorkPickup, PICKUP_TIMES, pickupError } from "../lib/cateringPickup";
@@ -94,6 +95,7 @@ export default function CateringCheckoutForm({ selections }: { selections: Selec
       sessionStorage.setItem("nazar-site-order-reference-v1", JSON.stringify({
         orderId: result.orderId, requestId: result.requestId,
       }));
+      trackBeginCheckout(result.orderId);
       window.location.assign(result.checkoutUrl!);
     } catch { setMessage(copy.error); setNeedsHelp(true); }
     finally {
